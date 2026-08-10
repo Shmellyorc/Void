@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "FlappyBirb",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/Examples/FlappyBirb/bin/Debug/net10.0/FlappyBirb.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/Examples/FlappyBirb",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        }
+    ]
+}

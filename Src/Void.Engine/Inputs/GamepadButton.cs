@@ -1,0 +1,36 @@
+namespace Void.Engine.Inputs;
+
+public enum GamepadButton
+{
+    A,
+    B,
+    X,
+    Y,
+    DPadUp,
+    DPadDown,
+    DPadLeft,
+    DPadRight,
+    LeftShoulder,
+    RightShoulder,
+    LeftTrigger,
+    RightTrigger,
+    LeftStick,
+    RightStick,
+    LeftStickUp,
+    LeftStickDown,
+    LeftStickLeft,
+    LeftStickRight,
+    RightStickUp,
+    RightStickDown,
+    RightStickLeft,
+    RightStickRight,
+    Start,
+    Back,
+    Guide,
+    Paddle1,
+    Paddle2,
+    Paddle3,
+    Paddle4,
+    Touchpad,
+    Misc1
+}

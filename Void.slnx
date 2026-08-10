@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Examples/">
+    <Project Path="Examples/FlappyBirb/FlappyBirb.csproj" />
+  </Folder>
+  <Folder Name="/Src/">
+    <Project Path="Src/Void.Engine/Void.Engine.csproj" />
+    <Project Path="Src/Void.Packer.CLI/Void.Packer.CLI.csproj" />
+    <Project Path="Src/Void.Packer/Void.Packer.csproj" />
+  </Folder>
+</Solution>
