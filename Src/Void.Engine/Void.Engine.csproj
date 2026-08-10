@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="SFML.Net" Version="2.6.1" />
+    <ProjectReference Include="..\Void.Packer\Void.Packer.csproj" />
   </ItemGroup>
 
   <ItemGroup>

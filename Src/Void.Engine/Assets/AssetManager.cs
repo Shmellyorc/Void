@@ -86,7 +86,113 @@ public sealed class AssetManager
 
 
 
+    #region Pack Mounts
+    public PackMount LoadPack(string packPath, string mountName = null)
+        => LoadPack(packPath, null, mountName);
 
+    public PackMount LoadPack(string packPath, string keyPath, string mountName = null)
+    {
+        if (string.IsNullOrEmpty(packPath))
+            throw new ArgumentException("Pack path cannot be null or empty", nameof(packPath));
+
+        string fullPackPath = GetFullPath(packPath);
+
+        if (!File.Exists(fullPackPath))
+            throw new FileNotFoundException($"Pack file not found: {fullPackPath}");
+
+        byte[] packData = File.ReadAllBytes(fullPackPath);
+        byte[] key = null;
+        if (!string.IsNullOrEmpty(keyPath))
+        {
+            string fullKeyPath = GetFullPath(keyPath);
+            if (!File.Exists(fullKeyPath))
+                throw new FileNotFoundException($"Key file not found: {fullKeyPath}");
+
+            key = File.ReadAllBytes(fullKeyPath);
+        }
+        else
+        {
+            string autoKeyPath = Path.ChangeExtension(fullPackPath, ".key");
+            if (File.Exists(autoKeyPath))
+            {
+                key = File.ReadAllBytes(autoKeyPath);
+            }
+        }
+
+        return LoadPackData(packData, key, mountName ?? Path.GetFileNameWithoutExtension(packPath));
+    }
+
+    public PackMount LoadPackData(byte[] packData, byte[] key = null, string mountName = null)
+    {
+        if (packData == null || packData.Length == 0)
+            throw new ArgumentException("Pack data cannot be null or empty", nameof(packData));
+
+        var mount = new PackMount(packData, key, mountName ?? "Pack Mount");
+
+        AddMountToEnd(mount);
+
+        return mount;
+    }
+
+    public List<PackMount> LoadAllPacks(string directoryPath)
+    {
+        if (string.IsNullOrEmpty(directoryPath))
+            throw new ArgumentException("Directory path cannot be null or empty", nameof(directoryPath));
+
+        string fullDirPath = GetFullPath(directoryPath);
+
+        if (!Directory.Exists(fullDirPath))
+            throw new DirectoryNotFoundException($"Directory not found: {fullDirPath}");
+
+        var mounted = new List<PackMount>();
+
+        var packFiles = Directory.GetFiles(fullDirPath, "*.pack", SearchOption.TopDirectoryOnly);
+
+        foreach (var packFile in packFiles)
+        {
+            try
+            {
+                string keyFile = Path.ChangeExtension(packFile, ".key");
+                string keyPath = File.Exists(keyFile) ? keyFile : null;
+
+                var mount = LoadPack(
+                    Path.GetRelativePath(GameSettings.Instance.AppContentRoot, packFile),
+                    keyPath != null ? Path.GetRelativePath(GameSettings.Instance.AppContentRoot, keyPath) : null,
+                    Path.GetFileNameWithoutExtension(packFile)
+                );
+
+                mounted.Add(mount);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[AssetManager] Failed to load pack '{packFile}': {ex.Message}");
+            }
+        }
+
+        return mounted;
+    }
+
+    public void UnloadPack(PackMount mount)
+    {
+        if (mount == null)
+            return;
+
+        RemoveMount(mount);
+
+        mount.Dispose();
+    }
+
+    public void UnloadAllPacks()
+    {
+        var packs = _mounts.OfType<PackMount>().ToList();
+
+        foreach (var pack in packs)
+        {
+            RemoveMount(pack);
+            pack.Dispose();
+        }
+    }
+    #endregion
 
 
 
