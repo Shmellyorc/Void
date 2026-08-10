@@ -20,6 +20,8 @@ global using Void.Engine.Graphics.Atlas.Packers;
 global using Void.Engine.Helpers;
 global using Void.Engine.Inputs;
 global using Void.Engine.Resources;
+global using Void.Engine.Sounds;
+global using Void.Engine.Sounds.EventArg;
 global using Void.Engine.Systems;
 
 global using SFBlendMode = SFML.Graphics.BlendMode;
@@ -36,6 +38,8 @@ global using SFPrimitiveType = SFML.Graphics.PrimitiveType;
 global using SFRenderStates = SFML.Graphics.RenderStates;
 global using SFRenderTexture = SFML.Graphics.RenderTexture;
 global using SFRenderWindow = SFML.Graphics.RenderWindow;
+global using SFSound = SFML.Audio.Sound;
+global using SFSoundBuffer = SFML.Audio.SoundBuffer;
 global using SFSprite = SFML.Graphics.Sprite;
 global using SFStyles = SFML.Window.Styles;
 global using SFTexture = SFML.Graphics.Texture;

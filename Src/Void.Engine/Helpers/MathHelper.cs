@@ -28,6 +28,9 @@ public static class MathHelper
     public static float Clamp(float value, float min, float max)
         => value < min ? min : value > max ? max : value;
 
+    public static float Center(float a, float b)
+        => (a - b) / 2f;
+
     public static float Saturate(float value)
         => value < 0f ? 0f : value > 1f ? 1f : value;
 

@@ -2,29 +2,36 @@ namespace Void.Engine.Assets;
 
 public sealed class AssetManager
 {
-    internal static uint _id;
+    private static uint s_id;
+    private static readonly Lock IdLock = new();
+
+
 
     private readonly Dictionary<uint, IAsset> _assets = [];
     private readonly List<IMount> _mounts = [];
 
-    private static readonly Dictionary<Type, string[]> SupportedExtetnions = new()
+    private static readonly Dictionary<Type, string[]> SupportedExtensions = new()
     {
         {typeof(Texture), [".png", ".bmp", ".tga", ".jpg", ".gif", ".psd", ".hdr", ".pic", ".pnm"] },
         // LDtkMap
         // SpriteFont
         // BitmapFont
         // Spritesheet
-        // Sound
+        {typeof(Sound), [
+            ".ogg", ".wav", ".flac", ".mp3", ".aiff", ".au", ".raw", ".paf", ".svx", ".nist", ".voc",
+            ".ircam", ".w64", ".mat4", ".mat5", ".pvf", ".htk", ".sds", ".avr", ".sd2", ".caf", ".wve",
+            ".mpc2k", ".rf64"
+        ]}
     };
 
-    private static readonly Dictionary<Type, Func<uint, byte[], string, IAsset>> DefaultLoaders = new()
+    private static readonly Dictionary<Type, Func<uint, byte[], string, IAsset>> SupportedLoaders = new()
     {
-        {typeof(Texture), (id, data, tag) => new Texture(id, data, tag, false, false)}
+        {typeof(Texture), (id, data, tag) => new Texture(id, data, tag, false, false)},
         // LDtkMap
         // SpriteFont
         // BitmapFont
         // Spritesheet
-        // Sound
+        {typeof(Sound), (id, data, tag) => new Sound(id, data, tag)}
     };
 
     public static AssetManager Instance { get; private set; }
@@ -84,8 +91,7 @@ public sealed class AssetManager
 
 
     #region GetOrLoad
-    public T Load<T>(string path) where T : IAsset
-        => GetOrLoadInternal<T>(path, null);
+    public T Load<T>(string path) where T : IAsset => GetOrLoadInternal<T>(path, null);
 
     public bool TryLoad<T>(string path, out T asset) where T : IAsset
     {
@@ -104,6 +110,9 @@ public sealed class AssetManager
     public Texture LoadTexture(string path, bool repeat, bool smoothing)
         => GetOrLoadInternal(path, (id, data, tag) => new Texture(id, data, tag, repeat, smoothing));
 
+    public Sound LoadSound(string path)
+        => GetOrLoadInternal(path, (id, data, tag) => new Sound(id, data, tag));
+
     #endregion
 
 
@@ -116,7 +125,7 @@ public sealed class AssetManager
         if (!IsValidExtention(normalizedPath, typeof(T)))
             throw new FileNotFoundException(
                 $"Asset '{normalizedPath}' has an unsupported extention for type '{typeof(T).Name}'. " +
-                $"Supported extentions: {string.Join(", ", SupportedExtetnions[typeof(T)])}"
+                $"Supported extentions: {string.Join(", ", SupportedExtensions[typeof(T)])}"
             );
 
         // Check if asset exists in cache:
@@ -156,7 +165,7 @@ public sealed class AssetManager
         if (assetData == null)
         {
             throw new FileNotFoundException(
-                $"Asset '{normalizedPath}' of typeo '{typeof(T).Name}' was not found in any move. " +
+                $"Asset '{normalizedPath}' of type '{typeof(T).Name}' was not found in any move. " +
                 $"Searched: {_mounts.Count} mount(s): {string.Join(", ", _mounts.Select(x => x.GetType().Name))}"
             );
         }
@@ -166,13 +175,13 @@ public sealed class AssetManager
         try
         {
             if (customLoader != null)
-                newAsset = customLoader(_id++, assetData, normalizedPath);
-            else if (DefaultLoaders.TryGetValue(typeof(T), out var defaultLoader))
-                newAsset = (T)defaultLoader(_id++, assetData, normalizedPath);
+                newAsset = customLoader(GetNextId(), assetData, normalizedPath);
+            else if (SupportedLoaders.TryGetValue(typeof(T), out var defaultLoader))
+                newAsset = (T)defaultLoader(GetNextId(), assetData, normalizedPath);
             else
                 throw new InvalidOperationException(
                     $"No loader found for asset type '{typeof(T).Name}' " +
-                    $"Registered types: {string.Join(", ", DefaultLoaders.Keys.Select(t => t.Name))}"
+                    $"Registered types: {string.Join(", ", SupportedLoaders.Keys.Select(t => t.Name))}"
                 );
         }
         catch (Exception ex)
@@ -229,13 +238,13 @@ public sealed class AssetManager
     {
         var ext = Path.GetExtension(path).ToLowerInvariant();
 
-        if (SupportedExtetnions.TryGetValue(assetType, out var extentions))
+        if (SupportedExtensions.TryGetValue(assetType, out var extentions))
             return extentions.Contains(ext);
 
         return false;
     }
 
-    private string GetFullPAth(string virtualPath)
+    private string GetFullPath(string virtualPath)
     {
         var contentRoot = GameSettings.Instance.AppContentRoot;
 
@@ -252,5 +261,17 @@ public sealed class AssetManager
         return fullPath;
     }
 
+    #endregion
+
+
+
+    #region Internal Methods
+    internal static uint GetNextId()
+    {
+        lock (IdLock)
+        {
+            return ++s_id;
+        }
+    }
     #endregion
 }

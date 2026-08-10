@@ -45,7 +45,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
             Smooth = _smooth
         };
 
-        Id = AssetManager._id++;
+        Id = AssetManager.GetNextId();
         Size = size;
         Width = (int)size.X;
         Height = (int)size.Y;
@@ -60,7 +60,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     {
         _texture = renderTexture.Texture;
 
-        Id = AssetManager._id++;
+        Id = AssetManager.GetNextId();
         Size = _texture.Size;
         Width = (int)Size.X;
         Height = (int)Size.Y;
@@ -70,7 +70,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         IsValid = true;
     }
 
-    
+
 
 
 
