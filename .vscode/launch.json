@@ -11,6 +11,113 @@
             "cwd": "${workspaceFolder}/Examples/FlappyBirb",
             "console": "internalConsole",
             "stopAtEntry": false
+        },
+
+
+
+        {
+            "name": "CLI Packer - Build",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-packer",
+            "program": "${workspaceFolder}/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI.dll",
+            "args": [
+                "build",
+                "--content",
+                "_TestFolder",
+                "--output",
+                "_Packs",
+                "--verbose",
+                "--no-wait"
+            ],
+            "cwd": "${workspaceFolder}/Src/Void.Packer.CLI",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "CLI Packer - Extract",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-packer",
+            "program": "${workspaceFolder}/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI.dll",
+            "args": [
+                "extract",
+                "--pack",
+                "_Packs/GameAssets.pack",
+                "--output",
+                "_Extracted",
+                "--verbose",
+                "--no-wait"
+            ],
+            "cwd": "${workspaceFolder}/Src/Void.Packer.CLI",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "CLI Packer - Verify",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-packer",
+            "program": "${workspaceFolder}/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI.dll",
+            "args": [
+                "verify",
+                "--pack",
+                "_Packs/GameAssets.pack",
+                "--verbose",
+                "--no-wait"
+            ],
+            "cwd": "${workspaceFolder}/Src/Void.Packer.CLI",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "CLI Packer - List",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-packer",
+            "program": "${workspaceFolder}/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI.dll",
+            "args": [
+                "list",
+                "--pack",
+                "_Packs/GameAssets.pack",
+                "--detailed",
+                "--no-wait"
+            ],
+            "cwd": "${workspaceFolder}/Src/Void.Packer.CLI",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "CLI Packer - Update",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-packer",
+            "program": "${workspaceFolder}/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI.dll",
+            "args": [
+                "update",
+                "--pack",
+                "_Packs/GameAssets.pack",
+                "--add",
+                "_TestFolder/hello.txt",
+                "--verbose",
+                "--no-wait"
+            ],
+            "cwd": "${workspaceFolder}/Src/Void.Packer.CLI",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "CLI Packer - Help",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-packer",
+            "program": "${workspaceFolder}/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI.dll",
+            "args": [
+                "--help"
+            ],
+            "cwd": "${workspaceFolder}/Src/Void.Packer.CLI",
+            "console": "internalConsole",
+            "stopAtEntry": false
         }
     ]
 }

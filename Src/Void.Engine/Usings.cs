@@ -11,6 +11,8 @@ global using System.Text;
 
 global using Void.Engine.Assets;
 global using Void.Engine.Assets.Loaders;
+global using Void.Engine.Assets.Loaders.Fonts;
+global using Void.Engine.Assets.Loaders.Spritesheets;
 global using Void.Engine.Assets.Mounts;
 global using Void.Engine.Beacons;
 global using Void.Engine.Coroutines;

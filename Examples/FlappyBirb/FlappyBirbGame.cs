@@ -18,6 +18,9 @@ public sealed class FlappyBirbGame(GameSettings settings) : Game(settings)
 
     protected override void OnEnter()
     {
+        var mount = AssetManager.Instance.LoadPack("GameAssets.pack");
+        AssetManager.Instance.AddMountToStart(mount);
+
         _batch = new SpriteBatcher();
         _texture = AssetManager.Instance.Load<Texture>("Spritesheet.png");
         _camera = new Camera();

@@ -26,11 +26,14 @@ public static class PackConstants
     public const int NonceOffset = 17;
     public const int NonceSize = 12;                            // AES-GCM nonce (96 bits)
 
-    public const int ReservedOffset = 29;
-    public const int ReservedSize = 3;                          // Padding to 32 bytes
+    public const int AlgorithmOffset = 29;
+    public const int AlgorithmSize = 1;                         // CompressionAlgorithm byte
+
+    public const int ReservedOffset = 30;
+    public const int ReservedSize = 2;                          // Padding to 32 bytes
 
     // Total bootstrap header size (fixed, never changes)
-    public const int BootstrapHeaderSize = 32;                  // 4+2+1+4+4+2+12+3=32
+    public const int BootstrapHeaderSize = 32;                  // 4+2+1+4+4+2+12+1+2=32
 
     // Header Block starts immediately after bootstrap
     public const int HeaderBlockOffset = BootstrapHeaderSize;
@@ -64,8 +67,8 @@ public static class PackConstants
     public const int FileEntryUncompressedSizeOffset = 6;
     public const int FileEntryUncompressedSizeSize = 4;         // uint
 
-    public const int FileEntryStoredSizeOffset = 10;            // Fixed typo
-    public const int FileEntryStoredSizeSize = 4;               // uint (Fixed casing)
+    public const int FileEntryStoredSizeOffset = 10;
+    public const int FileEntryStoredSizeSize = 4;               // uint
 
     public const int FileEntryFlagsOffset = 14;
     public const int FileEntryFlagsSize = 1;                    // byte

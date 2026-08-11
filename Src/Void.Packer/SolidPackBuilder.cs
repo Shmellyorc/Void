@@ -101,8 +101,13 @@ public sealed class SolidPackBuilder
             byte[] headerAad = BuildHeaderAad();
             encryptedHeader = AesGcmEncryptor.Encrypt(compressedHeader, key, nonce, headerAad);
 
+            // Derive data nonce from header nonce
+            byte[] dataNonce = new byte[nonce.Length];
+            Buffer.BlockCopy(nonce, 0, dataNonce, 0, nonce.Length);
+            dataNonce[dataNonce.Length - 1] ^= 0x01;
+
             byte[] dataAad = BuildDataAad(encryptedHeader);
-            encryptedData = AesGcmEncryptor.Encrypt(dataBytes, key, nonce, dataAad);
+            encryptedData = AesGcmEncryptor.Encrypt(dataBytes, key, dataNonce, dataAad);
         }
         else
         {
@@ -163,25 +168,19 @@ public sealed class SolidPackBuilder
 
         writer.Write((ushort)PackConstants.CurrentVersion);
 
-        uint fileTableOffset = 4 + 4 + 2 + 1 + 3; // version(2)+reserved(10)
+        uint fileTableOffset = PackConstants.HeaderBlockFixedSize;
         writer.Write(fileTableOffset);
 
         writer.Write((ushort)_entries.Count);
-
         writer.Write((byte)_options.Compression);
-
-        // reserved
-        writer.Write(new byte[3]);
+        writer.Write(new byte[PackConstants.HeaderReservedSize]);
 
         foreach (var entry in _entries)
         {
             byte[] pathBytes = Encoding.UTF8.GetBytes(entry.VirtualPath);
             writer.Write((ushort)pathBytes.Length);
-
             writer.Write(entry.OffsetInData);
-
             writer.Write(entry.UncompressedSize);
-
             writer.Write(entry.StoredSize);
 
             byte flags = 0;
@@ -189,7 +188,6 @@ public sealed class SolidPackBuilder
             writer.Write(flags);
 
             writer.Write(entry.CRC32);
-
             writer.Write(pathBytes);
         }
 
@@ -220,12 +218,12 @@ public sealed class SolidPackBuilder
     }
 
     private PackContainer BuildFinalPack(
-        byte[] encryptedHeader,
-        byte[] encryptedData,
-        byte[] key,
-        byte[] nonce,
-        bool headerCompressed
-    )
+    byte[] encryptedHeader,
+    byte[] encryptedData,
+    byte[] key,
+    byte[] nonce,
+    bool headerCompressed
+)
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
@@ -247,7 +245,12 @@ public sealed class SolidPackBuilder
         else
             writer.Write(new byte[PackConstants.NonceSize]);
 
+        // Write compression algorithm to bootstrap
+        writer.Write((byte)_options.Compression);
+
+        // Write remaining reserved bytes
         writer.Write(new byte[PackConstants.ReservedSize]);
+
         writer.Write(encryptedHeader);
         writer.Write(encryptedData);
 

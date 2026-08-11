@@ -30,7 +30,7 @@ public static class AesGcmEncryptor
     {
         if (data.Length == 0)
             return Array.Empty<byte>();
-        
+
         if (key.Length != KeySize)
             throw new ArgumentException($"Key must be {KeySize} bytes", nameof(key));
         if (nonce.Length != NonceSize)
@@ -66,12 +66,51 @@ public static class AesGcmEncryptor
         Buffer.BlockCopy(encryptedData.ToArray(), 0, cipherText, 0, cipherTextLength);
         Buffer.BlockCopy(encryptedData.ToArray(), cipherTextLength, tag, 0, TagSize);
 
-        using var aes = new AesGcm(key.ToArray(), TagSize);
-        byte[] plaintext = new byte[cipherTextLength];
+        byte[] plaintext;
+        try
+        {
+            using var aes = new AesGcm(key.ToArray(), TagSize);
+            plaintext = new byte[cipherTextLength];
+            aes.Decrypt(nonce.ToArray(), cipherText, tag, plaintext, associatedData.ToArray());
+        }
+        catch (Exception ex)
+        {
+            throw new CryptographicException($"Decryption failed: {ex.Message}", ex);
+        }
 
-        aes.Decrypt(nonce.ToArray(), cipherText, tag, plaintext, associatedData.ToArray());
+        // Optional: Re-verify tag manually (this is redundant since AesGcm already verifies, but can stay for debugging)
+        byte[] testCipherText = new byte[plaintext.Length];
+        byte[] testTag = new byte[TagSize];
+        using var testAes = new AesGcm(key.ToArray(), TagSize);
+        testAes.Encrypt(nonce.ToArray(), plaintext, testCipherText, testTag, associatedData.ToArray());
+
+        if (!testTag.SequenceEqual(tag))
+        {
+            throw new CryptographicException("Decryption failed: Tag verification failed (data corrupted or wrong key)");
+        }
+
+        // ❌ REMOVE THIS VERSION CHECK - it doesn't belong here
+        // The decrypted data might be compressed!
+        // if (plaintext.Length < 2 || BitConverter.ToUInt16(plaintext, 0) != PackConstants.CurrentVersion)
+        // {
+        //     throw new CryptographicException($"Decryption failed: Invalid data (version mismatch)");
+        // }
 
         return plaintext;
+    }
+
+    public static bool VerifyTag(byte[] encryptedData, byte[] key, byte[] nonce, byte[] associatedData = null)
+    {
+        try
+        {
+            // Try to decrypt - if it throws, tag is wrong
+            Decrypt(encryptedData, key, nonce, associatedData);
+            return true;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
     }
 
     public static bool Verify(ReadOnlySpan<byte> encryptedData, ReadOnlySpan<byte> key, ReadOnlySpan<byte> nonce, ReadOnlySpan<byte> associatedData = default)

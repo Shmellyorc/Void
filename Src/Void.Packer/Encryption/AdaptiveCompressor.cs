@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.IO.Compression;
 
 namespace Void.Packer.Encryption;
@@ -38,40 +39,66 @@ public static class AdaptiveCompressor
 
     private static byte[] CompressInternal(ReadOnlySpan<byte> data, CompressionAlgorithm algorithm, int level)
     {
-        using var outputStream = new MemoryStream();
-
-        Stream compressionStream = algorithm switch
+        var compressionLevel = level switch
         {
-            CompressionAlgorithm.Deflate => new DeflateStream(outputStream, (CompressionLevel)level, true),
-            CompressionAlgorithm.Brotli => new BrotliStream(outputStream, (CompressionLevel)level, true),
-            _ => throw new NotSupportedException($"Compression algorithm {algorithm} not supported.")
+            1 => CompressionLevel.Fastest,
+            2 => CompressionLevel.Fastest,
+            3 => CompressionLevel.Fastest,
+            <= 5 => CompressionLevel.Optimal,
+            9 => CompressionLevel.SmallestSize,
+            _ => CompressionLevel.Optimal
         };
 
-        using (compressionStream)
+        if (algorithm == CompressionAlgorithm.Deflate)
         {
-            compressionStream.Write(data);
+            using var outputStream = new MemoryStream();
+            using (var deflateStream = new DeflateStream(outputStream, compressionLevel))
+            {
+                deflateStream.Write(data);
+            }
+            return outputStream.ToArray();
+        }
+        else if (algorithm == CompressionAlgorithm.Brotli)
+        {
+            using var outputStream = new MemoryStream();
+            using (var brotliStream = new BrotliStream(outputStream, compressionLevel))
+            {
+                brotliStream.Write(data);
+            }
+            return outputStream.ToArray();
         }
 
-        return outputStream.ToArray();
+        throw new NotSupportedException($"Compression algorithm {algorithm} not supported.");
     }
 
     private static byte[] DecompressInternal(ReadOnlySpan<byte> data, int uncompressedSize, CompressionAlgorithm algorithm)
     {
+        var result = new byte[uncompressedSize];
+
         using var inputStream = new MemoryStream(data.ToArray());
-        using var outputStream = new MemoryStream(uncompressedSize);
 
         Stream decompressionStream = algorithm switch
         {
-            CompressionAlgorithm.Deflate => new DeflateStream(inputStream, CompressionMode.Decompress, true),
-            CompressionAlgorithm.Brotli => new BrotliStream(inputStream, CompressionMode.Decompress, true),
+            CompressionAlgorithm.Deflate => new DeflateStream(inputStream, CompressionMode.Decompress),
+            CompressionAlgorithm.Brotli => new BrotliStream(inputStream, CompressionMode.Decompress),
             _ => throw new NotSupportedException($"Compression algorithm {algorithm} not supported.")
         };
 
         using (decompressionStream)
         {
-            decompressionStream.CopyTo(outputStream);
+            int totalBytesRead = 0;
+            while (totalBytesRead < uncompressedSize)
+            {
+                int bytesRead = decompressionStream.Read(result, totalBytesRead, uncompressedSize - totalBytesRead);
+                if (bytesRead == 0)
+                    break;
+                totalBytesRead += bytesRead;
+            }
+
+            if (totalBytesRead != uncompressedSize)
+                throw new InvalidDataException($"Decompressed size mismatch. Expected {uncompressedSize}, got {totalBytesRead}");
         }
 
-        return outputStream.ToArray();
+        return result;
     }
 }

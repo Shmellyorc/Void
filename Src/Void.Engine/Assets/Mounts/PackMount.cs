@@ -53,7 +53,7 @@ public sealed class PackMount : IMount, IDisposable
 
         var normalized = PathNormalizer.Normalize(virtualPath);
 
-        lock (_pathCache)
+        lock (_cacheLock)
         {
             if (_pathCache.TryGetValue(normalized, out var orginalPath))
             {

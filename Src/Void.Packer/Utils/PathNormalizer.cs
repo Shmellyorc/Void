@@ -19,4 +19,14 @@ public static class PathNormalizer
 
         return path;
     }
+
+    private static byte[] UintToBytes(uint value)
+    {
+        return new byte[] {
+        (byte)(value & 0xFF),
+        (byte)((value >> 8) & 0xFF),
+        (byte)((value >> 16) & 0xFF),
+        (byte)((value >> 24) & 0xFF)
+    };
+    }
 }

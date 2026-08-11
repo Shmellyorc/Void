@@ -14,26 +14,14 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "build-packer",
             "command": "dotnet",
             "type": "process",
             "args": [
-                "publish",
-                "${workspaceFolder}/Examples/FlappyBirb/FlappyBirb.csproj",
+                "build",
+                "${workspaceFolder}/Src/Void.Packer.CLI/Void.Packer.CLI.csproj",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary;ForceNoAlign"
-            ],
-            "problemMatcher": "$msCompile"
-        },
-        {
-            "label": "watch",
-            "command": "dotnet",
-            "type": "process",
-            "args": [
-                "watch",
-                "run",
-                "--project",
-                "${workspaceFolder}/Examples/FlappyBirb/FlappyBirb.csproj"
             ],
             "problemMatcher": "$msCompile"
         }

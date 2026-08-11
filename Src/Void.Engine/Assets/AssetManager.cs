@@ -2,21 +2,27 @@ namespace Void.Engine.Assets;
 
 public sealed class AssetManager
 {
+    #region fields
     private static uint s_id;
     private static readonly Lock IdLock = new();
-
-
-
     private readonly Dictionary<uint, IAsset> _assets = [];
     private readonly List<IMount> _mounts = [];
+
+    private static readonly HashSet<Type> EngineAssetTypes = new()
+    {
+        typeof(Texture),
+        // LDtkMap
+        typeof(SpriteFont),
+        typeof(Spritesheet),
+        typeof(Sound),
+    };
 
     private static readonly Dictionary<Type, string[]> SupportedExtensions = new()
     {
         {typeof(Texture), [".png", ".bmp", ".tga", ".jpg", ".gif", ".psd", ".hdr", ".pic", ".pnm"] },
         // LDtkMap
-        // SpriteFont
-        // BitmapFont
-        // Spritesheet
+        {typeof(SpriteFont), [".png", ".bmp", ".tga", ".jpg", ".gif", ".psd", ".hdr", ".pic", ".pnm"]},
+        {typeof(Spritesheet), [".sheet", ".json"]},
         {typeof(Sound), [
             ".ogg", ".wav", ".flac", ".mp3", ".aiff", ".au", ".raw", ".paf", ".svx", ".nist", ".voc",
             ".ircam", ".w64", ".mat4", ".mat5", ".pvf", ".htk", ".sds", ".avr", ".sd2", ".caf", ".wve",
@@ -28,14 +34,22 @@ public sealed class AssetManager
     {
         {typeof(Texture), (id, data, tag) => new Texture(id, data, tag, false, false)},
         // LDtkMap
-        // SpriteFont
-        // BitmapFont
-        // Spritesheet
+        {typeof(SpriteFont), (id, data, tag) => new SpriteFont(id, data, tag, SpriteFont.CharsetFull)},
+        {typeof(Spritesheet), (id, data, tag) => new Spritesheet(id, data, tag)},
         {typeof(Sound), (id, data, tag) => new Sound(id, data, tag)}
     };
+    #endregion
 
+
+
+    #region Properties
     public static AssetManager Instance { get; private set; }
+    public IReadOnlyList<IMount> Mounts => _mounts;
+    #endregion
 
+
+
+    #region Constructor
     internal AssetManager()
     {
         Instance ??= this;
@@ -45,26 +59,11 @@ public sealed class AssetManager
 
         _mounts.Add(new VirtualFileSystemMount());
     }
-
-    internal void Clear()
-    {
-        foreach (var asset in _assets.Values)
-        {
-            asset.Dispose();
-        }
-        _assets.Clear();
-
-        foreach (var mount in _mounts.OfType<IDisposable>())
-            mount.Dispose();
-        _mounts.Clear();
-    }
-
+    #endregion
 
 
 
     #region Mounts
-    public IReadOnlyList<IMount> Mounts => _mounts;
-
     public void AddMountToStart(IMount mount) => _mounts.Insert(0, mount);
 
     public void AddMountToEnd(IMount mount) => _mounts.Add(mount);
@@ -216,9 +215,47 @@ public sealed class AssetManager
     public Texture LoadTexture(string path, bool repeat, bool smoothing)
         => GetOrLoadInternal(path, (id, data, tag) => new Texture(id, data, tag, repeat, smoothing));
 
-    public Sound LoadSound(string path)
-        => GetOrLoadInternal(path, (id, data, tag) => new Sound(id, data, tag));
+    public SpriteFont LoadSpriteFont(string path, int spacing, int lineSpacing, string charset = SpriteFont.CharsetFull)
+        => GetOrLoadInternal(path, (id, data, tag) => new SpriteFont(id, data, tag, charset, spacing, lineSpacing));
 
+    #endregion
+
+
+
+    #region Register Custom Assets
+    public static void RegisterAssetType<T>(string[] extensions, Func<uint, byte[], string, T> factory) where T : IAsset
+    {
+        if (extensions == null || extensions.Length == 0)
+            throw new ArgumentException("At least one extension required", nameof(extensions));
+
+        if (factory == null)
+            throw new ArgumentNullException(nameof(factory));
+
+        var type = typeof(T);
+
+        if (SupportedExtensions.ContainsKey(type))
+            throw new InvalidOperationException($"Asset type '{type.Name}' is already registered.");
+
+        SupportedExtensions[type] = extensions;
+        SupportedLoaders[type] = (id, data, tag) => factory(id, data, tag);
+    }
+
+    public static bool IsAssetTypeRegistered<T>()
+        => SupportedExtensions.ContainsKey(typeof(T));
+
+    public static void UnregisterAssetType<T>()
+    {
+        var type = typeof(T);
+
+        if (EngineAssetTypes.Contains(type))
+            throw new InvalidOperationException($"Cannot unregister engine asset type '{type.Name}'.");
+
+        if (!SupportedExtensions.ContainsKey(type))
+            throw new InvalidOperationException($"Asset type '{type.Name}' is not registered.");
+
+        SupportedExtensions.Remove(type);
+        SupportedLoaders.Remove(type);
+    }
     #endregion
 
 
@@ -285,10 +322,12 @@ public sealed class AssetManager
             else if (SupportedLoaders.TryGetValue(typeof(T), out var defaultLoader))
                 newAsset = (T)defaultLoader(GetNextId(), assetData, normalizedPath);
             else
+            {
                 throw new InvalidOperationException(
                     $"No loader found for asset type '{typeof(T).Name}' " +
                     $"Registered types: {string.Join(", ", SupportedLoaders.Keys.Select(t => t.Name))}"
                 );
+            }
         }
         catch (Exception ex)
         {
@@ -378,6 +417,19 @@ public sealed class AssetManager
         {
             return ++s_id;
         }
+    }
+
+    internal void Clear()
+    {
+        foreach (var asset in _assets.Values)
+        {
+            asset.Dispose();
+        }
+        _assets.Clear();
+
+        foreach (var mount in _mounts.OfType<IDisposable>())
+            mount.Dispose();
+        _mounts.Clear();
     }
     #endregion
 }
