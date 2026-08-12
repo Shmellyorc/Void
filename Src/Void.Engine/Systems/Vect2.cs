@@ -192,6 +192,40 @@ public struct Vect2 : IEquatable<Vect2>
 
 
 
+    #region SmoothStep
+    public readonly Vect2 SmoothStep(in Vect2 target, float t)
+        => SmoothStep(this, target, t);
+    public static Vect2 SmoothStep(in Vect2 a, in Vect2 b, float t) => new(
+        MathHelper.SmoothStep(a.X, b.X, t), MathHelper.SmoothStep(a.Y, b.Y, t));
+    #endregion
+
+
+
+    #region Wrap
+    public readonly Vect2 Wrap(in Vect2 min, in Vect2 max) => Wrap(this, min, max);
+    public static Vect2 Wrap(in Vect2 value, in Vect2 min, in Vect2 max)
+        => new(MathHelper.Wrap(value.X, min.X, max.X), MathHelper.Wrap(value.Y, min.Y, max.Y));
+    #endregion
+
+
+
+    #region Snap
+    public readonly Vect2 Snap(float gridSize) => Snap(this, gridSize);
+    public static Vect2 Snap(in Vect2 value, float gridSize)
+        => new(MathHelper.Snap(value.X, gridSize), MathHelper.Snap(value.Y, gridSize));
+    #endregion
+
+
+
+    #region Center
+    public readonly Vect2 Center(in Vect2 other, bool clamped = false)
+        => Center(this, other, clamped);
+    public static Vect2 Center(in Vect2 a, in Vect2 b, bool clamped = false)
+        => new(MathHelper.Center(a.X, b.X, clamped), MathHelper.Center(a.Y, b.Y, clamped));
+    #endregion
+
+
+
     #region Normalize
     public readonly Vect2 Normalized() => Normalize(this);
     public static Vect2 Normalize(in Vect2 value)

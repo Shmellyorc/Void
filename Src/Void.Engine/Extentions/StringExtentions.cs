@@ -13,4 +13,7 @@ public static class StringExtentions
 
     public static bool IsIntern(this string value)
         => string.IsInterned(value) == value;
+
+    public static string ToEnumString(this Enum value)
+        => $"{value.GetType().FullName}.{value}";
 }

@@ -2,7 +2,7 @@ namespace Void.Engine;
 
 public sealed class GameSettings
 {
-    private bool _isFixedTimeStepSet, _ignoreInputSet;
+    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet, _isVSyncSet;
 
     public static GameSettings Instance { get; private set; }
     public bool Initialized { get; private set; }
@@ -71,7 +71,22 @@ public sealed class GameSettings
 
 
 
+    public GameSettings SetFullScreen(bool value)
+    {
+        _isFullscreenSet = true;
+        Fullscreen = value;
+        return this;
+    }
+    internal bool Fullscreen { get; private set; }
 
+
+    public GameSettings SetVsync(bool value)
+    {
+        _isVSyncSet = true;
+        VSync = value;
+        return this;
+    }
+    internal bool VSync { get; private set; }
 
 
     #region Frame Timing
@@ -82,6 +97,9 @@ public sealed class GameSettings
         IsFixedTimeStep = value;
         return this;
     }
+
+
+
     internal bool IsFixedTimeStep { get; private set; }
 
     public GameSettings SetTargetElapsedTime(float seconds)
@@ -303,6 +321,7 @@ public sealed class GameSettings
 
     public GameSettings SetIgnoreInputWhenUnfocused(bool value)
     {
+        _ignoreInputSet = true;
         IgnoreInputWhenUnfocused = value;
         return this;
     }
@@ -355,6 +374,8 @@ public sealed class GameSettings
         MaxDeltaTime = MaxDeltaTime <= 0 ? 0.1f : MaxDeltaTime;
         DeadZone = DeadZone <= 0f ? 0.15f : DeadZone;
         IgnoreInputWhenUnfocused = !_ignoreInputSet || IgnoreInputWhenUnfocused;
+        Fullscreen = _isFullscreenSet && Fullscreen;
+        VSync = !_isVSyncSet || VSync;
 
         Initialized = true;
 

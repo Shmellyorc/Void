@@ -10,3 +10,6 @@
 using var game = new FlappyBirbGame(settings);
 
 game.Run();
+
+// var test = new PathfinderTest();
+// test.Run();

@@ -25,8 +25,10 @@ public static class EmbeddedResources
     {
         // Converts "Data/SDLDatabase.db" to "Void.Engine.Resources.Data.SDLDatabase.db"
         string fullPath = $"{_assembly.GetName().Name}.Resources.{resourcePath.Replace('/', '.').Replace('\\', '.')}";
-        
+
+#pragma warning disable CS8632 
         Stream? stream = _assembly.GetManifestResourceStream(fullPath);
+#pragma warning restore CS8632 
         if (stream == null)
             throw new FileNotFoundException($"Embedded resource '{fullPath}' not found.");
         

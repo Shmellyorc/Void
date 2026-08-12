@@ -4,17 +4,14 @@ public sealed class Pipe
 {
     private const float Gap = 60;
 
-    private readonly Rect2 _topPipeRect = new(302, 0, 26, 135);
-    private readonly Rect2 _bottomPipeRect = new(330, 0, 26, 135);
-    private readonly Texture _texture;
+    private readonly Rect2 _topPipeRect = Global.Sheet.GetBounds("TopPipe");
+    private readonly Rect2 _bottomPipeRect = Global.Sheet.GetBounds("BottomPipe");
 
     public Vect2 Position { get; set; }
 
     public Pipe(Vect2 position)
     {
         Position = position;
-
-        _texture = AssetManager.Instance.Load<Texture>("Spritesheet.png");
     }
 
     public void Draw(SpriteBatcher batch)
@@ -28,7 +25,7 @@ public sealed class Pipe
             Position.Y + Gap / 2
         );
 
-        batch.Draw(_texture, top, _topPipeRect, Color.White, 0.8f);
-        batch.Draw(_texture, bottom, _bottomPipeRect, Color.White, 0.8f);
+        batch.Draw(Global.Texture, top, _topPipeRect, Color.White, 0.8f);
+        batch.Draw(Global.Texture, bottom, _bottomPipeRect, Color.White, 0.8f);
     }
 }

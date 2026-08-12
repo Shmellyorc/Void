@@ -14,6 +14,9 @@ public abstract class Font : IAsset
     public bool IsValid { get; protected set; }
     public DateTime LastAccessTime { get; protected set; }
     public AssetType Type { get; }
+    public abstract float LineHeight { get; }
+    public float LineSpacing { get; protected set; }
+    public float Spacing { get; protected set; }
 
     protected Font(uint id, byte[] data, string tag, AssetType type = AssetType.Normal)
     {
@@ -68,13 +71,13 @@ public abstract class Font : IAsset
                 continue;
 
             var glyph = GetGlyph(c);
-            currentLineWidth += glyph.Advance;
+            currentLineWidth += glyph.Advance + Spacing;
         }
 
         if (currentLineWidth > maxLineWidth)
             maxLineWidth = currentLineWidth;
 
-        float lineHeight = GetLineHeight();
+        float lineHeight = LineHeight + LineSpacing;
 
         return new Vect2(maxLineWidth, lineCount * lineHeight);
     }

@@ -1,8 +1,11 @@
-﻿namespace Void.Engine;
+﻿using Void.Engine.Systems;
+
+namespace Void.Engine;
 
 public class Game : IDisposable
 {
     private readonly GameSettings _settings;
+    private readonly Window _window;
     private readonly BeaconManager _beacon = new();
     private readonly Coroutine _coroutine = new();
     private readonly AssetManager _asset = new();
@@ -12,13 +15,12 @@ public class Game : IDisposable
     private SFTime _previousTime;
     private bool _isDisposed;
 
-    internal SFRenderWindow _window;
-    internal SFRenderTexture _renderTexture;
-    internal SFSprite _renderSprite;
     internal int _scrollWheel;
 
     public static Game Instance { get; private set; }
-    public bool IsActive { get; private set; }
+    public bool IsActive => _window.IsFocused;
+    public FrameTime FrameTime => _timing;
+    public Window Window => _window;
 
     public Game(GameSettings settings)
     {
@@ -28,23 +30,20 @@ public class Game : IDisposable
             throw new InvalidOperationException($"Settings has never been build. Please use .Build() to finalize the build");
 
         Instance ??= this;
-
         _settings = settings;
 
-        var styles = SFStyles.Close | SFStyles.Titlebar;
-        var video = new SFVideoMode((uint)_settings.Window.X, (uint)_settings.Window.Y);
-        var context = new SFContextSettings { MajorVersion = 4, MinorVersion = 0 };
-
-        _window = new SFRenderWindow(video, _settings.AppTitle, styles, context);
-
-        _renderTexture = new SFRenderTexture((uint)_settings.Window.X, (uint)_settings.Window.Y);
-        _renderSprite = new SFSprite(_renderTexture.Texture);
-
-        _window.Closed += (s, o) => _window.Close();
-        _window.GainedFocus += (s, o) => IsActive = true;
-        _window.LostFocus += (s, o) => IsActive = false;
-        _window.MouseWheelScrolled += (sender, args) => _scrollWheel += (int)args.Delta;
+        _window = new Window(
+            (int)_settings.Window.X,
+            (int)_settings.Window.Y,
+            _settings.AppTitle,
+            _settings.Fullscreen ? WindowMode.Fullscreen : WindowMode.Windowed,
+            _settings.VSync
+        )
+        {
+            OnMouseWheelScrolled = delta => _scrollWheel += delta
+        };
     }
+
     ~Game() => Dispose();
 
     public void Run()
@@ -73,23 +72,19 @@ public class Game : IDisposable
                     _timing.ConsumeFixedUpdate();
                 }
 
-                _renderTexture.Clear(_settings.ClearColor);
+                _window.BeginRender(_settings.ClearColor);
                 OnDraw(_timing);
-                _renderTexture.Display();
+                _window.EndRender();
             }
             else
             {
                 _coroutine.Update(_timing);
                 OnUpdate(_timing);
 
-                _renderTexture.Clear(_settings.ClearColor);
+                _window.BeginRender(_settings.ClearColor);
                 OnDraw(_timing);
-                _renderTexture.Display();
+                _window.EndRender();
             }
-
-            _window.Clear();
-            _window.Draw(_renderSprite);
-            _window.Display();
         }
     }
 
@@ -109,13 +104,9 @@ public class Game : IDisposable
         _beacon.Clear();
         _asset.Clear();
         _atlas.Clear();
-
-        _renderSprite?.Dispose();
-        _renderTexture?.Dispose();
-        _window?.Dispose();
+        _window.Dispose();
 
         GC.SuppressFinalize(this);
-
         _isDisposed = true;
     }
 }

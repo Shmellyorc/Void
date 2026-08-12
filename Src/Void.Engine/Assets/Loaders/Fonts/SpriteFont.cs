@@ -13,10 +13,9 @@ public sealed class SpriteFont : Font, IAsset
 
     private readonly string _charset;
 
-    public int LineSpacing { get; }
-    public int Spacing { get; }
+    public override float LineHeight => GetActualLineHeight();
 
-    internal SpriteFont(uint id, byte[] data, string tag, string charset = null, int lineSpacing = 1, int spacing = 0)
+    internal SpriteFont(uint id, byte[] data, string tag, string charset = null, float lineSpacing = 0f, float spacing = 0f)
         : base(id, data, tag, AssetType.Normal)
     {
         _charset = charset ?? CharsetFull;
@@ -87,7 +86,7 @@ public sealed class SpriteFont : Font, IAsset
                     Position = bounds.Position,
                     Size = bounds.Size,
                     Offset = Vect2.Zero,
-                    Advance = (int)bounds.Width + Spacing
+                    Advance = bounds.Width + Spacing
                 };
 
                 glyphs.Add(glyph);
@@ -168,4 +167,15 @@ public sealed class SpriteFont : Font, IAsset
 
     public static implicit operator SFTexture(SpriteFont font)
         => font._texture;
+
+    private float GetActualLineHeight()
+    {
+        float maxHeight = 0;
+        foreach (var glyph in _glyphs)
+        {
+            if (glyph.Size.Y > maxHeight)
+                maxHeight = glyph.Size.Y;
+        }
+        return maxHeight > 0 ? maxHeight : (_image?.Size.Y ?? 0);
+    }
 }

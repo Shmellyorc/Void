@@ -14,9 +14,12 @@ public sealed class HashHelper
     public static uint Cache32(string input)
         => _cache32.GetOrAdd(input, new Lazy<uint>(() => Hash32(input))).Value;
 
+    public static uint Cache32(Enum input) => Hash32(input.ToEnumString());
+
     public static ulong Cache64(string input)
         => _cache64.GetOrAdd(input, new Lazy<ulong>(() => Hash64(input))).Value;
 
+    public static ulong Cache64(Enum input) => Cache64(input.ToEnumString());
 
     public static uint Hash32(ReadOnlySpan<byte> data)
     {

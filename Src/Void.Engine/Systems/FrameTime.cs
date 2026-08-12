@@ -128,5 +128,18 @@ public sealed class FrameTime
             _accumulator -= TargetElapsed;
     }
 
-    public float DeltaTime => (float)_elapsedTime.TotalSeconds;
+    /// <summary>
+    /// Gets or sets the time scale multiplier. 1f = normal speed, 0.5f = half speed, 2f = double speed.
+    /// </summary>
+    public float TimeScale { get; set; } = 1f;
+
+    /// <summary>
+    /// Gets the scaled delta time (affected by TimeScale).
+    /// </summary>
+    public float DeltaTime => (float)_elapsedTime.TotalSeconds * TimeScale;
+
+    /// <summary>
+    /// Gets the unscaled delta time (always real time, ignores TimeScale).
+    /// </summary>
+    public float UnscaledDeltaTime => (float)_elapsedTime.TotalSeconds;
 }

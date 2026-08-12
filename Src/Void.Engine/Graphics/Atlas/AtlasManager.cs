@@ -65,20 +65,16 @@ public sealed class AtlasManager
         }
     }
 
-    public bool TryPack(Texture texture, Rect2 srcRect, out Rect2 packedRect, out int pageId)
+    public bool TryPack(SFTexture texture, Rect2 srcRect, out Rect2 packedRect, out int pageId)
     {
         packedRect = default;
         pageId = -1;
-
-        // Pre-created (non-loaded texture file) cannot be added to an atlas
-        if (texture.Type == AssetType.Instanced)
-            return false;
 
         // Cannot fit a rectnagle bigger than an texture atlas page size
         if (srcRect.Width > _pageSize || srcRect.Height > _pageSize)
             return false;
 
-        if (!texture.IsValid)
+        if (texture == null || !texture.IsInvalid)
             return false;
 
         var key = (texture.NativeHandle, srcRect);
@@ -109,7 +105,7 @@ public sealed class AtlasManager
 
             if (page.Packer.TryPack(width, height, out var rect))
             {
-                texture.CopyTo(page.RenderTexture, srcRect, new Vect2(rect.Left, rect.Top));
+                CopyTo(page.RenderTexture, texture, srcRect, new Vect2(rect.Left, rect.Top));
 
                 // packed successfully
                 var lruNode = _lruList.AddFirst(key);
@@ -260,5 +256,35 @@ public sealed class AtlasManager
         }
 
         _evictionCount = 0;
+    }
+
+    private void CopyTo(SFRenderTexture target, SFTexture texture, Rect2 srcRect, Vect2 destination)
+    {
+        if (texture == null || texture.IsInvalid || target == null)
+            return;
+
+        var image = texture.CopyToImage();
+
+        var subImage = new SFImage(
+            (uint)srcRect.Width,
+            (uint)srcRect.Height,
+            Color.Transparent
+        );
+
+        for (int y = 0; y < srcRect.Height; y++)
+        {
+            for (int x = 0; x < srcRect.Width; x++)
+            {
+                int px = (int)(srcRect.Left + x);
+                int py = (int)(srcRect.Top + y);
+                var color = image.GetPixel((uint)px, (uint)py);
+                subImage.SetPixel((uint)x, (uint)y, color);
+            }
+        }
+
+        target.Texture.Update(subImage, (uint)destination.X, (uint)destination.Y);
+
+        image?.Dispose();
+        image = null;
     }
 }

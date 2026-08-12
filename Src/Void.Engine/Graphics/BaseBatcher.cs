@@ -28,7 +28,7 @@ public abstract class BaseBatcher : IBatcher
     public int VertexCount => _stats.Vertices;
     public int CommandCount => _cmdCount;
 
-    protected SFRenderTexture RenderTexture => Game.Instance._renderTexture;
+    protected SFRenderTexture RenderTexture => Game.Instance.Window._renderTexture;
     protected abstract int VerticesPerCommand { get; }
 
     protected BaseBatcher(int capacity = 0)
