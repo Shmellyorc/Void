@@ -1,5 +1,3 @@
-global using Snap.Engine.Tweens;
-
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 public sealed class SpeedTween<T> : IEnumerator

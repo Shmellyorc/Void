@@ -1,4 +1,4 @@
-namespace Snap.Engine.Helpers;
+namespace Void.Engine.Helpers;
 
 public static class JsonHelper
 {

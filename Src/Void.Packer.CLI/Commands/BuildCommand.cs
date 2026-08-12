@@ -1,4 +1,5 @@
 using CommandLine;
+
 using Void.Packer.Encryption;
 
 namespace Void.Packer.CLI.Commands;
@@ -12,13 +13,13 @@ public class BuildCommand
     [Option('o', "output", Required = true, HelpText = "Output directory for .pack and .key files")]
     public string OutputPath { get; set; }
 
-    [Option('n', "name", Default = "GameAssets", HelpText = "Base name for output files")]
+    [Option('n', "name", Default = "GameAssets",  HelpText = "Base name for output files")]
     public string Name { get; set; }
 
-    [Option('i', "include", HelpText = "Include patterns (e.g., **/*.png) - can specify multiple")]
+    [Option('i', "include", Separator = ',', HelpText = "Include patterns (e.g., **/*.png) - can specify multiple")]
     public IEnumerable<string> IncludePatterns { get; set; }
 
-    [Option('e', "exclude", HelpText = "Exclude patterns (e.g., **/Backup/**) - can specify multiple")]
+    [Option('e', "exclude", Separator = ',', HelpText = "Exclude patterns (e.g., **/Backup/**) - can specify multiple")]
     public IEnumerable<string> ExcludePatterns { get; set; }
 
     [Option("encrypt", Default = true, HelpText = "Enable encryption")]

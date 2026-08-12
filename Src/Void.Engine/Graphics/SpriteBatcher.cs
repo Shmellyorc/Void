@@ -13,6 +13,24 @@ public enum TextAlignment
     BottomRight
 }
 
+public enum TextWrapMode
+{
+    /// <summary>
+    /// No wrapping. Text may extend beyond the bounds.
+    /// </summary>
+    None,
+
+    /// <summary>
+    /// Wraps at word boundaries (spaces).
+    /// </summary>
+    Word,
+
+    /// <summary>
+    /// Wraps at character boundaries (any character).
+    /// </summary>
+    Character
+}
+
 public sealed partial class SpriteBatcher : BaseBatcher
 {
     private const int VerticesPerQuad = 6;
@@ -127,24 +145,47 @@ public sealed partial class SpriteBatcher : BaseBatcher
     public void DrawBypassAtlas(Texture texture, Vect2 position, Color color, float rotation, Vect2 scale, float depth = 0f)
         => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale, Vect2.Zero, TextureEffects.None, depth);
 
+    #region DrawText - Position-based (anchor point)
+
     public void DrawText(Font font, string text, Vect2 position, Color color)
-        => EngineDrawText(font, text, new Rect2(position.X, position.Y, float.MaxValue, float.MaxValue), color, 0f, Vect2.One, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
+        => DrawTextPosition(font, text, position, color, 0f, Vect2.One, TextAlignment.TopLeft);
+
     public void DrawText(Font font, string text, Vect2 position, Color color, Vect2 scale)
-        => EngineDrawText(font, text, new Rect2(position.X, position.Y, float.MaxValue, float.MaxValue), color, 0f, scale, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
+        => DrawTextPosition(font, text, position, color, 0f, scale, TextAlignment.TopLeft);
+
     public void DrawText(Font font, string text, Vect2 position, Color color, float depth)
-        => EngineDrawText(font, text, new Rect2(position.X, position.Y, float.MaxValue, float.MaxValue), color, depth, Vect2.One, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
-    public void DrawText(Font font, string text, Rect2 bounds, Color color)
-        => EngineDrawText(font, text, bounds, color, 0f, Vect2.One, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
-    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale)
-        => EngineDrawText(font, text, bounds, color, 0f, scale, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
-    public void DrawText(Font font, string text, Rect2 bounds, Color color, float depth)
-        => EngineDrawText(font, text, bounds, color, depth, Vect2.One, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
-    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, float depth, TextAlignment alignment = TextAlignment.TopLeft, bool wordWrap = false)
-        => EngineDrawText(font, text, bounds, color, depth, scale, alignment, wordWrap, font.Type == AssetType.Normal);
+        => DrawTextPosition(font, text, position, color, depth, Vect2.One, TextAlignment.TopLeft);
+
     public void DrawText(Font font, string text, Vect2 position, Color color, Vect2 scale, float depth)
-        => EngineDrawText(font, text, new Rect2(position, GameSettings.Instance.Viewport), color, depth, scale, TextAlignment.TopLeft, false, font.Type == AssetType.Normal);
-    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale, float depth = 0f)
-        => EngineDrawText(font, text, new Rect2(position, GameSettings.Instance.Viewport), color, depth, scale, alignment, false, font.Type == AssetType.Normal);
+        => DrawTextPosition(font, text, position, color, depth, scale, TextAlignment.TopLeft);
+
+    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment)
+        => DrawTextPosition(font, text, position, color, 0f, Vect2.One, alignment);
+
+    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale)
+        => DrawTextPosition(font, text, position, color, 0f, scale, alignment);
+
+    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale, float depth)
+        => DrawTextPosition(font, text, position, color, depth, scale, alignment);
+
+    #endregion
+
+    #region DrawText - Rect-based (bounding box)
+
+    public void DrawText(Font font, string text, Rect2 bounds, Color color)
+        => DrawTextBounds(font, text, bounds, color, 0f, Vect2.One, TextAlignment.TopLeft, TextWrapMode.None);
+
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale)
+        => DrawTextBounds(font, text, bounds, color, 0f, scale, TextAlignment.TopLeft, TextWrapMode.None);
+
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, float depth)
+        => DrawTextBounds(font, text, bounds, color, depth, Vect2.One, TextAlignment.TopLeft, TextWrapMode.None);
+
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, float depth,
+        TextAlignment alignment = TextAlignment.TopLeft, TextWrapMode wrapMode = TextWrapMode.None)
+        => DrawTextBounds(font, text, bounds, color, depth, scale, alignment, wrapMode);
+
+    #endregion
 
     public void DrawNinePatch(Texture texture, Rect2 dstRect, Rect2 sourceRect, Rect2 corners, Color color, float depth = 0f)
     {
@@ -168,6 +209,7 @@ public sealed partial class SpriteBatcher : BaseBatcher
     }
 
     #region Private Methods
+
     private Rect2[] CalculateNinePatchRects(Rect2 dstRect, Rect2 corners)
     {
         var result = new Rect2[9];
@@ -417,17 +459,53 @@ public sealed partial class SpriteBatcher : BaseBatcher
         public void UpdateMode(SortMode sortMode) => _sortMode = sortMode;
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void EngineDrawText(
-    Font font,
-    string text,
-    Rect2 bounds,
-    Color color,
-    float depth,
-    Vect2 scale,
-    TextAlignment alignment,
-    bool wordWrap,
-    bool canPack)
+    /// <summary>
+    /// Draws text with position as the anchor point based on alignment.
+    /// </summary>
+    private void DrawTextPosition(
+        Font font,
+        string text,
+        Vect2 position,
+        Color color,
+        float depth,
+        Vect2 scale,
+        TextAlignment alignment)
+    {
+        if (string.IsNullOrEmpty(text) || font == null || !font.IsValid)
+            return;
+
+        var textSize = font.Measure(text) * scale;
+
+        // Calculate top-left corner based on anchor position and alignment
+        Vect2 topLeft = alignment switch
+        {
+            TextAlignment.TopLeft => position,
+            TextAlignment.TopCenter => new(position.X - textSize.X / 2f, position.Y),
+            TextAlignment.TopRight => new(position.X - textSize.X, position.Y),
+            TextAlignment.CenterLeft => new(position.X, position.Y - textSize.Y / 2f),
+            TextAlignment.Center => new(position.X - textSize.X / 2f, position.Y - textSize.Y / 2f),
+            TextAlignment.CenterRight => new(position.X - textSize.X, position.Y - textSize.Y / 2f),
+            TextAlignment.BottomLeft => new(position.X, position.Y - textSize.Y),
+            TextAlignment.BottomCenter => new(position.X - textSize.X / 2f, position.Y - textSize.Y),
+            TextAlignment.BottomRight => new(position.X - textSize.X, position.Y - textSize.Y),
+            _ => position
+        };
+
+        DrawTextBounds(font, text, new Rect2(topLeft, textSize), color, depth, scale, alignment, TextWrapMode.None);
+    }
+
+    /// <summary>
+    /// Draws text within a bounding box with optional wrapping.
+    /// </summary>
+    private void DrawTextBounds(
+        Font font,
+        string text,
+        Rect2 bounds,
+        Color color,
+        float depth,
+        Vect2 scale,
+        TextAlignment alignment,
+        TextWrapMode wrapMode)
     {
         if (string.IsNullOrEmpty(text) || font == null || !font.IsValid)
             return;
@@ -466,19 +544,22 @@ public sealed partial class SpriteBatcher : BaseBatcher
                 continue;
             }
 
-            if (wordWrap)
+            switch (wrapMode)
             {
-                ProcessWrappedLine(line, font, bounds, color, depth, scale, alignment, ref currentY, lineHeight, canPack);
-            }
-            else
-            {
-                ProcessLine(line, font, bounds, color, depth, scale, alignment, currentY, canPack);
-                currentY += lineHeight;
+                case TextWrapMode.Word:
+                    ProcessWordWrappedLine(line, font, bounds, color, depth, scale, alignment, ref currentY, lineHeight);
+                    break;
+                case TextWrapMode.Character:
+                    ProcessCharWrappedLine(line, font, bounds, color, depth, scale, alignment, ref currentY, lineHeight);
+                    break;
+                default:
+                    ProcessLine(line, font, bounds, color, depth, scale, alignment, currentY);
+                    currentY += lineHeight;
+                    break;
             }
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ProcessLine(
         string line,
         Font font,
@@ -487,8 +568,7 @@ public sealed partial class SpriteBatcher : BaseBatcher
         float depth,
         Vect2 scale,
         TextAlignment alignment,
-        float y,
-        bool canPack)
+        float y)
     {
         float lineWidth = 0;
         for (int i = 0; i < line.Length; i++)
@@ -552,15 +632,14 @@ public sealed partial class SpriteBatcher : BaseBatcher
                 Vect2.Zero,
                 TextureEffects.None,
                 depth,
-                canPack
+                font.Type == AssetType.Normal
             );
 
             currentX += glyph.Advance * scale.X;
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ProcessWrappedLine(
+    private void ProcessWordWrappedLine(
         string line,
         Font font,
         Rect2 bounds,
@@ -569,8 +648,7 @@ public sealed partial class SpriteBatcher : BaseBatcher
         Vect2 scale,
         TextAlignment alignment,
         ref float y,
-        float lineHeight,
-        bool canPack)
+        float lineHeight)
     {
         string[] words = line.Split(' ');
         float currentX = bounds.X;
@@ -626,7 +704,7 @@ public sealed partial class SpriteBatcher : BaseBatcher
                     Vect2.Zero,
                     TextureEffects.None,
                     depth,
-                    canPack
+                    font.Type == AssetType.Normal
                 );
 
                 currentX += glyph.Advance * scale.X;
@@ -635,5 +713,64 @@ public sealed partial class SpriteBatcher : BaseBatcher
 
         y = currentY + lineHeight;
     }
+
+    private void ProcessCharWrappedLine(
+        string line,
+        Font font,
+        Rect2 bounds,
+        Color color,
+        float depth,
+        Vect2 scale,
+        TextAlignment alignment,
+        ref float y,
+        float lineHeight)
+    {
+        float currentX = bounds.X;
+        float currentY = y;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            char c = line[i];
+            Glyph glyph = font.GetGlyph(c);
+            if (glyph.IsEmpty)
+                continue;
+
+            float charWidth = glyph.Advance * scale.X;
+
+            if (currentX + charWidth > bounds.X + bounds.Width)
+            {
+                currentY += lineHeight;
+                currentX = bounds.X;
+
+                if (currentY + lineHeight > bounds.Y + bounds.Height)
+                    break;
+            }
+
+            Rect2 dstRect = new Rect2(
+                currentX + (glyph.Offset.X * scale.X),
+                currentY + (glyph.Offset.Y * scale.Y),
+                glyph.Size.X * scale.X,
+                glyph.Size.Y * scale.Y
+            );
+
+            EngineDraw(
+                font,
+                dstRect,
+                new Rect2(glyph.Position.X, glyph.Position.Y, glyph.Size.X, glyph.Size.Y),
+                color,
+                0f,
+                Vect2.One,
+                Vect2.Zero,
+                TextureEffects.None,
+                depth,
+                font.Type == AssetType.Normal
+            );
+
+            currentX += charWidth;
+        }
+
+        y = currentY + lineHeight;
+    }
+
     #endregion
 }

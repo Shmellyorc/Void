@@ -26,7 +26,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal string AppName { get; private set; }
+    public string AppName { get; private set; }
 
 
 
@@ -39,7 +39,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal string AppCompany { get; private set; }
+    public string AppCompany { get; private set; }
 
 
 
@@ -52,7 +52,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal string AppTitle { get; private set; }
+    public string AppTitle { get; private set; }
 
 
 
@@ -67,7 +67,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal string AppContentRoot { get; private set; }
+    public string AppContentRoot { get; private set; }
 
 
 
@@ -77,7 +77,7 @@ public sealed class GameSettings
         Fullscreen = value;
         return this;
     }
-    internal bool Fullscreen { get; private set; }
+    public bool Fullscreen { get; private set; }
 
 
     public GameSettings SetVsync(bool value)
@@ -86,7 +86,7 @@ public sealed class GameSettings
         VSync = value;
         return this;
     }
-    internal bool VSync { get; private set; }
+    public bool VSync { get; private set; }
 
 
     #region Frame Timing
@@ -97,10 +97,10 @@ public sealed class GameSettings
         IsFixedTimeStep = value;
         return this;
     }
+    public bool IsFixedTimeStep { get; private set; }
 
 
 
-    internal bool IsFixedTimeStep { get; private set; }
 
     public GameSettings SetTargetElapsedTime(float seconds)
     {
@@ -110,8 +110,6 @@ public sealed class GameSettings
         TargetElapsedTime = seconds;
         return this;
     }
-    internal float TargetElapsedTime { get; private set; }
-
     public GameSettings SetTargetFPS(float fps)
     {
         if (fps <= 0f)
@@ -120,6 +118,7 @@ public sealed class GameSettings
         TargetElapsedTime = 1f / fps;
         return this;
     }
+    public float TargetElapsedTime { get; private set; }
 
     public GameSettings SetMaxDeltaTime(float seconds)
     {
@@ -129,7 +128,7 @@ public sealed class GameSettings
         MaxDeltaTime = seconds;
         return this;
     }
-    internal float MaxDeltaTime { get; private set; }
+    public float MaxDeltaTime { get; private set; }
 
     #endregion
 
@@ -149,7 +148,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal Vect2 Window { get; private set; }
+    public Vect2 Window { get; private set; }
 
 
 
@@ -164,7 +163,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal Vect2 Viewport { get; private set; }
+    public Vect2 Viewport { get; private set; }
 
 
 
@@ -193,7 +192,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal Color ClearColor { get; private set; }
+    public Color ClearColor { get; private set; }
 
 
 
@@ -204,7 +203,7 @@ public sealed class GameSettings
         UseHalfTexelOffset = value;
         return this;
     }
-    internal bool UseHalfTexelOffset { get; private set; }
+    public bool UseHalfTexelOffset { get; private set; }
 
 
 
@@ -214,7 +213,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal int AssetEvictionMinutes { get; private set; }
+    public int AssetEvictionMinutes { get; private set; }
 
 
 
@@ -253,7 +252,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal IAtlasPacker AtlasPacker { get; private set; }
+    public IAtlasPacker AtlasPacker { get; private set; }
 
 
 
@@ -267,7 +266,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal int SpriteBatchCapacity { get; private set; }
+    public int SpriteBatchCapacity { get; private set; }
 
     public GameSettings SetPrimitiveBatchCapacity(uint value)
     {
@@ -278,21 +277,21 @@ public sealed class GameSettings
 
         return this;
     }
-    internal int PrimitiveBatchCapacity { get; private set; }
+    public int PrimitiveBatchCapacity { get; private set; }
 
     public GameSettings SetEnableBatchSorting(bool value)
     {
         EnableBatchSorting = value;
         return this;
     }
-    internal bool EnableBatchSorting { get; private set; }
+    public bool EnableBatchSorting { get; private set; }
 
     public GameSettings SetDefaultSortMode(SortMode value)
     {
         DefaultSortMode = value;
         return this;
     }
-    internal SortMode DefaultSortMode { get; private set; }
+    public SortMode DefaultSortMode { get; private set; }
 
     public GameSettings SetDefaultBlendMode(IBlendMode value)
     {
@@ -303,7 +302,7 @@ public sealed class GameSettings
 
         return this;
     }
-    internal IBlendMode DefaultBlendMode { get; private set; }
+    public IBlendMode DefaultBlendMode { get; private set; }
 
 
 
@@ -315,7 +314,7 @@ public sealed class GameSettings
         DeadZone = value;
         return this;
     }
-    internal float DeadZone { get; private set; }
+    public float DeadZone { get; private set; }
 
 
 
@@ -325,7 +324,7 @@ public sealed class GameSettings
         IgnoreInputWhenUnfocused = value;
         return this;
     }
-    internal bool IgnoreInputWhenUnfocused { get; private set; }
+    public bool IgnoreInputWhenUnfocused { get; private set; }
 
 
 

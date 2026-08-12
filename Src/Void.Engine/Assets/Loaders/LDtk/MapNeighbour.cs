@@ -1,6 +1,4 @@
-global using Snap.Engine.Helpers;
-
-namespace Snap.Engine.Assets.LDTKImporter;
+namespace Void.Engine.Assets.Loaders.LDtk;
 
 // N, NE, E, SE, S, SW, W, NW
 

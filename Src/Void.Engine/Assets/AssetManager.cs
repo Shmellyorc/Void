@@ -216,7 +216,7 @@ public sealed class AssetManager
         => GetOrLoadInternal(path, (id, data, tag) => new Texture(id, data, tag, repeat, smoothing));
 
     public SpriteFont LoadSpriteFont(string path, float spacing = 0f, float lineSpacing = 0f, string charset = SpriteFont.CharsetFull)
-        => GetOrLoadInternal(path, (id, data, tag) => new SpriteFont(id, data, tag, charset, spacing, lineSpacing));
+        => GetOrLoadInternal(path, (id, data, tag) => new SpriteFont(id, data, tag, charset, lineSpacing, spacing));
 
     #endregion
 

@@ -1,12 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<!-- 
+  Build the asset pack:
+  Packs all files from Content/ except:
+    - All .aseprite source files
+    - Unused font PNGs (Dialog, Knowledge, Messagebox)
+  
+  Output: GameAssets.pack + GameAssets.key in the Content folder.
+  
+  Test Compile:
+  /home/<user>/Documents/Void/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI build \
+  -c "/home/<user>/Documents/Void/Examples/FlappyBirb/Content" \
+  -o "/home/<user>/Documents/Void/Examples/FlappyBirb/Content" \
+  -i "**/*" \
+  -e "**/*.ase*,**/Fonts/FontDialog.png,**/Fonts/FontKnowledge.png,**/Fonts/FontMessagebox.png" \
+  -v
+-->
+
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>WinExe</OutputType>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- <AssemblyName>Void.Packer.CLI</AssemblyName> -->
-    <!-- <PackAsTool>true</PackAsTool> -->
-    <!-- <ToolCommandName>packer</ToolCommandName> -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>packer</ToolCommandName>
+    <Version>1.0.0</Version>
+    <Description>Asset packer for Void Engine games. Packs content files into .pack format with optional encryption and compression.</Description>
   </PropertyGroup>
 
   <ItemGroup>

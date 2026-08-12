@@ -1,5 +1,3 @@
-using Snap.Engine.Assets.LDTKImporter;
-
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 public sealed class LDtkLevel
