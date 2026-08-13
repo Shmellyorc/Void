@@ -1,5 +1,3 @@
-using CommandLine;
-
 namespace Void.Packer.CLI.Commands;
 
 [Verb("extract", HelpText = "Extract all files from a pack")]

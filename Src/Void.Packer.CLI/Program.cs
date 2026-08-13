@@ -1,13 +1,4 @@
-﻿using CommandLine;
-
-using Spectre.Console;
-
-using Void.Packer.CLI.Commands;
-using Void.Packer.CLI.Services;
-using Void.Packer.CLI.UI;
-using Void.Packer.Encryption;
-
-namespace Void.Packer.CLI;
+﻿namespace Void.Packer.CLI;
 
 public static class Program
 {

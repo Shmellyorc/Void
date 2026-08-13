@@ -2,7 +2,7 @@ namespace Void.Engine;
 
 public sealed class GameSettings
 {
-    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet, _isVSyncSet;
+    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet, _isVSyncSet, _useApplicationDataSet;
 
     public static GameSettings Instance { get; private set; }
     public bool Initialized { get; private set; }
@@ -14,7 +14,13 @@ public sealed class GameSettings
     }
 
 
-
+    public GameSettings SetUseApplicationData(bool value)
+    {
+        _useApplicationDataSet = true;
+        UseApplicationData = value;
+        return this;
+    }
+    public bool UseApplicationData { get; private set; }
 
 
     public GameSettings SetAppName(string name)
@@ -328,6 +334,19 @@ public sealed class GameSettings
 
 
 
+
+    public GameSettings SetAppVersion(uint major, uint minor = 0, uint rebuild = 0, uint revision = 0)
+    {
+        if (major == 0)
+            throw new ArgumentOutOfRangeException(nameof(major), "Major version must be greater than zero");
+
+        AppVersion = new Version((int)major, (int)minor, (int)rebuild, (int)revision).ToString();
+        return this;
+    }
+    public string AppVersion { get; private set; }
+    public string AppVersionHash => $"{HashHelper.Cache64(AppVersion):X8}";
+
+
     public GameSettings Build()
     {
         if (Initialized)
@@ -375,6 +394,8 @@ public sealed class GameSettings
         IgnoreInputWhenUnfocused = !_ignoreInputSet || IgnoreInputWhenUnfocused;
         Fullscreen = _isFullscreenSet && Fullscreen;
         VSync = !_isVSyncSet || VSync;
+        UseApplicationData = _useApplicationDataSet && UseApplicationData;
+        AppVersion = AppVersion.IsEmpty() ? "1.0.0.0" : AppVersion;
 
         Initialized = true;
 

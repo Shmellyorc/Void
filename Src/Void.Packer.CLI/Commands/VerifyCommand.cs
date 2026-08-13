@@ -1,5 +1,3 @@
-using CommandLine;
-
 namespace Void.Packer.CLI.Commands;
 
 [Verb("verify", HelpText = "Verify pack integrity")]

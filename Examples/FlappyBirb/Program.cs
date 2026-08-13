@@ -21,6 +21,8 @@
 // and scale the window up 4x for that chunky retro look.
 // ----------------------------------------------------------------------------
 
+using Void.Engine.Saves;
+
 var settings = new GameSettings()
     .SetAppCompany("Shmellyorc")
     .SetAppName("FlappyBirb")

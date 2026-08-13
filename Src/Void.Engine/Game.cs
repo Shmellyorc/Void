@@ -21,6 +21,30 @@ public class Game : IDisposable
     public bool IsActive => _window.IsFocused;
     public FrameTime FrameTime => _timing;
     public Window Window => _window;
+    public string ApplicationLogFolder => Path.Combine(ApplicationFolder, "Logs");
+    public string ApplicationSaveFolder => Path.Combine(ApplicationFolder, "Saves");
+    public string ApplicationConfigFolder => Path.Combine(ApplicationFolder, "Config");
+    public string ApplicationTempFolder => Path.Combine(ApplicationFolder, "Temp");
+    public string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
+    public string VersionHash => $"{HashHelper.Cache64(Version):X8}";
+
+    public string ApplicationFolder
+    {
+        get
+        {
+            if (_settings.UseApplicationData)
+                return FileHelper.GetApplicationData(_settings.AppCompany, _settings.AppName);
+
+            string localPath = Path.Combine(AppContext.BaseDirectory, _settings.AppName);
+
+            // If this path is a file (like the executable), use a subfolder instead
+            if (File.Exists(localPath) && !Directory.Exists(localPath))
+                return Path.Combine(AppContext.BaseDirectory, _settings.AppName + "Data");
+
+            return localPath;
+        }
+    }
+
 
     public Game(GameSettings settings)
     {
@@ -42,6 +66,12 @@ public class Game : IDisposable
         {
             OnMouseWheelScrolled = delta => _scrollWheel += delta
         };
+
+        CreateFolder(ApplicationFolder, "Application data root");
+        CreateFolder(ApplicationLogFolder, "Application log folder");
+        CreateFolder(ApplicationSaveFolder, "Application save folder");
+        CreateFolder(ApplicationConfigFolder, "Application config folder");
+        CreateFolder(ApplicationTempFolder, "Application temp folder");
     }
 
     ~Game() => Dispose();
@@ -108,5 +138,28 @@ public class Game : IDisposable
 
         GC.SuppressFinalize(this);
         _isDisposed = true;
+    }
+
+
+
+
+    private void CreateFolder(string path, string description)
+    {
+        try
+        {
+            if (FileHelper.EnsureDirectoryExists(path))
+            {
+                Console.WriteLine($"Created {description}: {path}");
+            }
+            else
+            {
+                Console.WriteLine($"{description} already exists: {path}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: Unable to create {description} at '{path}'. {ex.Message}");
+            throw new IOException($"Unable to create {description} at '{path}'.", ex);
+        }
     }
 }

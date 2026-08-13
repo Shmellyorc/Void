@@ -16,7 +16,7 @@ public sealed class BeaconManager
         if (handle == null)
             throw new ArgumentNullException(nameof(handle), "handle is null");
 
-        var hash = HashHelper.Cache32(topic.Intern());
+        var hash = HashHelper.Cache32(topic);
         _topics.AddOrUpdate(
             hash,
             handle,
@@ -31,7 +31,7 @@ public sealed class BeaconManager
         if (handle == null)
             throw new ArgumentNullException(nameof(handle), "handle is null");
 
-        var hash = HashHelper.Cache32(topic.Intern());
+        var hash = HashHelper.Cache32(topic);
         if (!_topics.TryGetValue(hash, out var handles))
             return false;
 
@@ -49,7 +49,7 @@ public sealed class BeaconManager
         if (topic.IsEmpty())
             throw new ArgumentNullException(nameof(topic), "topic is null or empty");
 
-        var hash = HashHelper.Cache32(topic.Intern());
+        var hash = HashHelper.Cache32(topic);
 
         if (!_topics.TryGetValue(hash, out var handles))
             return;

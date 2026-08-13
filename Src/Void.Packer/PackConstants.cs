@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-namespace Void.Packer;
+﻿namespace Void.Packer;
 
 public static class PackConstants
 {

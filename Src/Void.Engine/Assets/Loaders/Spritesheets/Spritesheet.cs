@@ -46,7 +46,7 @@ public sealed class Spritesheet : IAsset
                     throw new InvalidOperationException($"Unable to find spritesheet keys");
 
                 var keyItem = jKeys[0];
-                var name = jName.GetString().Intern();
+                var name = jName.GetString();
                 var hash = HashHelper.Cache32(name);
 
                 if (_entries.ContainsKey(hash))
@@ -126,7 +126,7 @@ public sealed class Spritesheet : IAsset
     }
     public Rect2 GetBounds(string name)
     {
-        var hash = HashHelper.Cache32(name.Intern());
+        var hash = HashHelper.Cache32(name);
         if (!_entries.TryGetValue(hash, out var value))
             throw new InvalidOperationException($"'{name}' doesnt exist.");
         if (value.Bounds.IsEmpty)
@@ -173,7 +173,7 @@ public sealed class Spritesheet : IAsset
     }
     public Rect2 GetPatch(string name)
     {
-        var hash = HashHelper.Cache32(name.Intern());
+        var hash = HashHelper.Cache32(name);
         if (!_entries.TryGetValue(hash, out var value))
             throw new InvalidOperationException($"'{name}' doesnt exist.");
         if (value.Patch.IsEmpty)
@@ -220,7 +220,7 @@ public sealed class Spritesheet : IAsset
     }
     public Vect2 GetPivot(string name)
     {
-        var hash = HashHelper.Cache32(name.Intern());
+        var hash = HashHelper.Cache32(name);
         if (!_entries.TryGetValue(hash, out var value))
             throw new InvalidOperationException($"'{name}' doesnt exist.");
         if (value.Pivot.IsZero)

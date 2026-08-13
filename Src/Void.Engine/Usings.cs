@@ -4,9 +4,11 @@ global using System.Collections.Concurrent;
 global using System.Collections.Generic;
 global using System.Diagnostics.CodeAnalysis;
 global using System.Globalization;
+global using System.IO.Compression;
 global using System.Runtime.CompilerServices;
 global using System.Runtime.InteropServices;
 global using System.Runtime.Serialization;
+global using System.Security.Cryptography;
 global using System.Text;
 global using System.Text.Json;
 

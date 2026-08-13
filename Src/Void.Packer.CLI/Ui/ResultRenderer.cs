@@ -1,5 +1,3 @@
-using Spectre.Console;
-
 namespace Void.Packer.CLI.UI;
 
 public static class ResultRenderer

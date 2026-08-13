@@ -1,5 +1,3 @@
-using CommandLine;
-
 namespace Void.Packer.CLI.Commands;
 
 [Verb("update", HelpText = "Update an existing pack")]

@@ -1,7 +1,3 @@
-using CommandLine;
-
-using Void.Packer.Encryption;
-
 namespace Void.Packer.CLI.Commands;
 
 [Verb("build", HelpText = "Build packs from content directory")]

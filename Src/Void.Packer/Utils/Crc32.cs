@@ -1,5 +1,3 @@
-using System;
-
 namespace Void.Packer.Utils;
 
 public static unsafe class Crc32

@@ -1,5 +1,31 @@
 namespace Void.Engine.Inputs.Gamepads;
 
+
+internal enum InputType { None, Button, Axis, AxisDirection, Hat }
+
+internal struct GamepadInput
+{
+    public InputType Type;
+    public int Index;
+    public int HatMask;
+    public bool AxisNegative;
+    public bool AxisInverted;
+}
+
+internal class GamepadMapping
+{
+    public GamepadInput A, B, X, Y;
+    public GamepadInput Back, Start, Guide;
+    public GamepadInput LeftShoulder, RightShoulder;
+    public GamepadInput LeftStick, RightStick;
+    public GamepadInput LeftTrigger, RightTrigger;
+    public GamepadInput LeftX, LeftY, RightX, RightY;
+    public GamepadInput DPadUp, DPadDown, DPadLeft, DPadRight;
+    public GamepadInput Touchpad;
+    public GamepadInput Paddle1, Paddle2, Paddle3, Paddle4;
+    public GamepadInput Misc1;
+}
+
 internal static class GamepadDatabase
 {
     private static readonly Dictionary<string, GamepadMapping> _mappings = [];
@@ -39,15 +65,60 @@ internal static class GamepadDatabase
                 continue;
 
             int mappingsEnd = rest.LastIndexOf(',', platformIndex);
-            string mappingPart = rest[(firstComma + 1 + rest.IndexOf(',') + 1)..mappingsEnd];
+            int nameComma = rest.IndexOf(",");
+            if (nameComma < 0) continue;
+
+            // string mappingPart = rest[(firstComma + 1 + rest.IndexOf(',') + 1)..mappingsEnd];
+            string mappingPart = rest[(nameComma + 1)..mappingsEnd];
 
             if (_mappings.ContainsKey(guid))
                 continue;
 
             _mappings[guid] = ParseMapping(mappingPart);
+
+            // For debugging SDLDatabase -> Parsing
+            // if (_mappings.Count <= 3)
+            // {
+            //     var m = _mappings[guid];
+            //     Console.WriteLine($"Loader: {guid}");
+            //     Console.WriteLine($"   A: {FormatInput(m.A)}");
+            //     Console.WriteLine($"   B: {FormatInput(m.B)}");
+            //     Console.WriteLine($"   X: {FormatInput(m.X)}");
+            //     Console.WriteLine($"   Y: {FormatInput(m.Y)}");
+            //     Console.WriteLine($"   Start: {FormatInput(m.Start)}");
+            //     Console.WriteLine($"   Guide: {FormatInput(m.Guide)}");
+            //     Console.WriteLine($"   LeftShoulder: {FormatInput(m.LeftShoulder)}");
+            //     Console.WriteLine($"   RightShoulder: {FormatInput(m.RightShoulder)}");
+            //     Console.WriteLine($"   LeftStick: {FormatInput(m.LeftStick)}");
+            //     Console.WriteLine($"   RightStick: {FormatInput(m.RightStick)}");
+            //     Console.WriteLine($"   LeftTrigger: {FormatInput(m.LeftTrigger)}");
+            //     Console.WriteLine($"   RightTrigger: {FormatInput(m.RightTrigger)}");
+            //     Console.WriteLine($"   LeftX: {FormatInput(m.LeftX)}");
+            //     Console.WriteLine($"   LeftY: {FormatInput(m.LeftY)}");
+            //     Console.WriteLine($"   RightX: {FormatInput(m.RightX)}");
+            //     Console.WriteLine($"   RightY: {FormatInput(m.RightY)}");
+            //     Console.WriteLine($"   DPadUp: {FormatInput(m.DPadUp)}");
+            //     Console.WriteLine($"   DPadDown: {FormatInput(m.DPadDown)}");
+            //     Console.WriteLine($"   DPadLeft: {FormatInput(m.DPadLeft)}");
+            //     Console.WriteLine($"   DPadRight: {FormatInput(m.DPadRight)}");
+            //     Console.WriteLine();
+            // }
         }
 
         _loaded = true;
+    }
+
+    private static string FormatInput(GamepadInput input)
+    {
+        return input.Type switch
+        {
+            InputType.None => "None",
+            InputType.Button => $"Button b{input.Index}",
+            InputType.Hat => $"Hat h{input.Index}.{input.HatMask}",
+            InputType.Axis => $"Axis a{input.Index}{(input.AxisInverted ? "~" : "")}",
+            InputType.AxisDirection => $"AxisDir {(input.AxisNegative ? "-" : "+")}a{input.Index}{(input.AxisInverted ? "~" : "")}",
+            _ => "Unknown"
+        };
     }
 
     private static GamepadMapping ParseMapping(string data)
@@ -135,7 +206,19 @@ internal static class GamepadDatabase
         }
 
         if (value.StartsWith('a'))
-            return new GamepadInput { Type = InputType.Axis, Index = int.Parse(value[1..]) };
+        {
+            string numStr = value[1..].TrimEnd('~');
+            bool inverted = value.EndsWith('~');
+
+            return new GamepadInput
+            {
+                Type = InputType.Axis,
+                Index = int.Parse(numStr),
+                AxisInverted = inverted
+            };
+
+            // return new GamepadInput { Type = InputType.Axis, Index = int.Parse(value[1..]) };
+        }
 
         return new GamepadInput { Type = InputType.None };
     }
@@ -150,27 +233,3 @@ internal static class GamepadDatabase
     }
 }
 
-internal enum InputType { None, Button, Axis, AxisDirection, Hat }
-
-internal struct GamepadInput
-{
-    public InputType Type;
-    public int Index;
-    public int HatMask;
-    public bool AxisNegative;
-    public bool AxisInverted;
-}
-
-internal class GamepadMapping
-{
-    public GamepadInput A, B, X, Y;
-    public GamepadInput Back, Start, Guide;
-    public GamepadInput LeftShoulder, RightShoulder;
-    public GamepadInput LeftStick, RightStick;
-    public GamepadInput LeftTrigger, RightTrigger;
-    public GamepadInput LeftX, LeftY, RightX, RightY;
-    public GamepadInput DPadUp, DPadDown, DPadLeft, DPadRight;
-    public GamepadInput Touchpad;
-    public GamepadInput Paddle1, Paddle2, Paddle3, Paddle4;
-    public GamepadInput Misc1;
-}

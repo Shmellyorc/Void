@@ -1,5 +1,3 @@
-using CommandLine;
-
 namespace Void.Packer.CLI.Commands;
 
 [Verb("list", HelpText = "List files in a pack")]

@@ -1,10 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
-using Void.Packer.Encryption;
-
 namespace Void.Packer;
 
 public sealed class PackOptions

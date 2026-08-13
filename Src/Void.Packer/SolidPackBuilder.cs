@@ -1,12 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using Void.Packer.Encryption;
-using Void.Packer.Utils;
-
 namespace Void.Packer;
 
 public class FileEntry

@@ -8,19 +8,19 @@ public sealed class AssetManager
     private readonly Dictionary<uint, IAsset> _assets = [];
     private readonly List<IMount> _mounts = [];
 
-    private static readonly HashSet<Type> EngineAssetTypes = new()
-    {
+    private static readonly HashSet<Type> EngineAssetTypes =
+    [
         typeof(Texture),
-        // LDtkMap
+        typeof(LDtkMap),
         typeof(SpriteFont),
         typeof(Spritesheet),
         typeof(Sound),
-    };
+    ];
 
     private static readonly Dictionary<Type, string[]> SupportedExtensions = new()
     {
         {typeof(Texture), [".png", ".bmp", ".tga", ".jpg", ".gif", ".psd", ".hdr", ".pic", ".pnm"] },
-        // LDtkMap
+        {typeof(LDtkMap), [".ldtk", ".json"]},
         {typeof(SpriteFont), [".png", ".bmp", ".tga", ".jpg", ".gif", ".psd", ".hdr", ".pic", ".pnm"]},
         {typeof(Spritesheet), [".sheet", ".json"]},
         {typeof(Sound), [
@@ -33,7 +33,7 @@ public sealed class AssetManager
     private static readonly Dictionary<Type, Func<uint, byte[], string, IAsset>> SupportedLoaders = new()
     {
         {typeof(Texture), (id, data, tag) => new Texture(id, data, tag, false, false)},
-        // LDtkMap
+        {typeof(LDtkMap), (id, data, tag) => new LDtkMap(id, data, tag)},
         {typeof(SpriteFont), (id, data, tag) => new SpriteFont(id, data, tag, SpriteFont.CharsetFull)},
         {typeof(Spritesheet), (id, data, tag) => new Spritesheet(id, data, tag)},
         {typeof(Sound), (id, data, tag) => new Sound(id, data, tag)}
@@ -272,7 +272,7 @@ public sealed class AssetManager
             );
 
         // Check if asset exists in cache:
-        var hash = HashHelper.Cache32(path.Intern());
+        var hash = HashHelper.Cache32(path);
 
         if (_assets.TryGetValue(hash, out var existingAsset))
         {

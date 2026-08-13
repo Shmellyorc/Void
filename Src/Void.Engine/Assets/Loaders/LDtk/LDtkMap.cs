@@ -23,10 +23,10 @@ public sealed class LDtkMap : IAsset
     public byte[] Data { get; private set; }
     public AssetType Type { get; private set; }
 
-    internal LDtkMap(byte[] data, uint id, string filename)
+    internal LDtkMap(uint id, byte[] data, string filename)
     {
-        Data = data;
         Id = id;
+        Data = data;
         Tag = filename;
         Type = AssetType.Normal;
         LastAccessTime = DateTime.Now;

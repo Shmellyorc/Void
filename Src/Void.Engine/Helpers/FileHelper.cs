@@ -37,7 +37,7 @@ public static class FileHelper
         }
     }
 
-    public static void EnsureDirectoryExists(string path)
+    public static bool EnsureDirectoryExists(string path)
     {
         // If path looks like it includes a filename, get its directory
         var directoryPath = path;
@@ -46,10 +46,14 @@ public static class FileHelper
             directoryPath = Path.GetDirectoryName(path);
         }
 
-        if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
-        {
-            Directory.CreateDirectory(directoryPath);
-        }
+        if (string.IsNullOrEmpty(directoryPath))
+            return false;
+
+        if (Directory.Exists(directoryPath))
+            return false;
+
+        Directory.CreateDirectory(directoryPath);
+        return true;
     }
 
     public static string GetApplicationData(string company, string appName)
