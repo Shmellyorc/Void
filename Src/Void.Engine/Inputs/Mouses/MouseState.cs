@@ -11,10 +11,12 @@ public struct MouseState
     private readonly bool _xButton2;
     private readonly int _x;
     private readonly int _y;
+    private readonly Vect2 _position;
     private readonly int _scrollWheel;
 
     public readonly int X => _x;
     public readonly int Y => _y;
+    public readonly Vect2 Position => _position;
     public readonly int ScrollWheel => _scrollWheel;
 
     public readonly bool LeftButton => _leftButton;
@@ -22,7 +24,6 @@ public struct MouseState
     public readonly bool MiddleButton => _middleButton;
     public readonly bool XButton1 => _xButton1;
     public readonly bool XButton2 => _xButton2;
-
 
     public ButtonState this[MouseButton button]
     {
@@ -49,6 +50,7 @@ public struct MouseState
         _xButton2 = buttons.Length > 4 && buttons[4];
         _x = x;
         _y = y;
+        _position = new Vect2(x, y);
         _scrollWheel = scrollWheel;
     }
 

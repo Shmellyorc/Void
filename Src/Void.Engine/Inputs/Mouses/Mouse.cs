@@ -21,7 +21,7 @@ public static class Mouse
     private static void UpdateState()
     {
         if (GameSettings.Instance.IgnoreInputWhenUnfocused &&
-        (!Game.Instance.Window.IsOpen || !Game.Instance.Window.IsFocused))
+            (!Game.Instance.Window.IsOpen || !Game.Instance.Window.IsFocused))
             return;
 
         for (int i = 0; i < 5; i++)
@@ -30,7 +30,7 @@ public static class Mouse
             _buttons[i] = SFMouse.IsButtonPressed(sfmlButton);
         }
 
-        var pos = SFMouse.GetPosition();
+        var pos = SFMouse.GetPosition(Game.Instance.Window._window);
         _x = pos.X;
         _y = pos.Y;
         _scrollWheel = Game.Instance._scrollWheel;

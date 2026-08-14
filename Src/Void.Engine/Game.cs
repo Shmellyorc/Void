@@ -118,8 +118,8 @@ public class Game : IDisposable
         }
     }
 
-    protected virtual void OnUpdate(FrameTime timing) { }
-    protected virtual void OnDraw(FrameTime timing) { }
+    protected virtual void OnUpdate(FrameTime frameTime) { }
+    protected virtual void OnDraw(FrameTime frameTime) { }
     protected virtual void OnEnter() { }
     protected virtual void OnExit() { }
 

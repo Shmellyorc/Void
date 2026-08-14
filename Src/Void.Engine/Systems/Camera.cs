@@ -3,7 +3,7 @@ namespace Void.Engine.Systems;
 public sealed class Camera
 {
     internal readonly SFView _view;
-    
+
     private Vect2 _position;
     private float _zoom = 1f;
 
@@ -40,10 +40,20 @@ public sealed class Camera
     public void ResetZoom() => Zoom = 1f;
 
     public Vect2 ScreenToWorld(Vect2 screenPos)
-        => screenPos / _zoom + _position - GameSettings.Instance.Viewport / (2f * _zoom);
+    {
+        // Use RenderTexture's MapPixelToCoords!
+        var sfPos = new SFVector2i((int)screenPos.X, (int)screenPos.Y);
+        var worldPos = Game.Instance.Window._renderTexture.MapPixelToCoords(sfPos, _view);
+        return new Vect2(worldPos.X, worldPos.Y);
+    }
 
     public Vect2 WorldToScreen(Vect2 worldPos)
-        => (worldPos - _position) * _zoom + GameSettings.Instance.Viewport / 2f;
+    {
+        // Use RenderTexture's MapCoordsToPixel!
+        var sfPos = new SFVector2f(worldPos.X, worldPos.Y);
+        var screenPos = Game.Instance.Window._renderTexture.MapCoordsToPixel(sfPos, _view);
+        return new Vect2(screenPos.X, screenPos.Y);
+    }
 
 
     public static implicit operator SFView(Camera v) => v._view;
