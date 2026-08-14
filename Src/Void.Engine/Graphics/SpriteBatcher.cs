@@ -1,3 +1,5 @@
+using Void.Engine.Graphics.RenderTargets;
+
 namespace Void.Engine.Graphics;
 
 public enum TextAlignment
@@ -67,7 +69,7 @@ public sealed partial class SpriteBatcher : BaseBatcher
 
     protected override unsafe void BuildVertices()
     {
-        fixed (SFVertex* vertexPtr = _vertexBuffer)
+        fixed (SFVertex* vertexPtr = _vertexData)
         {
             SFVertex* currentPtr = vertexPtr;
             for (int i = 0; i < _cmdCount; i++)
@@ -90,15 +92,17 @@ public sealed partial class SpriteBatcher : BaseBatcher
         Array.Resize(ref _cmds, newSize);
 
         var newVertexSize = newSize * VerticesPerQuad;
-        Array.Resize(ref _vertexBuffer, newVertexSize);
+        Array.Resize(ref _vertexData, newVertexSize);
         _vertexBufferSize = newVertexSize;
 
-        _gpuBuffer.Dispose();
-        _gpuBuffer = new SFVertexBuffer(
-            (uint)newVertexSize,
-            SFPrimitiveType.Triangles,
-            SFUsageSpecifier.Stream
-        );
+        // _gpuBuffer.Dispose();
+        // _gpuBuffer = new SFVertexBuffer(
+        //     (uint)newVertexSize,
+        //     SFPrimitiveType.Triangles,
+        //     SFUsageSpecifier.Stream
+        // );
+        _vertexBuffer?.Dispose();
+        _vertexBuffer = new VertexBuffer(newVertexSize);
 
         _capacity = newSize;
     }

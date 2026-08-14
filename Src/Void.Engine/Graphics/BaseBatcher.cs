@@ -1,3 +1,5 @@
+using Void.Engine.Graphics.RenderTargets;
+
 namespace Void.Engine.Graphics;
 
 public abstract class BaseBatcher : IBatcher
@@ -16,10 +18,14 @@ public abstract class BaseBatcher : IBatcher
     protected Texture _currentTexture;
     protected BatchStats _stats;
     protected string _name;
+    protected SFVertex[] _vertexData;
+    private readonly IRenderTarget _defaultRenderTarget;
 
-    protected SFVertex[] _vertexBuffer;
-    protected SFVertexBuffer _gpuBuffer;
+    // protected SFVertex[] _vertexBuffer;
+    // protected SFVertexBuffer _gpuBuffer;
     protected int _vertexBufferSize;
+    protected IRenderTarget _renderTarget;
+    protected IVertexBuffer _vertexBuffer;
 
     public abstract string Name { get; }
     public bool IsDrawing => _isDrawing;
@@ -28,8 +34,29 @@ public abstract class BaseBatcher : IBatcher
     public int VertexCount => _stats.Vertices;
     public int CommandCount => _cmdCount;
 
-    protected SFRenderTexture RenderTexture => Game.Instance.Window._renderTexture;
+    // protected SFRenderTexture RenderTexture => Game.Instance.Window._renderTexture;
     protected abstract int VerticesPerCommand { get; }
+
+
+
+    public void SetRenderTarget(IRenderTarget target)
+    {
+        if (target == null)
+            return;
+        _renderTarget = target;
+    }
+
+    public void ResetRenderTarget()
+    {
+        if (_renderTarget == _defaultRenderTarget)
+            return;
+        _renderTarget = _defaultRenderTarget;
+    }
+
+    public bool IsUsingDefaultRenderTarget => _renderTarget == _defaultRenderTarget;
+
+    public IRenderTarget GetRenderTarget() => _renderTarget;
+
 
     protected BaseBatcher(int capacity = 0)
     {
@@ -43,14 +70,18 @@ public abstract class BaseBatcher : IBatcher
         _stats = new BatchStats();
 
         int vertexCap = _capacity * VerticesPerCommand;
-        _vertexBuffer = new SFVertex[vertexCap];
+        // _vertexBuffer = new SFVertex[vertexCap];
+        _vertexBuffer = new VertexBuffer(vertexCap);
+        _vertexData = new SFVertex[vertexCap];
         _vertexBufferSize = vertexCap;
+        _defaultRenderTarget = new TextureRenderTarget(Game.Instance.Window);
+        _renderTarget = _defaultRenderTarget;
 
-        _gpuBuffer = new SFVertexBuffer(
-            (uint)vertexCap,
-            SFPrimitiveType.Triangles,
-            SFUsageSpecifier.Stream
-        );
+        // _gpuBuffer = new SFVertexBuffer(
+        //     (uint)vertexCap,
+        //     SFPrimitiveType.Triangles,
+        //     SFUsageSpecifier.Stream
+        // );
 
         _renderStates = new SFRenderStates
         {
@@ -61,12 +92,17 @@ public abstract class BaseBatcher : IBatcher
         _name = GetType().Name;
     }
 
-    public virtual void Begin(SortMode? sortMode = null, IBlendMode blendMode = null, Camera camera = null)
+    public virtual void Begin(SortMode? sortMode = null, IBlendMode blendMode = null, Camera camera = null, IRenderTarget renderTarget = null)
     {
         if (_isDisposed)
             throw new ObjectDisposedException(Name);
         if (_isDrawing)
             throw new InvalidOperationException($"{Name}.Begin called while already drawing. Call End() first.");
+
+        if (renderTarget != null)
+            _renderTarget = renderTarget;
+        else if (_renderTarget == null)
+            _renderTarget = _defaultRenderTarget;
 
         _cmdCount = 0;
         _sortMode = sortMode ?? GameSettings.Instance.DefaultSortMode;
@@ -76,7 +112,7 @@ public abstract class BaseBatcher : IBatcher
         _renderStates.BlendMode = ConvertToSFML(_blendMode);
 
         if (camera != null)
-            RenderTexture.SetView(camera);
+            _renderTarget.SetView(camera);
 
         _isDrawing = true;
         _stats.Reset();
@@ -111,7 +147,8 @@ public abstract class BaseBatcher : IBatcher
         BuildVertices();
 
         int totalVertices = _cmdCount * VerticesPerCommand;
-        _gpuBuffer.Update(_vertexBuffer, (uint)totalVertices, 0);
+        // _gpuBuffer.Update(_vertexBuffer, (uint)totalVertices, 0);
+        _vertexBuffer.Update(_vertexData, (uint)totalVertices, 0);
 
         int drawCalls = 0;
         int index = 0;
@@ -128,12 +165,14 @@ public abstract class BaseBatcher : IBatcher
             int vertexCount = quadCount * VerticesPerCommand;
 
             SetRenderStateForGroup(groupStart);
-            _gpuBuffer.Draw(
-                RenderTexture,
-                (uint)vertexStart,
-                (uint)vertexCount,
-                _renderStates
-            );
+
+            _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
+            // _gpuBuffer.Draw(
+            //     _vertexBuffer,
+            //     (uint)vertexStart,
+            //     (uint)vertexCount,
+            //     _renderStates
+            // );
 
             drawCalls++;
         }
@@ -213,7 +252,7 @@ public abstract class BaseBatcher : IBatcher
     {
         if (_isDisposed) return;
 
-        _gpuBuffer?.Dispose();
+        _vertexBuffer?.Dispose();
         _vertexBuffer = null;
         _cmdCount = 0;
         _isDisposed = true;

@@ -1,3 +1,5 @@
+using Void.Engine.Graphics.RenderTargets;
+
 namespace Void.Engine.Graphics;
 
 [Flags]
@@ -18,7 +20,7 @@ public enum SortMode
 
 public interface IBatcher : IDisposable
 {
-    void Begin(SortMode? sort = null, IBlendMode blendMode = null, Camera camera = null);
+    void Begin(SortMode? sort = null, IBlendMode blendMode = null, Camera camera = null, IRenderTarget renderTarget = null);
     void End();
     void Flush();
 
