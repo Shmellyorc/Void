@@ -517,9 +517,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(PrimitiveCommand a, PrimitiveCommand b)
         {
-            if (a.PrimitiveType < b.PrimitiveType) return -1;
-            if (a.PrimitiveType > b.PrimitiveType) return 1;
-
+            // Sort by depth FIRST
             if (_sortMode == SortMode.BackToFront)
             {
                 if (a.Depth < b.Depth) return -1;
@@ -530,6 +528,10 @@ public sealed class PrimitiveBatcher : BaseBatcher
                 if (b.Depth < a.Depth) return -1;
                 if (b.Depth > a.Depth) return 1;
             }
+
+            // Then by primitive type for batching
+            if (a.PrimitiveType < b.PrimitiveType) return -1;
+            if (a.PrimitiveType > b.PrimitiveType) return 1;
 
             return 0;
         }

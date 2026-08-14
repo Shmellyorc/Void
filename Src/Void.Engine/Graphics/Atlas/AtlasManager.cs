@@ -263,28 +263,19 @@ public sealed class AtlasManager
         if (texture == null || texture.IsInvalid || target == null)
             return;
 
-        var image = texture.CopyToImage();
-
-        var subImage = new SFImage(
-            (uint)srcRect.Width,
-            (uint)srcRect.Height,
-            Color.Transparent
-        );
-
-        for (int y = 0; y < srcRect.Height; y++)
+        var sprite = new SFSprite(texture)
         {
-            for (int x = 0; x < srcRect.Width; x++)
-            {
-                int px = (int)(srcRect.Left + x);
-                int py = (int)(srcRect.Top + y);
-                var color = image.GetPixel((uint)px, (uint)py);
-                subImage.SetPixel((uint)x, (uint)y, color);
-            }
-        }
+            TextureRect = new SFIntRect(
+                (int)srcRect.Left,
+                (int)srcRect.Top,
+                (int)srcRect.Width,
+                (int)srcRect.Height
+            ),
+            Position = new SFVector2f(destination.X, destination.Y)
+        };
 
-        target.Texture.Update(subImage, (uint)destination.X, (uint)destination.Y);
+        target.Draw(sprite);
 
-        image?.Dispose();
-        image = null;
+        sprite.Dispose();
     }
 }

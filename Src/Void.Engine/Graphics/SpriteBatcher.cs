@@ -434,24 +434,24 @@ public sealed partial class SpriteBatcher : BaseBatcher
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(DrawCommand a, DrawCommand b)
         {
-            uint texA = a.Texture.NativeHandle;
-            uint texB = b.Texture.NativeHandle;
-
-            if (texA < texB) return -1;
-            if (texA > texB) return 1;
-
+            // Sort by depth first (primary)
             if (_sortMode == SortMode.BackToFront)
             {
                 if (a.Depth < b.Depth) return -1;
                 if (a.Depth > b.Depth) return 1;
-                return 0;
             }
             else if (_sortMode == SortMode.FrontToBack)
             {
                 if (b.Depth < a.Depth) return -1;
                 if (b.Depth > a.Depth) return 1;
-                return 0;
             }
+
+            // Then by texture for batching (secondary)
+            uint texA = a.Texture.NativeHandle;
+            uint texB = b.Texture.NativeHandle;
+
+            if (texA < texB) return -1;
+            if (texA > texB) return 1;
 
             return 0;
         }

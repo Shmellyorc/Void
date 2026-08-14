@@ -123,31 +123,6 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         GC.SuppressFinalize(this);
     }
 
-    public void CopyTo(SFRenderTexture target, Rect2 srcRect, Vect2 destination)
-    {
-        if (!IsValid || target == null)
-            return;
-
-        var subImage = new SFImage(
-            (uint)srcRect.Width,
-            (uint)srcRect.Height,
-            Color.Transparent
-        );
-
-        for (int y = 0; y < srcRect.Height; y++)
-        {
-            for (int x = 0; x < srcRect.Width; x++)
-            {
-                int px = (int)(srcRect.Left + x);
-                int py = (int)(srcRect.Top + y);
-                var color = _image.GetPixel((uint)px, (uint)py);
-                subImage.SetPixel((uint)x, (uint)y, color);
-            }
-        }
-
-        target.Texture.Update(subImage, (uint)destination.X, (uint)destination.Y);
-    }
-
 
 
     public static bool operator ==(in Texture a, in Texture b)
