@@ -49,6 +49,18 @@ public sealed class GameSettings
 
 
 
+
+    public GameSettings SetAtlasDefragThreshold(float value)
+    {
+        if (value < 0.05f || value > 0.80f)
+            throw new ArgumentOutOfRangeException(nameof(value), "Threshold must be between 5% and 80%");
+
+        AtlasDefragThreshold = value;
+        return this;
+    }
+    public float AtlasDefragThreshold { get; private set; }
+
+
     public GameSettings SetAppTitle(string name)
     {
         if (name.IsEmpty())
@@ -396,6 +408,7 @@ public sealed class GameSettings
         VSync = !_isVSyncSet || VSync;
         UseApplicationData = _useApplicationDataSet && UseApplicationData;
         AppVersion = AppVersion.IsEmpty() ? "1.0.0.0" : AppVersion;
+        AtlasDefragThreshold = AtlasDefragThreshold <= 0 ? 0.3f : AtlasDefragThreshold;
 
         Initialized = true;
 

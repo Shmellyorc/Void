@@ -70,7 +70,6 @@ public sealed class AtlasManager
         packedRect = default;
         pageId = -1;
 
-        // Cannot fit a rectnagle bigger than an texture atlas page size
         if (srcRect.Width > _pageSize || srcRect.Height > _pageSize)
             return false;
 
@@ -84,14 +83,12 @@ public sealed class AtlasManager
             packedRect = slot.PackedRect;
             pageId = slot.PageId;
 
-            // Update LRU
             _lruList.Remove(slot.LruNode);
             _lruList.AddFirst(slot.LruNode);
 
             return true;
         }
 
-        // Try to pack:
         int width = (int)srcRect.Width;
         int height = (int)srcRect.Height;
 
@@ -107,7 +104,6 @@ public sealed class AtlasManager
             {
                 CopyTo(page.RenderTexture, texture, srcRect, new Vect2(rect.Left, rect.Top));
 
-                // packed successfully
                 var lruNode = _lruList.AddFirst(key);
 
                 _packedMap[key] = new AtlasSlot
@@ -121,6 +117,30 @@ public sealed class AtlasManager
                 pageId = i;
 
                 return true;
+            }
+
+            if (page.Packer.Fragmentation > GameSettings.Instance.AtlasDefragThreshold)
+            {
+                page.Packer.Defrag();
+
+                if (page.Packer.TryPack(width, height, out rect))
+                {
+                    CopyTo(page.RenderTexture, texture, srcRect, new Vect2(rect.Left, rect.Top));
+
+                    var lruNode = _lruList.AddFirst(key);
+
+                    _packedMap[key] = new AtlasSlot
+                    {
+                        PageId = i,
+                        PackedRect = rect,
+                        LruNode = lruNode
+                    };
+
+                    packedRect = rect;
+                    pageId = i;
+
+                    return true;
+                }
             }
         }
 
