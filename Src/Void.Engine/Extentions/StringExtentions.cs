@@ -2,13 +2,27 @@ namespace System;
 
 public static class StringExtensions
 {
-    // Null or whitespace check
+    private static readonly Dictionary<Enum, string> _enumStringCache = new();
+    private static readonly Lock _enumCacheLock = new();
+
     public static bool IsEmpty(this string v) => string.IsNullOrWhiteSpace(v);
     public static bool IsNotEmpty(this string v) => !IsEmpty(v);
-    public static string ToEnumString(this Enum v) => $"{v.GetType().FullName}.{v}";
     public static bool IsInteger(this string v) => long.TryParse(v, out _);
     public static bool IsDecimal(this string v) => decimal.TryParse(v, out _);
     public static bool IsNumeric(this string v) => double.TryParse(v, out _);
+
+    public static string ToEnumString(this Enum v)
+    {
+        lock (_enumCacheLock)
+        {
+            if (!_enumStringCache.TryGetValue(v, out var result))
+            {
+                result = $"{v.GetType().FullName}.{v}";
+                _enumStringCache[v] = result;
+            }
+            return result;
+        }
+    }
 
     public static string TrimToLength(this string v, int maxLength)
     {

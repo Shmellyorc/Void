@@ -40,46 +40,51 @@ public sealed class LDtkMap : IAsset
             return;
         }
 
-        // Only parse on first load. After LRU unload, data is still cached.
-        if (_levelCacheById.Count == 0)
+        if (_levelCacheById.Count > 0)
         {
-            using var doc = JsonDocument.Parse(Data);
-            var root = doc.RootElement;
+            IsValid = true;
+            LastAccessTime = DateTime.Now;
+            return;
+        }
 
-            if (!root.TryGetProperty("defs", out var jDefs))
-                throw new InvalidOperationException("Unable to find LDtk Defs");
-            if (!jDefs.TryGetProperty("tilesets", out var jTilesets))
-                throw new InvalidOperationException("Unable to find LDtk Tilesets");
-            if (!root.TryGetProperty("defaultGridSize", out var jDefaultGridSize))
-                throw new InvalidOperationException("Unable to find LDtk 'DefaultGridSize'.");
-            if (!root.TryGetProperty("levels", out var jLevels))
-                throw new InvalidOperationException("Unable to find LDtk 'Levels'.");
+        // NOTE: Only parse on first load. After LRU unload, data is still cached.
 
-            var tilesets = LDtkTileset.Process(jTilesets);
-            var levels = LDtkLevel.Process(jLevels, jDefaultGridSize.GetInt32());
+        using var doc = JsonDocument.Parse(Data);
+        var root = doc.RootElement;
 
-            foreach (var tileset in tilesets)
+        if (!root.TryGetProperty("defs", out var jDefs))
+            throw new InvalidOperationException("Unable to find LDtk Defs");
+        if (!jDefs.TryGetProperty("tilesets", out var jTilesets))
+            throw new InvalidOperationException("Unable to find LDtk Tilesets");
+        if (!root.TryGetProperty("defaultGridSize", out var jDefaultGridSize))
+            throw new InvalidOperationException("Unable to find LDtk 'DefaultGridSize'.");
+        if (!root.TryGetProperty("levels", out var jLevels))
+            throw new InvalidOperationException("Unable to find LDtk 'Levels'.");
+
+        var tilesets = LDtkTileset.Process(jTilesets);
+        var levels = LDtkLevel.Process(jLevels, jDefaultGridSize.GetInt32());
+
+        foreach (var tileset in tilesets)
+        {
+            _tilesetCacheById[tileset.Id] = tileset;
+            _tilesetCacheByName[HashHelper.Cache32(tileset.Name)] = tileset;
+        }
+
+        foreach (var level in levels)
+        {
+            _levelCacheById[HashHelper.Cache32(level.Id)] = level;
+            _levelCacheByName[HashHelper.Cache32(level.Name)] = level;
+
+            foreach (var layer in level.Layers)
             {
-                _tilesetCacheById[tileset.Id] = tileset;
-                _tilesetCacheByName[HashHelper.Cache32(tileset.Name)] = tileset;
-            }
+                _layerCacheById[HashHelper.Cache32(layer.Id)] = layer;
 
-            foreach (var level in levels)
-            {
-                _levelCacheById[HashHelper.Cache32(level.Id)] = level;
-                _levelCacheByName[HashHelper.Cache32(level.Name)] = level;
+                if (layer.Type != LDtkLayerType.Entities)
+                    continue;
 
-                foreach (var layer in level.Layers)
+                foreach (var entity in layer.InstanceAs<LDtkEntityInstance>())
                 {
-                    _layerCacheById[HashHelper.Cache32(layer.Id)] = layer;
-
-                    if (layer.Type != LDtkLayerType.Entities)
-                        continue;
-
-                    foreach (var entity in layer.InstanceAs<LDtkEntityInstance>())
-                    {
-                        _entityCacheById[HashHelper.Cache64(entity.Id)] = entity;
-                    }
+                    _entityCacheById[HashHelper.Cache64(entity.Id)] = entity;
                 }
             }
         }

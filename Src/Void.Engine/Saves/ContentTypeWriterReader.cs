@@ -52,242 +52,6 @@ internal enum WriteType : byte
 }
 
 /// <summary>
-/// Binary writer with game-specific type support and manifest tracking.
-/// Only the save system can create instances.
-/// </summary>
-public sealed class ContentWriter : BinaryWriter
-{
-    private readonly List<WriteType> _manifest = new();
-
-    internal ContentWriter(Stream stream) : base(stream) { }
-
-    internal WriteType[] Manifest => _manifest.ToArray();
-
-    public void Write(Vect2 value)
-    {
-        _manifest.Add(WriteType.Vect2);
-        base.Write(value.X);
-        base.Write(value.Y);
-    }
-
-    public void Write(Rect2 value)
-    {
-        _manifest.Add(WriteType.Rect2);
-        base.Write(value.X);
-        base.Write(value.Y);
-        base.Write(value.Width);
-        base.Write(value.Height);
-    }
-
-    public void Write(Color value)
-    {
-        _manifest.Add(WriteType.Color);
-        base.Write(value.R);
-        base.Write(value.G);
-        base.Write(value.B);
-        base.Write(value.A);
-    }
-
-    public override void Write(string value)
-    {
-        _manifest.Add(WriteType.String);
-
-        byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
-
-        int length = bytes.Length;
-        while (length >= 0x80)
-        {
-            base.Write((byte)(length | 0x80));
-            length >>= 7;
-        }
-        base.Write((byte)length);
-
-        base.Write(bytes);
-    }
-
-    public override void Write(int value)
-    {
-        _manifest.Add(WriteType.Int32);
-        base.Write(value);
-    }
-
-    public override void Write(float value)
-    {
-        _manifest.Add(WriteType.Single);
-        base.Write(value);
-    }
-
-    public override void Write(bool value)
-    {
-        _manifest.Add(WriteType.Boolean);
-        base.Write(value);
-    }
-
-    public override void Write(byte value)
-    {
-        _manifest.Add(WriteType.Byte);
-        base.Write(value);
-    }
-
-    public override void Write(long value)
-    {
-        _manifest.Add(WriteType.Int64);
-        base.Write(value);
-    }
-
-    public override void Write(double value)
-    {
-        _manifest.Add(WriteType.Double);
-        base.Write(value);
-    }
-
-    public void WriteObject<T>(T value)
-    {
-        _manifest.Add(WriteType.Object);
-
-        if (value == null)
-        {
-            base.Write(false);
-            return;
-        }
-
-        base.Write(true);
-
-        using var memoryStream = new MemoryStream();
-        var serializer = new System.Xml.Serialization.XmlSerializer(typeof(T));
-        serializer.Serialize(memoryStream, value);
-
-        byte[] data = memoryStream.ToArray();
-        base.Write(data.Length);
-        base.Write(data);
-    }
-}
-
-/// <summary>
-/// Binary reader with game-specific type support and manifest verification.
-/// Only the save system can create instances.
-/// </summary>
-public sealed class ContentReader : BinaryReader
-{
-    private readonly WriteType[] _manifest;
-    private int _manifestIndex;
-
-    internal ContentReader(Stream stream, WriteType[] manifest) : base(stream)
-    {
-        _manifest = manifest;
-        _manifestIndex = 0;
-    }
-
-    internal bool IsManifestComplete => _manifestIndex >= _manifest.Length;
-
-    private void VerifyNext(WriteType expected)
-    {
-        if (_manifestIndex >= _manifest.Length)
-            throw new InvalidOperationException($"Save data is corrupt: Expected {expected} but reached end of manifest.");
-
-        var actual = _manifest[_manifestIndex];
-        if (actual != expected)
-            throw new InvalidOperationException($"Save data is corrupt: Expected {expected} but found {actual} at position {_manifestIndex}.");
-
-        _manifestIndex++;
-    }
-
-    public Vect2 ReadVect2()
-    {
-        VerifyNext(WriteType.Vect2);
-        return new Vect2(base.ReadSingle(), base.ReadSingle());
-    }
-
-    public Rect2 ReadRect2()
-    {
-        VerifyNext(WriteType.Rect2);
-        return new Rect2(
-            base.ReadSingle(), base.ReadSingle(),
-            base.ReadSingle(), base.ReadSingle()
-        );
-    }
-
-    public Color ReadColor()
-    {
-        VerifyNext(WriteType.Color);
-        return new Color(
-            base.ReadByte(), base.ReadByte(),
-            base.ReadByte(), base.ReadByte()
-        );
-    }
-
-    public override string ReadString()
-    {
-        VerifyNext(WriteType.String);
-
-        int length = 0;
-        int shift = 0;
-        byte b;
-        do
-        {
-            b = base.ReadByte();
-            length |= (b & 0x7F) << shift;
-            shift += 7;
-        } while ((b & 0x80) != 0);
-
-        byte[] bytes = base.ReadBytes(length);
-        return Encoding.UTF8.GetString(bytes);
-    }
-
-    public override int ReadInt32()
-    {
-        VerifyNext(WriteType.Int32);
-        return base.ReadInt32();
-    }
-
-    public override float ReadSingle()
-    {
-        VerifyNext(WriteType.Single);
-        return base.ReadSingle();
-    }
-
-    public override bool ReadBoolean()
-    {
-        VerifyNext(WriteType.Boolean);
-        return base.ReadBoolean();
-    }
-
-    public override byte ReadByte()
-    {
-        VerifyNext(WriteType.Byte);
-        return base.ReadByte();
-    }
-
-    public override long ReadInt64()
-    {
-        VerifyNext(WriteType.Int64);
-        return base.ReadInt64();
-    }
-
-    public override double ReadDouble()
-    {
-        VerifyNext(WriteType.Double);
-        return base.ReadDouble();
-    }
-
-    public T ReadObject<T>()
-    {
-        VerifyNext(WriteType.Object);
-
-        bool hasValue = base.ReadBoolean();
-        if (!hasValue)
-            return default;
-
-        int length = base.ReadInt32();
-        byte[] data = base.ReadBytes(length);
-
-        using var memoryStream = new MemoryStream(data);
-        var serializer = new System.Xml.Serialization.XmlSerializer(typeof(T));
-        return (T)serializer.Deserialize(memoryStream);
-    }
-}
-
-/// <summary>
 /// Abstract base class for saving and loading game data.
 /// Handles file I/O, path security, versioning, compression, and encryption.
 /// </summary>
@@ -377,7 +141,6 @@ public abstract class ContentTypeWriterReader<T>
 
             string tempPath = fullPath + ".tmp";
 
-            // Step 1: Write dev data + manifest to inner buffer
             byte[] innerData;
             using (var innerStream = new MemoryStream())
             {
@@ -400,7 +163,6 @@ public abstract class ContentTypeWriterReader<T>
                 }
             }
 
-            // Step 2: Adaptive compression - always compress if smaller
             bool compressed = false;
             byte[] dataToWrite = innerData;
             byte[] compressedData = Compress(innerData);
@@ -410,18 +172,16 @@ public abstract class ContentTypeWriterReader<T>
                 compressed = true;
             }
 
-            // Step 3: Encrypt if key provided
             bool encrypted = _encryptionKey != null;
             byte[] finalData = dataToWrite;
             if (encrypted)
             {
-                string version = Game.Instance.Version;
+                string version = GameSettings.Instance.AppVersion;
                 ulong versionHash = HashHelper.Cache64(version);
                 finalData = Encrypt(dataToWrite, Magic, versionHash);
             }
 
-            // Step 4: Write final file
-            string versionStr = Game.Instance.Version;
+            string versionStr = GameSettings.Instance.AppVersion;
             ulong verHash = HashHelper.Cache64(versionStr);
 
             using (var fileStream = File.Create(tempPath))
@@ -509,7 +269,7 @@ public abstract class ContentTypeWriterReader<T>
             }
 
             ulong savedVersionHash = binaryReader.ReadUInt64();
-            string version = Game.Instance.Version;
+            string version = GameSettings.Instance.AppVersion;
             ulong currentVersionHash = HashHelper.Cache64(version);
             if (savedVersionHash != currentVersionHash)
             {
