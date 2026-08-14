@@ -51,16 +51,31 @@ public sealed class Coroutine
         if (i < 0)
             return false;
 
+        if (_running[i] is IDisposable disposable)
+            disposable.Dispose();
+
         _running[i] = null;
         _delays[i] = 0f;
 
         return true;
     }
 
-    public bool Stop(CoroutineHandle routine) => routine.Stop();
+    public bool Stop(CoroutineHandle routine)
+    {
+        if (!routine.IsRunning)
+            return false;
+
+        return Stop(routine.Enumerator);
+    }
 
     public void StopAll()
     {
+        foreach (var routine in _running)
+        {
+            if (routine is IDisposable disposable)
+                disposable.Dispose();
+        }
+
         _running.Clear();
         _delays.Clear();
     }
