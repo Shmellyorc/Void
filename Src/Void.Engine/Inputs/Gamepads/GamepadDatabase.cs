@@ -36,12 +36,14 @@ internal static class GamepadDatabase
         if (_loaded)
             return;
 
+        string currentPlatform = GetCurrentPlatform();
+
         string csv = EmbeddedResources.ReadAllText("Data/SDLDatabase.db");
         using var reader = new StringReader(csv);
 
-#pragma warning disable CS8632 
+#pragma warning disable CS8632
         string? line;
-#pragma warning restore CS8632 
+#pragma warning restore CS8632
         while ((line = reader.ReadLine()) != null)
         {
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
@@ -61,14 +63,13 @@ internal static class GamepadDatabase
                 ? rest[(platformIndex + 9)..platformEnd].Trim()
                 : rest[(platformIndex + 9)..].Trim();
 
-            if (!string.Equals(platform, "Windows", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(platform, currentPlatform, StringComparison.OrdinalIgnoreCase))
                 continue;
 
             int mappingsEnd = rest.LastIndexOf(',', platformIndex);
             int nameComma = rest.IndexOf(",");
             if (nameComma < 0) continue;
 
-            // string mappingPart = rest[(firstComma + 1 + rest.IndexOf(',') + 1)..mappingsEnd];
             string mappingPart = rest[(nameComma + 1)..mappingsEnd];
 
             if (_mappings.ContainsKey(guid))
@@ -107,6 +108,12 @@ internal static class GamepadDatabase
 
         _loaded = true;
     }
+
+    private static string GetCurrentPlatform() =>
+        OperatingSystem.IsWindows() ? "Windows" :
+        OperatingSystem.IsMacOS() ? "Mac OS X" :
+        OperatingSystem.IsLinux() ? "Linux" :
+        "Windows";
 
     private static string FormatInput(GamepadInput input)
     {

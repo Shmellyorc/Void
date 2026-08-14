@@ -27,6 +27,22 @@ public sealed class Camera
         }
     }
 
+    public Rect2 ViewBounds
+    {
+        get
+        {
+            var viewportSize = GameSettings.Instance.Viewport;
+            float halfWidth = viewportSize.X / (2f * _zoom);
+            float halfHeight = viewportSize.Y / (2f * _zoom);
+            return new Rect2(
+                _position.X - halfWidth,
+                _position.Y - halfHeight,
+                viewportSize.X / _zoom,
+                viewportSize.Y / _zoom
+            );
+        }
+    }
+
 
     public Camera()
     {

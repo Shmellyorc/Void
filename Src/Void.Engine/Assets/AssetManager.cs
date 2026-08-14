@@ -5,7 +5,7 @@ public sealed class AssetManager
     #region fields
     private static uint s_id;
     private static readonly Lock IdLock = new();
-    private readonly Dictionary<uint, IAsset> _assets = [];
+    private readonly ConcurrentDictionary<ulong, IAsset> _assets = [];
     private readonly List<IMount> _mounts = [];
 
     private static readonly HashSet<Type> EngineAssetTypes =
@@ -271,9 +271,7 @@ public sealed class AssetManager
                 $"Supported extentions: {string.Join(", ", SupportedExtensions[typeof(T)])}"
             );
 
-        // Check if asset exists in cache:
-        var hash = HashHelper.Cache32(path);
-
+        var hash = HashHelper.Cache64(path);
         if (_assets.TryGetValue(hash, out var existingAsset))
         {
             existingAsset.Load();
@@ -338,7 +336,7 @@ public sealed class AssetManager
         }
 
         // store:
-        _assets[hash] = newAsset;
+        _assets.TryAdd(hash, newAsset);
         newAsset.Load();
 
         EvictOneExpiredAsset();

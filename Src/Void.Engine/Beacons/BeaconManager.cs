@@ -2,7 +2,7 @@ namespace Void.Engine.Beacons;
 
 public sealed class BeaconManager
 {
-    private readonly ConcurrentDictionary<uint, Action<BeaconHandle>> _topics = [];
+    private readonly ConcurrentDictionary<ulong, Action<BeaconHandle>> _topics = [];
 
     public static BeaconManager Instance { get; private set; }
     public int Count => _topics.Count;
@@ -16,7 +16,7 @@ public sealed class BeaconManager
         if (handle == null)
             throw new ArgumentNullException(nameof(handle), "handle is null");
 
-        var hash = HashHelper.Cache32(topic);
+        var hash = HashHelper.Cache64(topic);
         _topics.AddOrUpdate(
             hash,
             handle,
@@ -31,7 +31,7 @@ public sealed class BeaconManager
         if (handle == null)
             throw new ArgumentNullException(nameof(handle), "handle is null");
 
-        var hash = HashHelper.Cache32(topic);
+        var hash = HashHelper.Cache64(topic);
         if (!_topics.TryGetValue(hash, out var handles))
             return false;
 
@@ -49,7 +49,7 @@ public sealed class BeaconManager
         if (topic.IsEmpty())
             throw new ArgumentNullException(nameof(topic), "topic is null or empty");
 
-        var hash = HashHelper.Cache32(topic);
+        var hash = HashHelper.Cache64(topic);
 
         if (!_topics.TryGetValue(hash, out var handles))
             return;

@@ -90,8 +90,30 @@ public sealed class Coroutine
         {
             if (_delays[i] > 0f)
                 _delays[i] -= frameTime.MaxDeltaTime;
-            else if (_running[i] == null || !MoveNext(_running[i], i))
+
+            if (_running[i] == null)
             {
+                _running.RemoveAt(i);
+                _delays.RemoveAt(i--);
+                continue;
+            }
+
+            try
+            {
+                if (!_running[i].MoveNext())
+                {
+                    if (_running[i] is IDisposable disposable)
+                        disposable.Dispose();
+                    _running.RemoveAt(i);
+                    _delays.RemoveAt(i--);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Coroutine] Error: {ex.Message}");
+
+                if (_running[i] is IDisposable disposable)
+                    disposable.Dispose();
                 _running.RemoveAt(i);
                 _delays.RemoveAt(i--);
             }

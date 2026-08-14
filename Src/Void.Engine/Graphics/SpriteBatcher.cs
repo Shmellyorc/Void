@@ -289,6 +289,9 @@ public sealed partial class SpriteBatcher : BaseBatcher
         if (!_isDrawing)
             throw new InvalidOperationException("cannot draw outside Begin/End");
 
+        if (!IsVisible(dstRect))
+            return;
+
         if (_cmdCount >= _cmds.Length)
             ResizeBuffers();
 
@@ -336,6 +339,9 @@ public sealed partial class SpriteBatcher : BaseBatcher
             throw new ObjectDisposedException(nameof(SpriteBatcher));
         if (!_isDrawing)
             throw new InvalidOperationException("cannot draw outside Begin/End");
+
+        if (!IsVisible(dstRect))
+            return;
 
         if (_cmdCount >= _cmds.Length)
             ResizeBuffers();
@@ -474,7 +480,12 @@ public sealed partial class SpriteBatcher : BaseBatcher
         if (string.IsNullOrEmpty(text) || font == null || !font.IsValid)
             return;
 
+
         var textSize = font.Measure(text) * scale;
+
+        var textRect = new Rect2(position, textSize);
+        if (!IsVisible(textRect))
+            return;
 
         // Calculate top-left corner based on anchor position and alignment
         Vect2 topLeft = alignment switch
@@ -508,6 +519,8 @@ public sealed partial class SpriteBatcher : BaseBatcher
         TextWrapMode wrapMode)
     {
         if (string.IsNullOrEmpty(text) || font == null || !font.IsValid)
+            return;
+        if (!IsVisible(bounds))
             return;
 
         string[] lines = text.Split('\n');
@@ -772,5 +785,12 @@ public sealed partial class SpriteBatcher : BaseBatcher
         y = currentY + lineHeight;
     }
 
+    private bool IsVisible(Rect2 dstRect)
+    {
+        if (_currentCamera == null)
+            return true;
+
+        return dstRect.Intersects(_currentCamera.ViewBounds);
+    }
     #endregion
 }
