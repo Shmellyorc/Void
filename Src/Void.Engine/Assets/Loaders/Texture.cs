@@ -22,8 +22,6 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     public DateTime LastAccessTime { get; private set; }
     public AssetType Type { get; }
 
-    internal uint NativeHandle => _texture.NativeHandle;
-
     internal Texture(uint id, byte[] data, string tag, bool repeated, bool smooth)
     {
         Id = id;
@@ -70,13 +68,53 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         IsValid = true;
     }
 
+    internal Texture(SFTexture renderTexture)
+    {
+        _texture = renderTexture;
 
+        Id = AssetManager.GetNextId();
+        Size = _texture.Size;
+        Width = (int)Size.X;
+        Height = (int)Size.Y;
+
+        LastAccessTime = DateTime.Now;
+        Type = AssetType.Instanced;
+        IsValid = true;
+    }
 
 
 
     ~Texture() => Dispose();
 
 
+
+
+
+    internal void UpdateFrom(SFTexture sourceTexture)
+    {
+        if (sourceTexture == null || sourceTexture.IsInvalid)
+            return;
+
+        // Get the texture image
+        var image = sourceTexture.CopyToImage();
+
+        // Dispose old texture
+        _texture?.Dispose();
+
+        // Create new texture from image
+        _texture = new SFTexture(image);
+
+        // Update size
+        Size = _texture.Size;
+        Width = (int)Size.X;
+        Height = (int)Size.Y;
+
+        // Clean up image
+        image.Dispose();
+
+        IsValid = true;
+        LastAccessTime = DateTime.Now;
+    }
 
 
 

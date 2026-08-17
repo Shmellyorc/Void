@@ -26,10 +26,10 @@ namespace Void.Engine.Coroutines;
 
 public readonly struct CoroutineHandle
 {
-    public Coroutine Runner { get; }
+    public CoroutineManager Runner { get; }
     public IEnumerator Enumerator { get; }
 
-    internal CoroutineHandle(Coroutine runner, IEnumerator enumerator)
+    internal CoroutineHandle(CoroutineManager runner, IEnumerator enumerator)
     {
         Runner = runner;
         Enumerator = enumerator;

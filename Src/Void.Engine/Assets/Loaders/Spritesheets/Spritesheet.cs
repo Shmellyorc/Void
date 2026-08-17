@@ -124,7 +124,7 @@ public sealed class Spritesheet : IAsset
 
         return result;
     }
-    public Rect2 GetBounds(string name)
+    public Rect2 GetBound(string name)
     {
         var hash = HashHelper.Cache32(name);
         if (!_entries.TryGetValue(hash, out var value))
@@ -140,7 +140,7 @@ public sealed class Spritesheet : IAsset
     {
         try
         {
-            value = GetBounds(name);
+            value = GetBound(name);
             return true;
         }
         catch

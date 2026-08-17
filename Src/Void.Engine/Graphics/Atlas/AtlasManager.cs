@@ -1,3 +1,5 @@
+using Void.Engine.Logs;
+
 namespace Void.Engine.Graphics.Atlas;
 
 public sealed class AtlasManager
@@ -53,7 +55,8 @@ public sealed class AtlasManager
         _pageSize = settings.AtlasPageSize;
         _pageCount = settings.AtlasPageCount;
 
-        var packer = settings.AtlasPacker ?? new SkylinePacker(_pageSize, _pageSize);
+        Logger.Instance.InfoWithCategory("Atlas", "Initializing atlas: {0} pages of {1}x{1}",
+            _pageCount, _pageSize);
 
         for (int i = 0; i < _pageCount; i++)
         {
@@ -71,9 +74,14 @@ public sealed class AtlasManager
         pageId = -1;
 
         if (srcRect.Width > _pageSize || srcRect.Height > _pageSize)
+        {
+            Logger.Instance.WarningWithCategory("Atlas",
+                "Texture {0}x{1} exceeds page size {2}x{2}",
+                srcRect.Width, srcRect.Height, _pageSize);
             return false;
+        }
 
-        if (texture == null || !texture.IsInvalid)
+        if (texture == null || texture.IsInvalid)
             return false;
 
         var key = (texture.NativeHandle, srcRect);
@@ -113,6 +121,9 @@ public sealed class AtlasManager
                     LruNode = lruNode
                 };
 
+                Logger.Instance.DebugWithCategory("Atlas", "Packed {0}x{1} into page {2} (total: {3})", 
+                    width, height, i, _packedMap.Count);
+
                 packedRect = rect;
                 pageId = i;
 
@@ -146,6 +157,10 @@ public sealed class AtlasManager
 
         if (EvictAndRepack(key, width, height, out packedRect, out pageId))
             return true;
+
+        Logger.Instance.WarningWithCategory("Atlas",
+            "Failed to pack texture {0}x{1} - atlas full or too fragmented",
+            width, height);
 
         return false;
     }
@@ -189,6 +204,10 @@ public sealed class AtlasManager
 
                 packedRect = rect;
                 pageId = slot.PageId;
+
+                Logger.Instance.DebugWithCategory("Atlas",
+                    "Evicted texture from page {0} to make room (total evictions: {1})",
+                    slot.PageId, _evictionCount);
                 return true;
             }
         }
@@ -264,6 +283,9 @@ public sealed class AtlasManager
 
     public void Clear()
     {
+        Logger.Instance.InfoWithCategory("Atlas", "Clearing atlas: {0} textures, {1} pages",
+            _packedMap.Count, _pages.Count);
+
         _packedMap.Clear();
         _lruList.Clear();
 
@@ -295,6 +317,7 @@ public sealed class AtlasManager
         };
 
         target.Draw(sprite);
+        target.Display();
 
         sprite.Dispose();
     }

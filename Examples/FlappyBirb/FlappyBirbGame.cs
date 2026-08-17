@@ -20,6 +20,9 @@
 //  See LICENSE file in the project root for full license information.
 // ============================================================================
 
+using Void.Engine.Graphics.RenderTargets;
+using Void.Engine.Graphics.Shaders;
+
 namespace FlappyBirb;
 
 /// <summary>
@@ -66,8 +69,8 @@ public sealed class FlappyBirbGame(GameSettings settings) : Game(settings)
         Globals.Sheet = AssetManager.Instance.Load<Spritesheet>("Spritesheet.sheet");
 
         // Get source rectangles for background and ground sprites
-        _bgRect = Globals.Sheet.GetBounds("Background");
-        _groundRect = Globals.Sheet.GetBounds("Ground");
+        _bgRect = Globals.Sheet.GetBound("Background");
+        _groundRect = Globals.Sheet.GetBound("Ground");
 
         // Create batcher, camera, and bird
         _batch = new SpriteBatcher();

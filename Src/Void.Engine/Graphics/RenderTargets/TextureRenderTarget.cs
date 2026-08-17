@@ -34,36 +34,35 @@ internal sealed class TextureRenderTarget : IRenderTarget
         _sRGB = false;
     }
 
-    public void SetView(Camera camera)
+    public Texture GetTexture()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
         
-        var texture = RenderTexture;
-        if (texture == null || texture.IsInvalid)
-            return;
-            
-        texture.SetView(camera);
+        var renderTexture = RenderTexture;
+        if (renderTexture == null || renderTexture.IsInvalid)
+            return null;
+        
+        var image = renderTexture.Texture.CopyToImage();
+        
+        var sfTexture = new SFTexture(image);
+        image.Dispose();
+        
+        return new Texture(sfTexture);
     }
 
     public void Clear(Color color)
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-        
         var texture = RenderTexture;
-        if (texture == null || texture.IsInvalid)
-            return;
-            
+        if (texture == null || texture.IsInvalid) return;
         texture.Clear(color);
     }
 
     public void Display()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-        
         var texture = RenderTexture;
-        if (texture == null || texture.IsInvalid)
-            return;
-            
+        if (texture == null || texture.IsInvalid) return;
         texture.Display();
     }
 
@@ -73,11 +72,18 @@ internal sealed class TextureRenderTarget : IRenderTarget
         buffer.Draw(this, vertexStart, vertexCount, states);
     }
 
+    public void SetView(Camera camera)
+    {
+        if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
+        var texture = RenderTexture;
+        if (texture == null || texture.IsInvalid) return;
+        texture.SetView(camera);
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
         
-        // Only dispose if we created the texture
         if (_texture != null)
             _texture.Dispose();
             

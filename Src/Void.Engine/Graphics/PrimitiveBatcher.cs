@@ -1,4 +1,7 @@
+using System.Runtime.CompilerServices;
+
 using Void.Engine.Graphics.RenderTargets;
+using Void.Engine.Logs;
 
 namespace Void.Engine.Graphics;
 
@@ -19,6 +22,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
     private PrimitiveCommand[] _cmds;
     private readonly PrimitiveCommandComparer _comparer;
     private int _vertexIndex;
+    private SFVertex[] _sortedVertexData;
 
     public override string Name => "PrimitiveBatcher";
     protected override int VerticesPerCommand => 1;
@@ -29,6 +33,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
             _capacity = GetDefaultCapacity();
 
         _cmds = new PrimitiveCommand[_capacity];
+        _sortedVertexData = new SFVertex[_capacity];
         _comparer = new PrimitiveCommandComparer(_sortMode);
         _vertexIndex = 0;
     }
@@ -42,6 +47,32 @@ public sealed class PrimitiveBatcher : BaseBatcher
     {
         _comparer.UpdateMode(_sortMode);
         Array.Sort(_cmds, 0, _cmdCount, _comparer);
+        RebuildSortedVertices();
+    }
+
+    private void RebuildSortedVertices()
+    {
+        if (_sortedVertexData.Length < _vertexIndex)
+        {
+            Array.Resize(ref _sortedVertexData, _vertexIndex);
+        }
+
+        int sortedIndex = 0;
+
+        for (int i = 0; i < _cmdCount; i++)
+        {
+            var cmd = _cmds[i];
+            int sourceOffset = cmd.VertexOffset;
+
+            for (int j = 0; j < cmd.VertexCount; j++)
+            {
+                _sortedVertexData[sortedIndex++] = _vertexData[sourceOffset + j];
+            }
+
+            _cmds[i].VertexOffset = sortedIndex - cmd.VertexCount;
+        }
+
+        Array.Copy(_sortedVertexData, _vertexData, sortedIndex);
     }
 
     protected override void BuildVertices() { }
@@ -55,7 +86,6 @@ public sealed class PrimitiveBatcher : BaseBatcher
         if (_sortMode != SortMode.Immediate && _sortMode != SortMode.Deferred)
             SortCommands();
 
-        // _gpuBuffer.Update(_vertexBuffer, (uint)_vertexIndex, 0);
         _vertexBuffer.Update(_vertexData, (uint)_vertexIndex, 0);
 
         _renderStates.Texture = null;
@@ -74,13 +104,6 @@ public sealed class PrimitiveBatcher : BaseBatcher
                 index++;
             }
 
-            // _gpuBuffer.PrimitiveType = currentType;
-            // _gpuBuffer.Draw(
-            //     RenderTexture,
-            //     (uint)vertexStart,
-            //     (uint)vertexCount,
-            //     _renderStates
-            // );
             _vertexBuffer.PrimitiveType = currentType;
             _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
             drawCalls++;
@@ -101,22 +124,26 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
     protected override void ResizeBuffers()
     {
+        Logger.Instance.DebugWithCategory("PrimitiveBatcher", 
+            "Resizing buffers: {0} -> {1} commands", _vertexBufferSize, _vertexBufferSize * 2);
+            
         int newSize = _vertexBufferSize * 2;
         Array.Resize(ref _vertexData, newSize);
+        Array.Resize(ref _sortedVertexData, newSize);
         _vertexBufferSize = newSize;
 
-        // _gpuBuffer.Dispose();
-        // _gpuBuffer = new SFVertexBuffer(
-        //     (uint)newSize,
-        //     SFPrimitiveType.Triangles,
-        //     SFUsageSpecifier.Stream
-        // );
         _vertexBuffer?.Dispose();
         _vertexBuffer = new VertexBuffer(newSize);
 
         int newCmdSize = _cmds.Length * 2;
         Array.Resize(ref _cmds, newCmdSize);
         _capacity = newCmdSize;
+    }
+
+    protected override void SetRenderStateForGroup(int commandIndex)
+    {
+        base.SetRenderStateForGroup(commandIndex);
+        ApplyShader();
     }
 
     private void EnsureVertexCapacity(int needed)
@@ -524,7 +551,6 @@ public sealed class PrimitiveBatcher : BaseBatcher
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(PrimitiveCommand a, PrimitiveCommand b)
         {
-            // Sort by depth FIRST
             if (_sortMode == SortMode.BackToFront)
             {
                 if (a.Depth < b.Depth) return -1;
@@ -536,7 +562,6 @@ public sealed class PrimitiveBatcher : BaseBatcher
                 if (b.Depth > a.Depth) return 1;
             }
 
-            // Then by primitive type for batching
             if (a.PrimitiveType < b.PrimitiveType) return -1;
             if (a.PrimitiveType > b.PrimitiveType) return 1;
 

@@ -23,6 +23,8 @@ public sealed class BeaconManager
             (k, existing) => (Action<BeaconHandle>)Delegate.Combine(existing, handle)
         );
     }
+    public void Subscribe(Enum topic, Action<BeaconHandle> handle)
+        => Subscribe(topic.ToEnumString(), handle);
 
     public bool Unsubscribe(string topic, Action<BeaconHandle> handle)
     {
@@ -43,6 +45,8 @@ public sealed class BeaconManager
         _topics[hash] = newHandler;
         return true;
     }
+    public void Unsubscribe(Enum topic, Action<BeaconHandle> handle)
+        => Unsubscribe(topic.ToEnumString(), handle);
 
     public void Publish(string topic, params object[] data)
     {
@@ -63,6 +67,8 @@ public sealed class BeaconManager
 
         handles.Invoke(handle);
     }
+    public void Publish(Enum topic, params object[] data)
+        => Publish(topic.ToEnumString(), data);
 
     public void Clear() => _topics.Clear();
 }

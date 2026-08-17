@@ -38,15 +38,29 @@ internal sealed class VertexBuffer : IVertexBuffer
     {
         if (_disposed) throw new ObjectDisposedException(nameof(VertexBuffer));
 
-        // Try to get the underlying SFML render target
         if (target is TextureRenderTarget textureTarget)
         {
-            _buffer.Draw(textureTarget.RenderTexture, vertexStart, vertexCount, states);
+            var renderTexture = textureTarget.RenderTexture;
+            var previousShader = ShaderState.GetCurrent();
+
+            if (states.Shader != null && !states.Shader.IsInvalid)
+            {
+                ShaderState.Bind(states.Shader);
+
+                if (states.Texture != null && !states.Texture.IsInvalid)
+                {
+                    states.Shader.SetUniform("uTexture", states.Texture);
+                }
+            }
+            else
+            {
+                ShaderState.Bind(null);
+            }
+
+            _buffer.Draw(renderTexture, vertexStart, vertexCount, states);
+
+            ShaderState.Bind(previousShader);
         }
-        // else if (target is WindowRenderTarget windowTarget)
-        // {
-        //     _buffer.Draw(windowTarget.RenderTexture, vertexStart, vertexCount, states);
-        // }
         else
         {
             throw new InvalidOperationException($"Unsupported render target type: {target.GetType().Name}");

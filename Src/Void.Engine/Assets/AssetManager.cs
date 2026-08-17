@@ -1,3 +1,5 @@
+using Void.Engine.Logs;
+
 namespace Void.Engine.Assets;
 
 public sealed class AssetManager
@@ -58,6 +60,8 @@ public sealed class AssetManager
             _mounts.Add(new MacOsMount());
 
         _mounts.Add(new VirtualFileSystemMount());
+
+        Logger.Instance.InfoWithCategory("AssetManager", "Initialized with {0} mounts", _mounts.Count);
     }
     #endregion
 
@@ -99,6 +103,8 @@ public sealed class AssetManager
         if (!File.Exists(fullPackPath))
             throw new FileNotFoundException($"Pack file not found: {fullPackPath}");
 
+        Logger.Instance.InfoWithCategory("AssetManager", "Loading pack: {0} (key: {1})", packPath, keyPath ?? "none");
+
         byte[] packData = File.ReadAllBytes(fullPackPath);
         byte[] key = null;
         if (!string.IsNullOrEmpty(keyPath))
@@ -118,6 +124,8 @@ public sealed class AssetManager
             }
         }
 
+        Logger.Instance.InfoWithCategory("AssetManager", "Pack loaded: {0}", mountName ?? Path.GetFileNameWithoutExtension(packPath));
+
         return LoadPackData(packData, key, mountName ?? Path.GetFileNameWithoutExtension(packPath));
     }
 
@@ -125,6 +133,9 @@ public sealed class AssetManager
     {
         if (packData == null || packData.Length == 0)
             throw new ArgumentException("Pack data cannot be null or empty", nameof(packData));
+
+        Logger.Instance.DebugWithCategory("AssetManager",
+            "Loading pack data: {0} bytes, name: {1}", packData.Length, mountName ?? "Pack Mount");
 
         var mount = new PackMount(packData, key, mountName ?? "Pack Mount");
 
@@ -164,7 +175,7 @@ public sealed class AssetManager
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[AssetManager] Failed to load pack '{packFile}': {ex.Message}");
+                Logger.Instance.WarningWithCategory("AssetManager", "Failed to load pack '{0}': {1}", packFile, ex.Message);
             }
         }
 
@@ -227,9 +238,11 @@ public sealed class AssetManager
     {
         if (extensions == null || extensions.Length == 0)
             throw new ArgumentException("At least one extension required", nameof(extensions));
-
         if (factory == null)
             throw new ArgumentNullException(nameof(factory));
+
+        Logger.Instance.InfoWithCategory("AssetManager", "Registering asset type: {0} with extensions: {1}",
+            typeof(T).Name, string.Join(", ", extensions));
 
         var type = typeof(T);
 
@@ -274,10 +287,14 @@ public sealed class AssetManager
         var hash = HashHelper.Cache64(path);
         if (_assets.TryGetValue(hash, out var existingAsset))
         {
+            Logger.Instance.DebugWithCategory("AssetManager", "Cache hit: {0} (hash: {1})", normalizedPath, hash);
+
             existingAsset.Load();
             EvictOneExpiredAsset();
             return (T)existingAsset;
         }
+
+
 
         // Find it:
         byte[] assetData = null;
@@ -295,9 +312,8 @@ public sealed class AssetManager
                 }
                 catch (Exception ex)
                 {
-                    System.Console.WriteLine(
-                        $"[AssetManager] Mount '{mount.GetType().Name}' reported file '{normalizedPath}' but failed to read: {ex.Message}"
-                    );
+                    Logger.Instance.WarningWithCategory("AssetManager", "Mount '{0}' reported file '{1}' but failed to read: {2}",
+                        mount.GetType().Name, normalizedPath, ex.Message);
                     continue;
                 }
             }
@@ -339,6 +355,9 @@ public sealed class AssetManager
         _assets.TryAdd(hash, newAsset);
         newAsset.Load();
 
+        Logger.Instance.DebugWithCategory("AssetManager", "Loaded asset: {0} ({1} bytes from {2})",
+            normalizedPath, assetData.Length, foundInMount);
+
         EvictOneExpiredAsset();
 
         return newAsset;
@@ -354,6 +373,9 @@ public sealed class AssetManager
 
             if ((DateTime.Now - v.LastAccessTime) > TimeSpan.FromMinutes(evictionMinutes))
             {
+                Logger.Instance.DebugWithCategory("AssetManager", "Evicted asset: {0} (idle for {1} minutes)",
+                    v.Tag, evictionMinutes);
+
                 v.Unload();
                 break; // only do one at a time, so it doesnt spike and/or lag
             }
@@ -419,6 +441,9 @@ public sealed class AssetManager
 
     internal void Clear()
     {
+        Logger.Instance.InfoWithCategory("AssetManager", 
+            "Clearing {0} assets and {1} mounts", _assets.Count, _mounts.Count);
+
         foreach (var asset in _assets.Values)
         {
             asset.Dispose();

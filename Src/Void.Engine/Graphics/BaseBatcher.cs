@@ -1,4 +1,7 @@
+using System.Runtime.CompilerServices;
+
 using Void.Engine.Graphics.RenderTargets;
+using Void.Engine.Graphics.Shaders;
 
 namespace Void.Engine.Graphics;
 
@@ -19,10 +22,9 @@ public abstract class BaseBatcher : IBatcher
     protected BatchStats _stats;
     protected string _name;
     protected SFVertex[] _vertexData;
-    private readonly IRenderTarget _defaultRenderTarget;
+    protected IShader _currentShader;
 
-    // protected SFVertex[] _vertexBuffer;
-    // protected SFVertexBuffer _gpuBuffer;
+    private readonly IRenderTarget _defaultRenderTarget;
     protected int _vertexBufferSize;
     protected IRenderTarget _renderTarget;
     protected IVertexBuffer _vertexBuffer;
@@ -34,54 +36,22 @@ public abstract class BaseBatcher : IBatcher
     public int VertexCount => _stats.Vertices;
     public int CommandCount => _cmdCount;
 
-    // protected SFRenderTexture RenderTexture => Game.Instance.Window._renderTexture;
     protected abstract int VerticesPerCommand { get; }
-
-
-
-    public void SetRenderTarget(IRenderTarget target)
-    {
-        if (target == null)
-            return;
-        _renderTarget = target;
-    }
-
-    public void ResetRenderTarget()
-    {
-        if (_renderTarget == _defaultRenderTarget)
-            return;
-        _renderTarget = _defaultRenderTarget;
-    }
-
-    public bool IsUsingDefaultRenderTarget => _renderTarget == _defaultRenderTarget;
-
-    public IRenderTarget GetRenderTarget() => _renderTarget;
-
 
     protected BaseBatcher(int capacity = 0)
     {
-        if (capacity <= 0)
-            capacity = GetDefaultCapacity();
-
-        _capacity = Math.Clamp(capacity, 1, MaxCapacity);
+        _capacity = capacity > 0 ? Math.Clamp(capacity, 1, MaxCapacity) : GetDefaultCapacity();
         _cmdCount = 0;
         _sortMode = SortMode.BackToFront;
         _blendMode = BlendMode.Alpha;
         _stats = new BatchStats();
 
         int vertexCap = _capacity * VerticesPerCommand;
-        // _vertexBuffer = new SFVertex[vertexCap];
         _vertexBuffer = new VertexBuffer(vertexCap);
         _vertexData = new SFVertex[vertexCap];
         _vertexBufferSize = vertexCap;
         _defaultRenderTarget = new TextureRenderTarget(Game.Instance.Window);
         _renderTarget = _defaultRenderTarget;
-
-        // _gpuBuffer = new SFVertexBuffer(
-        //     (uint)vertexCap,
-        //     SFPrimitiveType.Triangles,
-        //     SFUsageSpecifier.Stream
-        // );
 
         _renderStates = new SFRenderStates
         {
@@ -92,6 +62,35 @@ public abstract class BaseBatcher : IBatcher
         _name = GetType().Name;
     }
 
+    public void SetRenderTarget(IRenderTarget target)
+    {
+        if (target != null)
+            _renderTarget = target;
+    }
+
+    public void ResetRenderTarget()
+    {
+        _renderTarget = _defaultRenderTarget;
+    }
+
+    public bool IsUsingDefaultRenderTarget => _renderTarget == _defaultRenderTarget;
+    public IRenderTarget GetRenderTarget() => _renderTarget;
+
+    protected virtual void ApplyShader()
+    {
+        _renderStates.Shader = (_currentShader as Shader)?.SFShader;
+    }
+
+    public void SetShader(IShader shader)
+    {
+        _currentShader = shader;
+    }
+
+    public void ClearShader()
+    {
+        _currentShader = null;
+    }
+
     public virtual void Begin(SortMode? sortMode = null, IBlendMode blendMode = null, Camera camera = null, IRenderTarget renderTarget = null)
     {
         if (_isDisposed)
@@ -99,11 +98,7 @@ public abstract class BaseBatcher : IBatcher
         if (_isDrawing)
             throw new InvalidOperationException($"{Name}.Begin called while already drawing. Call End() first.");
 
-        if (renderTarget != null)
-            _renderTarget = renderTarget;
-        else if (_renderTarget == null)
-            _renderTarget = _defaultRenderTarget;
-
+        _renderTarget = renderTarget ?? _renderTarget ?? _defaultRenderTarget;
         _cmdCount = 0;
         _sortMode = sortMode ?? GameSettings.Instance.DefaultSortMode;
         _blendMode = blendMode ?? GameSettings.Instance.DefaultBlendMode ?? BlendMode.Alpha;
@@ -114,6 +109,7 @@ public abstract class BaseBatcher : IBatcher
         if (camera != null)
             _renderTarget.SetView(camera);
 
+        ApplyShader();
         _isDrawing = true;
         _stats.Reset();
 
@@ -129,6 +125,7 @@ public abstract class BaseBatcher : IBatcher
 
         Flush();
         _isDrawing = false;
+        _renderStates.Shader = null;
 
         OnEnd();
     }
@@ -140,18 +137,16 @@ public abstract class BaseBatcher : IBatcher
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
         if (_sortMode != SortMode.Immediate && _sortMode != SortMode.Deferred)
-        {
             SortCommands();
-        }
 
         BuildVertices();
 
         int totalVertices = _cmdCount * VerticesPerCommand;
-        // _gpuBuffer.Update(_vertexBuffer, (uint)totalVertices, 0);
         _vertexBuffer.Update(_vertexData, (uint)totalVertices, 0);
 
         int drawCalls = 0;
         int index = 0;
+
         while (index < _cmdCount)
         {
             int groupStart = index;
@@ -166,14 +161,10 @@ public abstract class BaseBatcher : IBatcher
 
             SetRenderStateForGroup(groupStart);
 
-            _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
-            // _gpuBuffer.Draw(
-            //     _vertexBuffer,
-            //     (uint)vertexStart,
-            //     (uint)vertexCount,
-            //     _renderStates
-            // );
+            if (_currentShader is Shader shader)
+                _renderStates.Shader = shader.SFShader;
 
+            _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
             drawCalls++;
         }
 
@@ -185,10 +176,8 @@ public abstract class BaseBatcher : IBatcher
         _stats.Commands = _cmdCount;
 
         _cmdCount = 0;
-
         OnFlush();
     }
-
 
     protected abstract void SortCommands();
     protected abstract void BuildVertices();
@@ -201,52 +190,42 @@ public abstract class BaseBatcher : IBatcher
     protected virtual bool CanBatchTogether(int indexA, int indexB) => true;
     protected virtual void SetRenderStateForGroup(int commandIndex) { }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    protected SFBlendMode.Factor ConvertFactor(BlendFactor factor) => factor switch
+    {
+        BlendFactor.Zero => SFBlendMode.Factor.Zero,
+        BlendFactor.One => SFBlendMode.Factor.One,
+        BlendFactor.SrcColor => SFBlendMode.Factor.SrcColor,
+        BlendFactor.OneMinusSrcColor => SFBlendMode.Factor.OneMinusSrcColor,
+        BlendFactor.DstColor => SFBlendMode.Factor.DstColor,
+        BlendFactor.OneMinusDstColor => SFBlendMode.Factor.OneMinusDstColor,
+        BlendFactor.SrcAlpha => SFBlendMode.Factor.SrcAlpha,
+        BlendFactor.OneMinusSrcAlpha => SFBlendMode.Factor.OneMinusSrcAlpha,
+        BlendFactor.DstAlpha => SFBlendMode.Factor.DstAlpha,
+        BlendFactor.OneMinusDstAlpha => SFBlendMode.Factor.OneMinusDstAlpha,
+        _ => SFBlendMode.Factor.One
+    };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected SFBlendMode.Factor ConvertFactor(BlendFactor factor)
+    protected SFBlendMode.Equation ConvertEquation(BlendEquation equation) => equation switch
     {
-        return factor switch
-        {
-            BlendFactor.Zero => SFBlendMode.Factor.Zero,
-            BlendFactor.One => SFBlendMode.Factor.One,
-            BlendFactor.SrcColor => SFBlendMode.Factor.SrcColor,
-            BlendFactor.OneMinusSrcColor => SFBlendMode.Factor.OneMinusSrcColor,
-            BlendFactor.DstColor => SFBlendMode.Factor.DstColor,
-            BlendFactor.OneMinusDstColor => SFBlendMode.Factor.OneMinusDstColor,
-            BlendFactor.SrcAlpha => SFBlendMode.Factor.SrcAlpha,
-            BlendFactor.OneMinusSrcAlpha => SFBlendMode.Factor.OneMinusSrcAlpha,
-            BlendFactor.DstAlpha => SFBlendMode.Factor.DstAlpha,
-            BlendFactor.OneMinusDstAlpha => SFBlendMode.Factor.OneMinusDstAlpha,
-            _ => SFBlendMode.Factor.One
-        };
-    }
+        BlendEquation.Add => SFBlendMode.Equation.Add,
+        BlendEquation.Subtract => SFBlendMode.Equation.Subtract,
+        BlendEquation.ReverseSubtract => SFBlendMode.Equation.ReverseSubtract,
+        BlendEquation.Min => SFBlendMode.Equation.Min,
+        BlendEquation.Max => SFBlendMode.Equation.Max,
+        _ => SFBlendMode.Equation.Add
+    };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected SFBlendMode.Equation ConvertEquation(BlendEquation equation)
-    {
-        return equation switch
-        {
-            BlendEquation.Add => SFBlendMode.Equation.Add,
-            BlendEquation.Subtract => SFBlendMode.Equation.Subtract,
-            BlendEquation.ReverseSubtract => SFBlendMode.Equation.ReverseSubtract,
-            BlendEquation.Min => SFBlendMode.Equation.Min,
-            BlendEquation.Max => SFBlendMode.Equation.Max,
-            _ => SFBlendMode.Equation.Add
-        };
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected SFBlendMode ConvertToSFML(IBlendMode blendMode)
-    {
-        return new SFBlendMode(
-            ConvertFactor(blendMode.ColorSrcFactor),
-            ConvertFactor(blendMode.ColorDstFactor),
-            ConvertEquation(blendMode.ColorEquation),
-            ConvertFactor(blendMode.AlphaSrcFactor),
-            ConvertFactor(blendMode.AlphaDstFactor),
-            ConvertEquation(blendMode.AlphaEquation)
-        );
-    }
+    protected SFBlendMode ConvertToSFML(IBlendMode blendMode) => new SFBlendMode(
+        ConvertFactor(blendMode.ColorSrcFactor),
+        ConvertFactor(blendMode.ColorDstFactor),
+        ConvertEquation(blendMode.ColorEquation),
+        ConvertFactor(blendMode.AlphaSrcFactor),
+        ConvertFactor(blendMode.AlphaDstFactor),
+        ConvertEquation(blendMode.AlphaEquation)
+    );
 
     public virtual void Dispose()
     {

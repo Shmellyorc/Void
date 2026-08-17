@@ -6,6 +6,7 @@ public interface IRenderTarget
     void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, SFRenderStates states);
     void Display();
     void SetView(Camera camera);
+    Texture GetTexture();
     Vect2 Size { get; }
     int Width { get; }
     int Height { get; }

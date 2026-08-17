@@ -1,5 +1,7 @@
 
 
+using Void.Engine.Logs;
+
 namespace Void.Engine.Systems;
 
 
@@ -152,6 +154,9 @@ public sealed class Window : IDisposable
     /// </summary>
     public Window(int width, int height, string title, WindowMode mode = WindowMode.Windowed, bool vsync = true)
     {
+        Logger.Instance.InfoWithCategory("Window", "Creating window: {0}x{1} '{2}' Mode={3} VSync={4}",
+            width, height, title, mode, vsync);
+
         _pendingWidth = width;
         _pendingHeight = height;
         _pendingMode = mode;
@@ -201,6 +206,8 @@ public sealed class Window : IDisposable
         {
             OnMouseWheelScrolled?.Invoke((int)args.Delta);
         };
+
+        Logger.Instance.InfoWithCategory("Window", "Window created successfully");
     }
 
     /// <summary>
@@ -278,12 +285,16 @@ public sealed class Window : IDisposable
         if (!_hasPendingChanges)
             return this;
 
+        Logger.Instance.InfoWithCategory("Window", "Applying window changes...");
+
         bool modeChanged = _pendingMode != _appliedMode;
         bool sizeChanged = _pendingWidth != _appliedWidth || _pendingHeight != _appliedHeight;
 
         // Mode changes require recreating the window
         if (modeChanged)
         {
+            Logger.Instance.InfoWithCategory("Window", "Mode changed from {0} to {1}, recreating window",
+                _appliedMode, _pendingMode);
             RecreateWindow(_pendingWidth, _pendingHeight, _pendingTitle, _pendingMode);
         }
         else
@@ -291,6 +302,9 @@ public sealed class Window : IDisposable
             // Just apply size/title/vsync
             if (sizeChanged)
             {
+                Logger.Instance.InfoWithCategory("Window", "Size changed to {0}x{1}",
+                    _pendingWidth, _pendingHeight);
+
                 _window.Size = new SFVector2u((uint)_pendingWidth, (uint)_pendingHeight);
                 RecreateRenderTarget(_pendingWidth, _pendingHeight);
             }
@@ -308,6 +322,9 @@ public sealed class Window : IDisposable
 
         _windowSize = new Vect2(_appliedWidth, _appliedHeight);
         _renderSize = new Vect2(_appliedWidth, _appliedHeight);
+
+        Logger.Instance.InfoWithCategory("Window", "Window changes applied: {0}x{1} {2} VSync={3}",
+            _appliedWidth, _appliedHeight, _appliedMode, _appliedVSync);
 
         _hasPendingChanges = false;
         OnWindowResized?.Invoke(_windowSize);
@@ -361,6 +378,8 @@ public sealed class Window : IDisposable
 
     private void CreateWindow(int width, int height, string title, WindowMode mode)
     {
+        Logger.Instance.DebugWithCategory("Window", "Creating SFML window with styles for {0}", mode);
+
         var styles = mode switch
         {
             WindowMode.Windowed => SFStyles.Close | SFStyles.Titlebar | SFStyles.Resize,
@@ -373,10 +392,15 @@ public sealed class Window : IDisposable
         var context = new SFContextSettings { MajorVersion = 4, MinorVersion = 0 };
 
         _window = new SFRenderWindow(video, title, styles, context);
+
+        Logger.Instance.DebugWithCategory("Window", "SFML window created");
     }
 
     private void RecreateWindow(int width, int height, string title, WindowMode mode)
     {
+        Logger.Instance.InfoWithCategory("Window", "Recreating window: {0}x{1} '{2}' Mode={3}",
+            width, height, title, mode);
+
         // Unsubscribe events
         _window.Closed -= OnWindowClosedHandler;
         _window.GainedFocus -= OnFocusGainedHandler;
@@ -395,10 +419,14 @@ public sealed class Window : IDisposable
         _window.MouseWheelScrolled += OnMouseWheelHandler;
 
         RecreateRenderTarget(width, height);
+
+        Logger.Instance.InfoWithCategory("Window", "Window recreated");
     }
 
     private void RecreateRenderTarget(int width, int height)
     {
+        Logger.Instance.DebugWithCategory("Window", "Recreating render target: {0}x{1}", width, height);
+
         _renderTexture?.Dispose();
         _renderSprite?.Dispose();
         _renderTexture = new SFRenderTexture((uint)width, (uint)height);
@@ -409,6 +437,8 @@ public sealed class Window : IDisposable
     {
         if (width <= 0 || height <= 0)
             return;
+
+        Logger.Instance.InfoWithCategory("Window", "Window resized to {0}x{1}", width, height);
 
         _appliedWidth = width;
         _appliedHeight = height;
@@ -572,10 +602,13 @@ public sealed class Window : IDisposable
         if (_isDisposed)
             return;
 
+        Logger.Instance.InfoWithCategory("Window", "Disposing window");
+
         _renderSprite?.Dispose();
         _renderTexture?.Dispose();
         _window?.Dispose();
 
+        Logger.Instance.InfoWithCategory("Window", "Window disposed");
         _isDisposed = true;
     }
 }

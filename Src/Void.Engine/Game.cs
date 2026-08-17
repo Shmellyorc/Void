@@ -1,4 +1,6 @@
-﻿using Void.Engine.Systems;
+﻿using Void.Engine.Logs;
+using Void.Engine.Logs.Sinks;
+using Void.Engine.Systems;
 
 namespace Void.Engine;
 
@@ -6,12 +8,12 @@ public class Game : IDisposable
 {
     private readonly GameSettings _settings;
     private readonly Window _window;
-    private readonly BeaconManager _beacon = new();
-    private readonly Coroutine _coroutine = new();
-    private readonly AssetManager _asset = new();
-    private readonly AtlasManager _atlas = new();
-    private readonly FrameTime _timing = new();
-    private readonly SFClock _sfClock = new();
+    private readonly BeaconManager _beacon;
+    private readonly CoroutineManager _coroutine;
+    private readonly AssetManager _asset;
+    private readonly AtlasManager _atlas;
+    private readonly FrameTime _timing;
+    private readonly SFClock _sfClock;
     private SFTime _previousTime;
     private bool _isDisposed;
 
@@ -56,6 +58,19 @@ public class Game : IDisposable
         Instance ??= this;
         _settings = settings;
 
+        Logger.Instance.AddSink(new ConsoleSink());
+        Logger.Instance.AddSink(new FileSink(ApplicationLogFolder, _settings.LogMaxFileSizeMB, _settings.LogMaxFiles));
+        Logger.Instance.SetLevel(_settings.LogMinLevel);
+
+        Logger.Instance.Info("  ██╗   ██╗   ██████╗   ██╗  ██████╗");
+        Logger.Instance.Info("  ██║   ██║  ██╔═══██╗  ██║  ██╔══██╗");
+        Logger.Instance.Info("  ██║   ██║  ██║   ██║  ██║  ██║  ██║");
+        Logger.Instance.Info("  ╚██╗ ██╔╝  ██║   ██║  ██║  ██║  ██║");
+        Logger.Instance.Info("   ╚████╔╝   ╚██████╔╝  ██║  ██████╔╝");
+        Logger.Instance.Info("    ╚═══╝     ╚═════╝   ╚═╝  ╚═════╝");
+        Logger.Instance.Info("Version: {0}  Hash: {1}", Version, VersionHash);
+        Logger.Instance.Info();
+
         _window = new Window(
             (int)_settings.Window.X,
             (int)_settings.Window.Y,
@@ -67,11 +82,20 @@ public class Game : IDisposable
             OnMouseWheelScrolled = delta => _scrollWheel += delta
         };
 
-        CreateFolder(ApplicationFolder, "Application data root");
-        CreateFolder(ApplicationLogFolder, "Application log folder");
-        CreateFolder(ApplicationSaveFolder, "Application save folder");
-        CreateFolder(ApplicationConfigFolder, "Application config folder");
-        CreateFolder(ApplicationTempFolder, "Application temp folder");
+        _sfClock = new SFClock();
+        _timing = new FrameTime();
+        _asset = new AssetManager();
+        _atlas = new AtlasManager();
+        _beacon = new BeaconManager();
+        _coroutine = new CoroutineManager();
+
+        Logger.Instance.Info("VOID setting up Application folders...");
+        FileHelper.EnsureDirectoryExists(ApplicationFolder);
+        FileHelper.EnsureDirectoryExists(ApplicationLogFolder);
+        FileHelper.EnsureDirectoryExists(ApplicationSaveFolder);
+        FileHelper.EnsureDirectoryExists(ApplicationConfigFolder);
+        FileHelper.EnsureDirectoryExists(ApplicationTempFolder);
+        Logger.Instance.Info("Application folders ready");
     }
 
     ~Game() => Dispose();

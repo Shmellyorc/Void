@@ -1,3 +1,5 @@
+using Void.Engine.Logs;
+
 namespace Void.Engine;
 
 public sealed class GameSettings
@@ -7,12 +9,12 @@ public sealed class GameSettings
     public static GameSettings Instance { get; private set; }
     public bool Initialized { get; private set; }
 
-
     public GameSettings()
     {
         Instance ??= this;
     }
 
+    #region Application Data
 
     public GameSettings SetUseApplicationData(bool value)
     {
@@ -49,18 +51,6 @@ public sealed class GameSettings
 
 
 
-
-    public GameSettings SetAtlasDefragThreshold(float value)
-    {
-        if (value < 0.05f || value > 0.80f)
-            throw new ArgumentOutOfRangeException(nameof(value), "Threshold must be between 5% and 80%");
-
-        AtlasDefragThreshold = value;
-        return this;
-    }
-    public float AtlasDefragThreshold { get; private set; }
-
-
     public GameSettings SetAppTitle(string name)
     {
         if (name.IsEmpty())
@@ -89,6 +79,21 @@ public sealed class GameSettings
 
 
 
+    public GameSettings SetAppVersion(uint major, uint minor = 0, uint rebuild = 0, uint revision = 0)
+    {
+        if (major == 0)
+            throw new ArgumentOutOfRangeException(nameof(major), "Major version must be greater than zero");
+
+        AppVersion = new Version((int)major, (int)minor, (int)rebuild, (int)revision).ToString();
+        return this;
+    }
+    public string AppVersion { get; private set; }
+    public string AppVersionHash => $"{HashHelper.Cache64(AppVersion):X8}";
+
+    #endregion
+
+    #region Window & Viewport
+
     public GameSettings SetFullScreen(bool value)
     {
         _isFullscreenSet = true;
@@ -106,6 +111,36 @@ public sealed class GameSettings
     }
     public bool VSync { get; private set; }
 
+
+    public GameSettings SetWindow(uint width, uint height)
+    {
+        if (width == 0)
+            throw new ArgumentOutOfRangeException(nameof(width), "Width is zero");
+        if (height == 0)
+            throw new ArgumentOutOfRangeException(nameof(height), "Height is zero");
+
+        Window = new Vect2(width, height);
+
+        return this;
+    }
+    public Vect2 Window { get; private set; }
+
+
+
+    public GameSettings SetViewport(uint width, uint height)
+    {
+        if (width == 0)
+            throw new ArgumentOutOfRangeException(nameof(width), "Width is zero");
+        if (height == 0)
+            throw new ArgumentOutOfRangeException(nameof(height), "Height is zero");
+
+        Viewport = new Vect2(width, height);
+
+        return this;
+    }
+    public Vect2 Viewport { get; private set; }
+
+    #endregion
 
     #region Frame Timing
 
@@ -150,53 +185,11 @@ public sealed class GameSettings
 
     #endregion
 
-
-
-
-
-
-    public GameSettings SetWindow(uint width, uint height)
-    {
-        if (width == 0)
-            throw new ArgumentOutOfRangeException(nameof(width), "Width is zero");
-        if (width == 0)
-            throw new ArgumentOutOfRangeException(nameof(height), "Height is zero");
-
-        Window = new Vect2(width, height);
-
-        return this;
-    }
-    public Vect2 Window { get; private set; }
-
-
-
-    public GameSettings SetViewport(uint width, uint height)
-    {
-        if (width == 0)
-            throw new ArgumentOutOfRangeException(nameof(width), "Width is zero");
-        if (width == 0)
-            throw new ArgumentOutOfRangeException(nameof(height), "Height is zero");
-
-        Viewport = new Vect2(width, height);
-
-        return this;
-    }
-    public Vect2 Viewport { get; private set; }
-
-
-
-
-
-
-
-
-
-
-
+    #region Graphics
 
     public GameSettings SetClearColor(uint red, uint green, uint blue)
     {
-        ClearColor = new Color(red, green, blue);
+        ClearColor = new Color((byte)red, (byte)green, (byte)blue);
 
         return this;
     }
@@ -223,17 +216,19 @@ public sealed class GameSettings
     }
     public bool UseHalfTexelOffset { get; private set; }
 
+    #endregion
 
+    #region Atlas
 
-    public GameSettings SetAssetEviction(uint minutes)
+    public GameSettings SetAtlasDefragThreshold(float value)
     {
-        AssetEvictionMinutes = (int)minutes;
+        if (value < 0.05f || value > 0.80f)
+            throw new ArgumentOutOfRangeException(nameof(value), "Threshold must be between 5% and 80%");
 
+        AtlasDefragThreshold = value;
         return this;
     }
-    public int AssetEvictionMinutes { get; private set; }
-
-
+    public float AtlasDefragThreshold { get; private set; }
 
 
 
@@ -272,8 +267,21 @@ public sealed class GameSettings
     }
     public IAtlasPacker AtlasPacker { get; private set; }
 
+    #endregion
 
+    #region Asset Management
 
+    public GameSettings SetAssetEviction(uint minutes)
+    {
+        AssetEvictionMinutes = (int)minutes;
+
+        return this;
+    }
+    public int AssetEvictionMinutes { get; private set; }
+
+    #endregion
+
+    #region Batch Rendering
 
     public GameSettings SetSpriteBatchCapacity(uint value)
     {
@@ -322,7 +330,56 @@ public sealed class GameSettings
     }
     public IBlendMode DefaultBlendMode { get; private set; }
 
+    #endregion
 
+    #region Discoverable
+
+    public GameSettings SetDiscoverableScanMode(AssemblyScanMode mode)
+    {
+        DiscoverableScanMode = mode;
+        return this;
+    }
+    public AssemblyScanMode DiscoverableScanMode { get; private set; }
+
+
+
+    public GameSettings SetDiscoverableAssemblyFilter(Func<Assembly, bool> filter)
+    {
+        if (filter == null)
+            throw new ArgumentNullException(nameof(filter));
+
+        DiscoverableAssemblyFilter = filter;
+        return this;
+    }
+    public Func<Assembly, bool> DiscoverableAssemblyFilter { get; private set; }
+
+
+
+    public GameSettings AddDiscoverableAssembly(string assemblyName)
+    {
+        if (assemblyName.IsEmpty())
+            throw new ArgumentNullException(nameof(assemblyName));
+
+        DiscoverableAssemblies.Add(assemblyName.Trim());
+        return this;
+    }
+    public HashSet<string> DiscoverableAssemblies { get; } = [];
+
+
+
+    public GameSettings AddDiscoverableExcludedPrefix(string prefix)
+    {
+        if (prefix.IsEmpty())
+            throw new ArgumentNullException(nameof(prefix));
+
+        DiscoverableExcludedPrefixes.Add(prefix.Trim());
+        return this;
+    }
+    public List<string> DiscoverableExcludedPrefixes { get; } = [];
+
+    #endregion
+
+    #region Input
 
     public GameSettings SetDeadZone(float value)
     {
@@ -344,20 +401,42 @@ public sealed class GameSettings
     }
     public bool IgnoreInputWhenUnfocused { get; private set; }
 
+    #endregion
 
+    #region Logging
 
-
-    public GameSettings SetAppVersion(uint major, uint minor = 0, uint rebuild = 0, uint revision = 0)
+    public GameSettings SetLogMinLevel(LogLevel level)
     {
-        if (major == 0)
-            throw new ArgumentOutOfRangeException(nameof(major), "Major version must be greater than zero");
-
-        AppVersion = new Version((int)major, (int)minor, (int)rebuild, (int)revision).ToString();
+        LogMinLevel = level;
         return this;
     }
-    public string AppVersion { get; private set; }
-    public string AppVersionHash => $"{HashHelper.Cache64(AppVersion):X8}";
+    public LogLevel LogMinLevel { get; private set; }
 
+
+
+    public GameSettings SetLogMaxFileSizeMB(uint size)
+    {
+        if (size == 0)
+            throw new ArgumentOutOfRangeException(nameof(size), "Log file size must be greater than zero");
+
+        LogMaxFileSizeMB = size;
+        return this;
+    }
+    public uint LogMaxFileSizeMB { get; private set; }
+
+
+
+    public GameSettings SetLogMaxFiles(uint count)
+    {
+        if (count == 0)
+            throw new ArgumentOutOfRangeException(nameof(count), "Log file count must be greater than zero");
+
+        LogMaxFiles = (int)count;
+        return this;
+    }
+    public int LogMaxFiles { get; private set; }
+
+    #endregion
 
     public GameSettings Build()
     {
@@ -409,6 +488,10 @@ public sealed class GameSettings
         UseApplicationData = _useApplicationDataSet && UseApplicationData;
         AppVersion = AppVersion.IsEmpty() ? "1.0.0.0" : AppVersion;
         AtlasDefragThreshold = AtlasDefragThreshold <= 0 ? 0.3f : AtlasDefragThreshold;
+        DiscoverableScanMode = DiscoverableScanMode == default ? AssemblyScanMode.ExcludeFramework : DiscoverableScanMode;
+        LogMinLevel = LogMinLevel == default ? LogLevel.Info : LogMinLevel;
+        LogMaxFileSizeMB = LogMaxFileSizeMB == 0 ? 10 : LogMaxFileSizeMB;
+        LogMaxFiles = LogMaxFiles == 0 ? 10 : LogMaxFiles;
 
         Initialized = true;
 
