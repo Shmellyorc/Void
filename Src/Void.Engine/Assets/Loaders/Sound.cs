@@ -1,8 +1,15 @@
 namespace Void.Engine.Assets.Loaders;
 
+public enum SoundPriority
+{
+    Low = 0,      // Ambient, background noise
+    Normal = 1,   // Default sounds (footsteps, gunshots)
+    High = 2,     // UI sounds, important feedback
+    Critical = 3  // Dialogue, quest updates, alarms
+}
+
 public sealed class Sound : IAsset
 {
-    private SFSoundBuffer _buffer;
     private readonly Lock _lock = new();
 
     public uint Id { get; }
@@ -10,17 +17,33 @@ public sealed class Sound : IAsset
     public byte[] Data { get; }
     public AssetType Type { get; }
     public bool IsValid { get; private set; }
+    public SoundPriority Priority { get; }
     public DateTime LastAccessTime { get; private set; }
 
-    internal Sound(uint id, byte[] data, string tag)
+    internal SFSoundBuffer Buffer { get; private set; }
+
+    internal Sound(uint id, byte[] data, string tag, SoundPriority priority)
     {
         Id = id;
         Data = data;
         Tag = tag;
+        Priority = priority;
         Type = AssetType.Normal;
         LastAccessTime = DateTime.Now;
     }
-    ~Sound() => Dispose();
+    ~Sound()
+    {
+        try
+        {
+            Buffer?.Dispose();
+            Buffer = null;
+            IsValid = false;
+        }
+        catch
+        {
+            // Ignore any exceptions during finalization
+        }
+    }
 
     public void Load()
     {
@@ -32,7 +55,7 @@ public sealed class Sound : IAsset
                 return;
             }
 
-            _buffer = new SFSoundBuffer(Data);
+            Buffer = new SFSoundBuffer(Data);
 
             IsValid = true;
             LastAccessTime = DateTime.Now;
@@ -46,14 +69,14 @@ public sealed class Sound : IAsset
             if (!IsValid)
                 return;
 
-            _buffer?.Dispose();
-            _buffer = null;
+            Buffer?.Dispose();
+            Buffer = null;
 
             IsValid = false;
         }
     }
 
-    public SoundInstance CreateInstance()
+    public SoundInstance CreateInstance(Enum category = null)
     {
         lock (_lock)
         {
@@ -69,19 +92,18 @@ public sealed class Sound : IAsset
 
             var instance = SoundInstancePool.Instance.GetInstance();
 
-            instance.Initialize(_buffer);
+            instance.Initialize(Buffer, category, Priority);
             instance.SoundName = Tag;
             return instance;
         }
-
     }
 
     public void Dispose()
     {
         lock (_lock)
         {
-            _buffer?.Dispose();
-            _buffer = null;
+            Buffer?.Dispose();
+            Buffer = null;
             IsValid = false;
         }
 

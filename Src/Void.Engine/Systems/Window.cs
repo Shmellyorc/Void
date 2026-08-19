@@ -1,4 +1,4 @@
-
+global using SFState = SFML.Window.State;
 
 using Void.Engine.Logs;
 
@@ -176,7 +176,7 @@ public sealed class Window : IDisposable
         CreateWindow(width, height, title, mode);
         _window.SetVerticalSyncEnabled(vsync);
 
-        _renderTexture = new SFRenderTexture((uint)width, (uint)height);
+        _renderTexture = new SFRenderTexture(new((uint)width, (uint)height));
         _renderSprite = new SFSprite(_renderTexture.Texture);
 
         _window.Closed += (s, o) =>
@@ -199,7 +199,7 @@ public sealed class Window : IDisposable
 
         _window.Resized += (s, e) =>
         {
-            HandleResize((int)e.Width, (int)e.Height);
+            HandleResize((int)e.Size.X, (int)e.Size.Y);
         };
 
         _window.MouseWheelScrolled += (sender, args) =>
@@ -387,11 +387,16 @@ public sealed class Window : IDisposable
             WindowMode.Fullscreen => SFStyles.Close,
             _ => SFStyles.Close | SFStyles.Titlebar | SFStyles.Resize
         };
+        var state = mode switch
+        {
+            WindowMode.Fullscreen => SFState.Fullscreen,
+            _ => SFState.Windowed
+        };
 
-        var video = new SFVideoMode((uint)width, (uint)height);
+        var video = new SFVideoMode(new((uint)width, (uint)height));
         var context = new SFContextSettings { MajorVersion = 4, MinorVersion = 0 };
 
-        _window = new SFRenderWindow(video, title, styles, context);
+        _window = new SFRenderWindow(video, title, styles, state, context);
 
         Logger.Instance.DebugWithCategory("Window", "SFML window created");
     }
@@ -429,7 +434,7 @@ public sealed class Window : IDisposable
 
         _renderTexture?.Dispose();
         _renderSprite?.Dispose();
-        _renderTexture = new SFRenderTexture((uint)width, (uint)height);
+        _renderTexture = new SFRenderTexture(new((uint)width, (uint)height));
         _renderSprite = new SFSprite(_renderTexture.Texture);
     }
 
@@ -473,7 +478,7 @@ public sealed class Window : IDisposable
 
     private void OnResizedHandler(object sender, SFSizeEventArgs e)
     {
-        HandleResize((int)e.Width, (int)e.Height);
+        HandleResize((int)e.Size.X, (int)e.Size.Y);
     }
 
     private void OnMouseWheelHandler(object sender, SFMouseWheelScrollEventArgs e)
@@ -498,7 +503,7 @@ public sealed class Window : IDisposable
     public static Vect2 GetDesktopResolution()
     {
         var mode = SFVideoMode.DesktopMode;
-        return new Vect2(mode.Width, mode.Height);
+        return mode.Size;
     }
 
     /// <summary>
@@ -512,7 +517,7 @@ public sealed class Window : IDisposable
 
         foreach (var mode in modes)
         {
-            var size = new Vect2(mode.Width, mode.Height);
+            var size = mode.Size;
             if (!result.Contains(size))
                 result.Add(size);
         }
@@ -581,7 +586,7 @@ public sealed class Window : IDisposable
     /// <returns>True if the resolution is supported.</returns>
     public static bool IsResolutionSupported(int width, int height)
     {
-        var mode = new SFVideoMode((uint)width, (uint)height);
+        var mode = new SFVideoMode(new((uint)width, (uint)height));
         return mode.IsValid();
     }
 

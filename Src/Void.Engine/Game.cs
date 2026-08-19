@@ -121,7 +121,7 @@ public class Game : IDisposable
             {
                 while (_timing.Accumulator >= _timing.TargetElapsed)
                 {
-                    _coroutine.Update(_timing);
+                    _coroutine.Update(_timing.TargetElapsed);
                     OnUpdate(_timing);
                     _timing.ConsumeFixedUpdate();
                 }
@@ -132,7 +132,7 @@ public class Game : IDisposable
             }
             else
             {
-                _coroutine.Update(_timing);
+                _coroutine.Update(_timing.DeltaTime);
                 OnUpdate(_timing);
 
                 _window.BeginRender(_settings.ClearColor);

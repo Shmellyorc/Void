@@ -26,11 +26,12 @@ public sealed class Tween<T> : IEnumerator
     {
         if (_elapsed < _duration)
         {
-            float normalized = _elapsed / _duration;
+            _elapsed += Game.Instance.FrameTime.DeltaTime;
+
+            float normalized = Math.Clamp(_elapsed / _duration, 0f, 1f);
             float eased = Easing.Ease(_type, normalized);
             T value = _lerp(_from, _to, eased);
             _onUpdate?.Invoke(value);
-            _elapsed += Game.Instance.FrameTime.DeltaTime;
 
             return true;
         }

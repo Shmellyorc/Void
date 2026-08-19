@@ -20,7 +20,7 @@ public sealed class AtlasManager
 
         public AtlasPage(int width, int height, IAtlasPacker packer)
         {
-            RenderTexture = new SFRenderTexture((uint)width, (uint)height);
+            RenderTexture = new SFRenderTexture(new((uint)width, (uint)height));
             Texture = new Texture(RenderTexture);
             Packer = packer;
             IsActive = false;
@@ -121,7 +121,7 @@ public sealed class AtlasManager
                     LruNode = lruNode
                 };
 
-                Logger.Instance.DebugWithCategory("Atlas", "Packed {0}x{1} into page {2} (total: {3})", 
+                Logger.Instance.DebugWithCategory("Atlas", "Packed {0}x{1} into page {2} (total: {3})",
                     width, height, i, _packedMap.Count);
 
                 packedRect = rect;
@@ -217,8 +217,8 @@ public sealed class AtlasManager
 
     private void ClearAtlasArea(SFRenderTexture renderTexture, Rect2 rect)
     {
-        var clearImage = new SFImage((uint)rect.Width, (uint)rect.Height, Color.Transparent);
-        renderTexture.Texture.Update(clearImage, (uint)rect.Left, (uint)rect.Top);
+        var clearImage = new SFImage(new((uint)rect.Width, (uint)rect.Height), Color.Transparent);
+        renderTexture.Texture.Update(clearImage, new((uint)rect.Left, (uint)rect.Top));
     }
 
     public SFTexture GetPageTexture(int pageId)
@@ -308,10 +308,8 @@ public sealed class AtlasManager
         var sprite = new SFSprite(texture)
         {
             TextureRect = new SFIntRect(
-                (int)srcRect.Left,
-                (int)srcRect.Top,
-                (int)srcRect.Width,
-                (int)srcRect.Height
+                new((int)srcRect.Left, (int)srcRect.Top),
+                new((int)srcRect.Width, (int)srcRect.Height)
             ),
             Position = new SFVector2f(destination.X, destination.Y)
         };

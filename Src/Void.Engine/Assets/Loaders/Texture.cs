@@ -36,7 +36,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
 
     public Texture(Vect2 size, Color color)
     {
-        _image = new SFImage((uint)size.X, (uint)size.Y, color);
+        _image = new SFImage(new((uint)size.X, (uint)size.Y), color);
         _texture = new SFTexture(_image)
         {
             Repeated = _repeated,

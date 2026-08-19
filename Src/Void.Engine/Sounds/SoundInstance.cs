@@ -1,8 +1,16 @@
 namespace Void.Engine.Sounds;
 
+public enum SoundStatus
+{
+    Stopped,
+    Paused,
+    Playing,
+}
+
+
 public sealed class SoundInstance : IDisposable
 {
-    private readonly SFSound _sfmlSound;
+    private SFSound _sfmlSound;
     private SFSoundBuffer _buffer;
     private bool _isInitialized;
     private float _playTime;
@@ -12,6 +20,9 @@ public sealed class SoundInstance : IDisposable
     private int _loopCount;
     private bool _wasPlaying;
     private bool _wasPaused;
+
+    public bool IsDisposed => _isDisposed;
+    public Enum Category { get; internal set; }
 
     public SoundStatus Status
     {
@@ -31,15 +42,32 @@ public sealed class SoundInstance : IDisposable
         {
             if (_isDisposed || !_isInitialized)
                 return;
-            // NOTE: if values are almost simular of est. MathHelper.Epsilon, just fail
             if (MathHelper.AlmostEquals(value, _volume, MathHelper.Epsilon))
                 return;
 
-            _volume = Math.Clamp(value, 0f, 1f);
+            _rawVolume = Math.Clamp(value, 0f, 1f);
+            _volume = _rawVolume;
             _sfmlSound.Volume = _volume * 100f;
         }
     }
+    private float _rawVolume = 1f;
     private float _volume = 1f;
+    internal void ApplyCategoryVolume(Enum category)
+    {
+        if (_isDisposed || !_isInitialized)
+            return;
+
+        float categoryVolume = 1f;
+        if (category != null)
+        {
+            var method = typeof(SoundHelper).GetMethod(nameof(SoundHelper.GetCategoryVolume));
+            var genericMethod = method.MakeGenericMethod(category.GetType());
+            categoryVolume = (float)genericMethod.Invoke(null, new[] { category });
+        }
+
+        _volume = _rawVolume * categoryVolume;
+        _sfmlSound.Volume = _volume * 100f;
+    }
 
 
     public float Pitch
@@ -49,7 +77,6 @@ public sealed class SoundInstance : IDisposable
         {
             if (_isDisposed || !_isInitialized)
                 return;
-            // NOTE: if values are almost simular of est. MathHelper.Epsilon, just fail
             if (MathHelper.AlmostEquals(value, _pitch, MathHelper.Epsilon))
                 return;
 
@@ -100,14 +127,14 @@ public sealed class SoundInstance : IDisposable
 
             _looping = value;
 
-            _sfmlSound.Loop = _looping;
+            _sfmlSound.IsLooping = _looping;
         }
     }
     private bool _looping;
 
 
     public float PlayTime => _playTime;
-    public float Duration => _buffer?.Duration.AsSeconds() ?? 0f;
+    public float Duration => _buffer != null && !_buffer.IsInvalid ? _buffer.Duration.AsSeconds() : 0f;
     public float Progress => Duration > 0 ? Math.Clamp(_playTime / Duration, 0f, 1f) : 0f;
     public int LoopCount => _loopCount;
     public bool IsPlaying => Status == SoundStatus.Playing;
@@ -115,6 +142,7 @@ public sealed class SoundInstance : IDisposable
     public bool IsStopped => Status == SoundStatus.Stopped;
     public bool IsComplete => IsStopped && _hasNotifiedCompletion;
     public bool IsValid => _isInitialized && !_isDisposed;
+    public SoundPriority Priority { get; set; } = SoundPriority.Normal;
 
     public string SoundName
     {
@@ -131,7 +159,6 @@ public sealed class SoundInstance : IDisposable
 
     internal SoundInstance()
     {
-        _sfmlSound = new SFSound();
         _isInitialized = false;
         _playTime = 0f;
         _isDisposed = false;
@@ -141,7 +168,7 @@ public sealed class SoundInstance : IDisposable
         _wasPaused = false;
     }
 
-    internal void Initialize(SFSoundBuffer buffer)
+    internal void Initialize(SFSoundBuffer buffer, Enum category = null, SoundPriority priority = SoundPriority.Normal)
     {
         if (_isDisposed)
             throw new ObjectDisposedException(nameof(SoundInstance));
@@ -150,7 +177,14 @@ public sealed class SoundInstance : IDisposable
             Stop();
 
         _buffer = buffer;
-        _sfmlSound.SoundBuffer = buffer;
+
+        if (_sfmlSound == null)
+            _sfmlSound = new SFSound(buffer);
+        else
+            _sfmlSound.SoundBuffer = buffer;
+
+        Category = category;
+        Priority = priority;
         _isInitialized = true;
         _playTime = 0f;
         _hasNotifiedCompletion = false;
@@ -179,16 +213,18 @@ public sealed class SoundInstance : IDisposable
 
                 if (!Looping && !_hasNotifiedCompletion && _buffer != null && _playTime >= _buffer.Duration.AsSeconds())
                 {
-                    SoundCompleted?.Invoke(this, new SoundCompletedEventArgs(this, false, _loopCount));
+                    // Set flag BEFORE firing event to prevent re-entry
                     _hasNotifiedCompletion = true;
+                    SoundCompleted?.Invoke(this, new SoundCompletedEventArgs(this, false, _loopCount));
                 }
             }
-            else if (Status == SoundStatus.Stopped)
+            else if (Status == SoundStatus.Stopped && _isInitialized)
             {
                 if (!_hasNotifiedCompletion)
                 {
-                    SoundStopped?.Invoke(this, new SoundStoppedEventArgs(this, _wasPlaying, _wasPaused));
+                    // Set flag BEFORE firing event to prevent re-entry
                     _hasNotifiedCompletion = true;
+                    SoundStopped?.Invoke(this, new SoundStoppedEventArgs(this, _wasPlaying, _wasPaused));
                 }
             }
         }
@@ -265,10 +301,29 @@ public sealed class SoundInstance : IDisposable
 
     internal void Reset()
     {
+        if (_isDisposed || !_isInitialized || _sfmlSound == null)
+        {
+            _buffer = null;
+            _isInitialized = false;
+            _playTime = 0f;
+            Priority = SoundPriority.Normal;
+            _hasNotifiedCompletion = false;
+            _loopCount = 0;
+            _wasPlaying = false;
+            _wasPaused = false;
+            _rawVolume = 1f;
+            Category = null;
+            return;
+        }
+
         try
         {
-            _sfmlSound.Stop();
-            _sfmlSound.SoundBuffer = null;
+            if (_sfmlSound.CPointer != IntPtr.Zero)
+            {
+                _sfmlSound?.Stop();
+                _sfmlSound.SoundBuffer = null;
+            }
+
             _buffer = null;
             _isInitialized = false;
             _playTime = 0f;
@@ -276,6 +331,21 @@ public sealed class SoundInstance : IDisposable
             _loopCount = 0;
             _wasPlaying = false;
             _wasPaused = false;
+            _rawVolume = 1f;
+            Category = null;
+        }
+        catch (ObjectDisposedException)
+        {
+            _sfmlSound = null;
+            _buffer = null;
+            _isInitialized = false;
+            _playTime = 0f;
+            _hasNotifiedCompletion = false;
+            _loopCount = 0;
+            _wasPlaying = false;
+            _wasPaused = false;
+            _rawVolume = 1f;
+            Category = null;
         }
         catch (Exception ex)
         {

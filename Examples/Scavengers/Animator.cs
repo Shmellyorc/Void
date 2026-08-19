@@ -1,13 +1,13 @@
 namespace Scavengers;
 
-public readonly struct Animation
+public readonly struct Animation<TEnum>
 {
-    public Enum Type { get; }
+    public TEnum Type { get; }
     public Rect2[] Sources { get; }
     public float Speed { get; }
     public bool Looped { get; }
 
-    public Animation(Enum type, Rect2[] sources, float speed, bool looped)
+    public Animation(TEnum type, Rect2[] sources, float speed, bool looped)
     {
         Type = type;
         Sources = sources;
@@ -16,23 +16,23 @@ public readonly struct Animation
     }
 }
 
-public sealed class Animator
+public sealed class Animator<TEnum> where TEnum : Enum
 {
-    private readonly Dictionary<Enum, Animation> _anims = [];
+    private readonly Dictionary<Enum, Animation<TEnum>> _anims = [];
     private readonly Texture _texture;
-    private Enum _current = null;
+    private TEnum _current;
     private bool _playing;
     public float _delta;
     private int _frame;
 
-    public Action<Animation> AnimFinished { get; set; }
+    public Action<TEnum, Animation<TEnum>> AnimFinished { get; set; }
 
     public Animator(Texture texture)
     {
         _texture = texture;
     }
 
-    public Animator Add(Enum name, Rect2[] rects, float speed, bool looped)
+    public Animator<TEnum> Add(TEnum name, Rect2[] rects, float speed, bool looped)
     {
         if (_anims.ContainsKey(name))
             return this;
@@ -43,16 +43,16 @@ public sealed class Animator
         for (int i = 0; i < rects.Length; i++)
             sources.Add(rects[i]);
 
-        _anims[name] = new Animation(name, sources.ToArray(), speed, looped);
+        _anims[name] = new Animation<TEnum>(name, sources.ToArray(), speed, looped);
 
         return this;
     }
 
-    public Animator Play(Enum name, bool repeat)
+    public Animator<TEnum> Play(TEnum name, bool repeat)
     {
         if (!_anims.TryGetValue(name, out var result))
             return this;
-        if (repeat && _current == name)
+        if (repeat && _current.Equals(name))
             return this;
 
         _frame = 0;
@@ -85,7 +85,7 @@ public sealed class Animator
                     _frame = anim.Sources.Length - 1;
                     _playing = false;
 
-                    AnimFinished?.Invoke(anim);
+                    AnimFinished?.Invoke(_current, anim);
                 }
             }
         }

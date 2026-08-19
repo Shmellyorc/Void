@@ -21,7 +21,7 @@ internal sealed class TextureRenderTarget : IRenderTarget
         _width = width;
         _height = height;
         _sRGB = sRGB;
-        _texture = new SFRenderTexture((uint)width, (uint)height);
+        _texture = new SFRenderTexture(new((uint)width, (uint)height));
         _window = null;
     }
 

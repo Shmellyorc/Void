@@ -61,7 +61,7 @@ public sealed class SpriteFont : Font, IAsset
         uint width = _image.Size.X;
         uint height = _image.Size.Y;
 
-        Color ignoreColor = _image.GetPixel(0, 0);
+        Color ignoreColor = _image.GetPixel(new(0, 0));
 
         bool[,] processed = new bool[width, height];
         var glyphs = new List<Glyph>();
@@ -73,7 +73,7 @@ public sealed class SpriteFont : Font, IAsset
                 if (processed[x, y])
                     continue;
 
-                Color pixel = _image.GetPixel(x, y);
+                Color pixel = _image.GetPixel(new(x, y));
                 if (pixel == ignoreColor)
                     continue;
 
@@ -132,7 +132,7 @@ public sealed class SpriteFont : Font, IAsset
             if (processed[x, y])
                 continue;
 
-            Color pixel = _image.GetPixel(x, y);
+            Color pixel = _image.GetPixel(new(x, y));
             if (pixel == ignoreColor)
                 continue;
 

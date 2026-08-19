@@ -179,8 +179,8 @@ public struct Rect2 : IEquatable<Rect2>
 
     public static implicit operator Rect2(in SFFloatRect v) => new(v.Left, v.Top, v.Width, v.Height);
     public static implicit operator Rect2(in SFIntRect v) => new(v.Left, v.Top, v.Width, v.Height);
-    public static implicit operator SFFloatRect(in Rect2 v) => new(v._position.X, v._position.Y, v._size.X, v._size.Y);
-    public static implicit operator SFIntRect(in Rect2 v) => new((int)v._position.X, (int)v._position.Y, (int)v._size.X, (int)v._size.Y);
+    public static implicit operator SFFloatRect(in Rect2 v) => new(new(v._position.X, v._position.Y), new(v._size.X, v._size.Y));
+    public static implicit operator SFIntRect(in Rect2 v) => new(new((int)v._position.X, (int)v._position.Y), new((int)v._size.X, (int)v._size.Y));
     #endregion
 
 

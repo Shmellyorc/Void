@@ -3,6 +3,8 @@ using System.Runtime.CompilerServices;
 using Void.Engine.Graphics.RenderTargets;
 using Void.Engine.Graphics.Shaders;
 
+using SFCoordinateType = SFML.Graphics.CoordinateType;
+
 namespace Void.Engine.Graphics;
 
 public abstract class BaseBatcher : IBatcher
@@ -56,7 +58,8 @@ public abstract class BaseBatcher : IBatcher
         _renderStates = new SFRenderStates
         {
             BlendMode = SFBlendMode.Alpha,
-            Transform = SFTransform.Identity
+            Transform = SFTransform.Identity,
+            CoordinateType = SFCoordinateType.Pixels,
         };
 
         _name = GetType().Name;

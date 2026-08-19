@@ -47,9 +47,11 @@ public class Entity
             Position = _path.Dequeue();
 
             if (this is Player player)
+            {
+                BeaconManager.Instance.Publish(GameBecaons.UpdateFood, Globals.PlayerMoveFoodReduction);
                 BeaconManager.Instance.Publish(GameBecaons.PlayerMoved, player);
-            if (this is Enemy enemy)
-                BeaconManager.Instance.Publish(GameBecaons.EnemyMoved, enemy);
+
+            }
         }
     }
 

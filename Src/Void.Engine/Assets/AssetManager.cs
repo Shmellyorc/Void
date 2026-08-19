@@ -38,7 +38,7 @@ public sealed class AssetManager
         {typeof(LDtkMap), (id, data, tag) => new LDtkMap(id, data, tag)},
         {typeof(SpriteFont), (id, data, tag) => new SpriteFont(id, data, tag, SpriteFont.CharsetFull)},
         {typeof(Spritesheet), (id, data, tag) => new Spritesheet(id, data, tag)},
-        {typeof(Sound), (id, data, tag) => new Sound(id, data, tag)}
+        {typeof(Sound), (id, data, tag) => new Sound(id, data, tag, SoundPriority.Normal)}
     };
     #endregion
 
@@ -228,6 +228,9 @@ public sealed class AssetManager
 
     public SpriteFont LoadSpriteFont(string path, float spacing = 0f, float lineSpacing = 0f, string charset = SpriteFont.CharsetFull)
         => GetOrLoadInternal(path, (id, data, tag) => new SpriteFont(id, data, tag, charset, lineSpacing, spacing));
+
+    public Sound LoadSound(string path, SoundPriority priority = SoundPriority.Normal)
+        => GetOrLoadInternal(path, (id, data, tag) => new Sound(id, data, tag, priority));
 
     #endregion
 
@@ -441,7 +444,7 @@ public sealed class AssetManager
 
     internal void Clear()
     {
-        Logger.Instance.InfoWithCategory("AssetManager", 
+        Logger.Instance.InfoWithCategory("AssetManager",
             "Clearing {0} assets and {1} mounts", _assets.Count, _mounts.Count);
 
         foreach (var asset in _assets.Values)

@@ -24,8 +24,8 @@ namespace FlappyBirb;
 public sealed class Pipe
 {
     // Source rectangles from the spritesheet
-    private readonly Rect2 _topPipeRect = Globals.Sheet.GetBounds("TopPipe");
-    private readonly Rect2 _bottomPipeRect = Globals.Sheet.GetBounds("BottomPipe");
+    private readonly Rect2 _topPipeRect = Globals.Sheet.GetBound("TopPipe");
+    private readonly Rect2 _bottomPipeRect = Globals.Sheet.GetBound("BottomPipe");
 
     /// <summary>
     /// The top pipe's hitbox. Hangs down from above the gap.

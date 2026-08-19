@@ -75,7 +75,6 @@ public sealed class SoundInstancePool : IDisposable
             }
             catch (TaskCanceledException)
             {
-                // Excepted when shutting down
                 break;
             }
         }
@@ -114,10 +113,9 @@ public sealed class SoundInstancePool : IDisposable
     {
         InstanceError?.Invoke(this, e);
 
-        var instance = sender as SoundInstance;
-        if (instance != null)
+        if (sender is SoundInstance instance)
         {
-            Task.Factory.StartNew(() => ReturnInstance(instance));
+            ReturnInstance(instance);
         }
     }
 
@@ -128,19 +126,17 @@ public sealed class SoundInstancePool : IDisposable
 
     private void OnInstanceSoundStopped(object sender, SoundStoppedEventArgs e)
     {
-        var instance = sender as SoundInstance;
-        if (instance != null)
+        if (sender is SoundInstance instance)
         {
-            Task.Factory.StartNew(() => ReturnInstance(instance));
+            ReturnInstance(instance);
         }
     }
 
     private void OnInstanceSoundCompleted(object sender, SoundCompletedEventArgs e)
     {
-        var instance = sender as SoundInstance;
-        if (instance != null)
+        if (sender is SoundInstance instance)
         {
-            Task.Factory.StartNew(() => ReturnInstance(instance));
+            ReturnInstance(instance);
         }
     }
 
@@ -152,7 +148,7 @@ public sealed class SoundInstancePool : IDisposable
         instance.SoundError -= OnInstanceSoundError;
     }
 
-    public SoundInstance GetInstance()
+    public SoundInstance GetInstance(SoundPriority newSoundPriority = SoundPriority.Normal)
     {
         lock (_lock)
         {
@@ -178,7 +174,28 @@ public sealed class SoundInstancePool : IDisposable
                     return recycled;
                 }
 
-                var oldest = _activeInstances.OrderBy(s => s.PlayTime).FirstOrDefault();
+                var lowestPriority = _activeInstances
+                    .Where(x => x.IsPlaying || x.IsPaused)
+                    .Where(x => x.Priority < newSoundPriority)
+                    .OrderBy(x => x.Priority)
+                    .ThenBy(x => x.PlayTime)
+                    .FirstOrDefault();
+
+                if (lowestPriority != null)
+                {
+                    lowestPriority.Stop();
+                    UnsubscribeFromInstanceEvents(lowestPriority);
+                    lowestPriority.Reset();
+                    SubscribeToInstanceEvents(lowestPriority);
+                    InstanceRecycled?.Invoke(this, new SoundEventArgs(lowestPriority));
+                    return lowestPriority;
+                }
+
+                var oldest = _activeInstances
+                    .Where(x => x.IsPlaying || x.IsPaused)
+                    .OrderBy(x => x.PlayTime)
+                    .FirstOrDefault();
+
                 if (oldest != null)
                 {
                     oldest.Stop();
@@ -207,10 +224,17 @@ public sealed class SoundInstancePool : IDisposable
         {
             try
             {
+                if (!_activeInstances.Contains(instance))
+                    return; // Already returned or never was active
+
                 if (_activeInstances.Remove(instance))
                 {
                     instance.Reset();
-                    _availableInstances.Enqueue(instance);
+
+                    if (!_availableInstances.Contains(instance))
+                    {
+                        _availableInstances.Enqueue(instance);
+                    }
                 }
             }
             catch (Exception ex)
@@ -306,5 +330,64 @@ public sealed class SoundInstancePool : IDisposable
         _cancellationTokenSource.Dispose();
         _isDisposed = true;
         GC.SuppressFinalize(this);
+    }
+
+    public List<SoundInstance> GetActiveInstances()
+    {
+        lock (_lock)
+        {
+            return [.. _activeInstances];
+        }
+    }
+
+    // Apply volume to all active instances
+    public void ApplyVolumeToAll(float volume)
+    {
+        lock (_lock)
+        {
+            foreach (var instance in _activeInstances)
+            {
+                instance.Volume = volume;
+            }
+        }
+    }
+
+    // Stop all instances (no name filter)
+    public void StopAll()
+    {
+        lock (_lock)
+        {
+            var instances = _activeInstances.ToList();
+            foreach (var instance in instances)
+            {
+                instance.Stop();
+            }
+        }
+    }
+
+    // Pause all instances (no name filter)
+    public void PauseAll()
+    {
+        lock (_lock)
+        {
+            var instances = _activeInstances.ToList();
+            foreach (var instance in instances)
+            {
+                instance.Pause();
+            }
+        }
+    }
+
+    // Resume all instances (no name filter)
+    public void ResumeAll()
+    {
+        lock (_lock)
+        {
+            var instances = _activeInstances.Where(x => x.IsPaused).ToList();
+            foreach (var instance in instances)
+            {
+                instance.Play();
+            }
+        }
     }
 }

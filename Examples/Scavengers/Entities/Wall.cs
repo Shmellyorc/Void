@@ -11,7 +11,7 @@ public sealed class Wall(LDtkEntityInstance inst) : Entity(inst)
     private static readonly IReadOnlyList<Rect2> _wallE = Globals.Sheet.GetBounds("WallE0", "WallE1");
     private static readonly IReadOnlyList<Rect2> _wallF = Globals.Sheet.GetBounds("WallF0", "WallF1");
 
-    private Animator _anim;
+    private Animator<WallType> _anim;
     private WallType _state;
 
     public override void OnEnter()
@@ -21,7 +21,7 @@ public sealed class Wall(LDtkEntityInstance inst) : Entity(inst)
         var result = FastRandom.Shared
             .Choice([_wallA, _wallB, _wallC, _wallD, _wallE, _wallF]);
 
-        _anim = new Animator(Globals.Texture)
+        _anim = new Animator<WallType>(Globals.Texture)
             .Add(WallType.Normal, [result[0]], 8f, false)
             .Add(WallType.Damaged, [result[1]], 8f, false)
             .Add(WallType.Destroyed, [Globals.Sheet.GetBound("Empty")], 8f, false)

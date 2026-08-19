@@ -5,7 +5,7 @@ public sealed class Food(LDtkEntityInstance inst) : Entity(inst)
     private enum FoodType { Soda, Fruit, Random }
 
     private FoodType _type;
-    private Animator _anim;
+    private Animator<FoodType> _anim;
 
     public override void OnEnter()
     {
@@ -21,7 +21,7 @@ public sealed class Food(LDtkEntityInstance inst) : Entity(inst)
             _type = FastRandom.Shared.Choice(types);
         }
 
-        _anim = new Animator(Globals.Texture)
+        _anim = new Animator<FoodType>(Globals.Texture)
             .Add(FoodType.Fruit, [Globals.Sheet.GetBound("Fruit")], 8f, false)
             .Add(FoodType.Soda, [Globals.Sheet.GetBound("Soda")], 8f, false)
             .Play(_type, false)
@@ -44,12 +44,24 @@ public sealed class Food(LDtkEntityInstance inst) : Entity(inst)
         if (Location != player.Location)
             return;
 
-        Globals.Data.Food += _type switch
+        var looted = _type switch
         {
-            FoodType.Soda => 10,
-            FoodType.Fruit => 5,
+            FoodType.Soda => Globals.SodaPoints,
+            FoodType.Fruit => Globals.FruitPoints,
             _ => throw new InvalidOperationException($"Unable to detect fruit type of: '{_type}'.")
         };
+
+        Sound instance = _type switch
+        {
+            FoodType.Soda => FastRandom.Shared.Choice([Globals.Soda1, Globals.Soda2]),
+            FoodType.Fruit => FastRandom.Shared.Choice([Globals.Fruit1, Globals.Fruit2]),
+            _ => throw new InvalidOperationException($"Unable to detect fruit type of: '{_type}'.")
+        };
+
+        instance.PlayAndForget(Globals.SoundFxVolume);
+
+        Globals.Data.Food += looted;
+        Globals.Data.Looted += looted;
 
         Destroy();
     }

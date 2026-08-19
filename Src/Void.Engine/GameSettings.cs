@@ -4,7 +4,7 @@ namespace Void.Engine;
 
 public sealed class GameSettings
 {
-    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet, _isVSyncSet, _useApplicationDataSet;
+    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet, _isVSyncSet, _useApplicationDataSet, _setLogMinLevel;
 
     public static GameSettings Instance { get; private set; }
     public bool Initialized { get; private set; }
@@ -407,7 +407,9 @@ public sealed class GameSettings
 
     public GameSettings SetLogMinLevel(LogLevel level)
     {
+        _setLogMinLevel = true;
         LogMinLevel = level;
+
         return this;
     }
     public LogLevel LogMinLevel { get; private set; }
@@ -489,7 +491,7 @@ public sealed class GameSettings
         AppVersion = AppVersion.IsEmpty() ? "1.0.0.0" : AppVersion;
         AtlasDefragThreshold = AtlasDefragThreshold <= 0 ? 0.3f : AtlasDefragThreshold;
         DiscoverableScanMode = DiscoverableScanMode == default ? AssemblyScanMode.ExcludeFramework : DiscoverableScanMode;
-        LogMinLevel = LogMinLevel == default ? LogLevel.Info : LogMinLevel;
+        LogMinLevel = !_setLogMinLevel ? LogLevel.Info : LogMinLevel;
         LogMaxFileSizeMB = LogMaxFileSizeMB == 0 ? 10 : LogMaxFileSizeMB;
         LogMaxFiles = LogMaxFiles == 0 ? 10 : LogMaxFiles;
 
