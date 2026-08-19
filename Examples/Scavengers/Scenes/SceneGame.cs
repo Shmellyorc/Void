@@ -117,19 +117,39 @@ public sealed class SceneGame : Scene
     {
         var amount = handle.Get<int>(0);
 
-        Globals.Data.Food += amount;
+        if (amount > 0)
+            Globals.Data.Looted += amount;
 
-        if (Globals.Data.Food <= 0)
+        if (amount < 0)
         {
-            BeaconManager.Instance.Publish(GameBecaons.LockUnits);
-            BeaconManager.Instance.Publish(GameBecaons.GameOver);
+            Globals.Data.Food += amount;
 
-            if (!_isGameOver)
+            if (Globals.Data.Food <= 0)
             {
-                CoroutineManager.Instance.Run(new DelayCall(2f, () => SceneManager.Instance.Add(new SceneGameOver())));
-                _isGameOver = true;
+                BeaconManager.Instance.Publish(GameBecaons.LockUnits);
+                BeaconManager.Instance.Publish(GameBecaons.GameOver);
+
+                if (!_isGameOver)
+                {
+                    CoroutineManager.Instance.Run(new DelayCall(2f, () => SceneManager.Instance.Add(new SceneGameOver())));
+                    _isGameOver = true;
+                }
             }
         }
+        else
+            CoroutineManager.Instance.Run(AnimateFood(amount));
+    }
+
+    private IEnumerator AnimateFood(float amount)
+    {
+        if (_isGameOver)
+            yield break;
+
+        var start = Globals.Data.Food;
+        var end = Globals.Data.Food + amount;
+
+        yield return new Tween<float>(start, end, 0.1f, EaseType.CubicOut, MathHelper.Lerp,
+            v => Globals.Data.Food = (int)v);
     }
 
     public Vect2[] GetPath(Vect2 start, Vect2 end)

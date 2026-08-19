@@ -48,12 +48,9 @@ public sealed class SceneTransition : Scene
         var toRemove = new List<Scene>(sm.Scenes.Count);
 
         yield return Globals.FadeInOut(0f, 1f, 0.8f, v => _fade = v);
-        yield return Globals.FadeInOut(0f, 1f, 1.2f, v => _textFade = v);
-        yield return new WaitForNextFrame();
+        yield return Globals.FadeInOut(0f, 1f, 1.5f, v => _textFade = v);
 
-        SoundExtensions.PlayRandom([Globals.FootStep1, Globals.FootStep2], volume: Globals.SoundFxVolume);
-
-        
+        SoundHelper.PlayRandom([Globals.FootStep1, Globals.FootStep2], Globals.SoundFxVolume);
 
         Globals.Data.Days++;
         yield return new WaitForSeconds(2.5f);

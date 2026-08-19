@@ -85,8 +85,9 @@ public sealed class SoundInstancePool : IDisposable
         lock (_lock)
         {
             var completedInstances = new List<SoundInstance>();
+            var activeSnapshot = _activeInstances.ToList();
 
-            foreach (var instance in _activeInstances)
+            foreach (var instance in activeSnapshot)
             {
                 instance.Update(deltaTime);
 

@@ -48,7 +48,7 @@ public static class SoundHelper
         if (instance == null)
             return null;
 
-        instance.Initialize(sound.Buffer, category, sound.Priority); 
+        instance.Initialize(sound.Buffer, category, sound.Priority);
         instance.SoundName = sound.Tag;
         instance.Volume = volume;
         instance.ApplyCategoryVolume(category);
@@ -89,6 +89,15 @@ public static class SoundHelper
     public static void RegisterSoundGroup(string groupName, params Sound[] sounds)
     {
         SoundGroups[groupName] = sounds;
+    }
+
+    public static SoundInstance PlayRandom(Sound[] sounds, float volume = 1f, float pan = 0f, float pitch = 1f)
+    {
+        var list = sounds as IList<Sound> ?? sounds.ToList();
+        if (list.Count == 0)
+            return null;
+
+        return list[FastRandom.Shared.Next(list.Count)].PlayOneShot(volume, pan, pitch);
     }
 
     public static SoundInstance PlayFromGroup<T>(string groupName, float volume = 1f, float pan = 0f, float pitch = 1f, T category = default, bool withVariation = false,

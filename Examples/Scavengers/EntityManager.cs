@@ -48,6 +48,7 @@ public class Entity
 
             if (this is Player player)
             {
+                SoundHelper.PlayRandom([Globals.FootStep1, Globals.FootStep2], Globals.SoundFxVolume);
                 BeaconManager.Instance.Publish(GameBecaons.UpdateFood, Globals.PlayerMoveFoodReduction);
                 BeaconManager.Instance.Publish(GameBecaons.PlayerMoved, player);
 

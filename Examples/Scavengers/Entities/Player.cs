@@ -42,7 +42,10 @@ public sealed class Player(LDtkEntityInstance inst) : Entity(inst)
     private void OnGameover(BeaconHandle handle)
         => _anim.Play(PlayerAnims.GameOver, false);
     private void OnPlayerHit(BeaconHandle handle)
-        => _anim.Play(PlayerAnims.Hit, true);
+    {
+        Globals.Die.PlayAndForget(Globals.SoundFxVolume);
+        _anim.Play(PlayerAnims.Hit, true);
+    }
 
     private void OnAnimFinished(PlayerAnims current, Animation<PlayerAnims> animation)
     {
@@ -80,17 +83,23 @@ public sealed class Player(LDtkEntityInstance inst) : Entity(inst)
             }
             else if (state.IsPressed(GameInputs.Interact))
             {
-                _canMove = false;
+                SoundHelper.PlayRandom([Globals.Chop1, Globals.Chop2], Globals.SoundFxVolume);
                 _anim.Play(PlayerAnims.Attack, true);
 
                 BeaconManager.Instance.Publish(GameBecaons.UpdateFood, Globals.PlayerAttackFoodReduction);
                 BeaconManager.Instance.Publish(GameBecaons.PlayerInteract, this);
                 BeaconManager.Instance.Publish(GameBecaons.PlayerMoved, this);
+                _canMove = false;
             }
         }
 
         if (vel != Vect2.Zero)
-            SetPath(vel + Location);
+        {
+            if (!App.HasCollded(Location + vel))
+            {
+                SetPath(vel + Location);
+            }
+        }
 
         Globals.Camera.Position = Position + Vect2.One * Globals.TileSize / 2f;
 

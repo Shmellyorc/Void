@@ -39,29 +39,25 @@ public sealed class Food(LDtkEntityInstance inst) : Entity(inst)
 
     private void OnPlayerMoved(BeaconHandle handle)
     {
-        var player = handle.Get<Player>(0);
-
-        if (Location != player.Location)
+        if (Location != handle.Get<Player>(0).Location)
             return;
 
-        var looted = _type switch
+        int points;
+        switch (_type)
         {
-            FoodType.Soda => Globals.SodaPoints,
-            FoodType.Fruit => Globals.FruitPoints,
-            _ => throw new InvalidOperationException($"Unable to detect fruit type of: '{_type}'.")
-        };
+            case FoodType.Soda:
+                points = Globals.SodaPoints;
+                SoundHelper.PlayRandom([Globals.Soda1, Globals.Soda2], Globals.SoundFxVolume);
+                break;
+            case FoodType.Fruit:
+                points = Globals.FruitPoints;
+                SoundHelper.PlayRandom([Globals.Fruit1, Globals.Fruit2], Globals.SoundFxVolume);
+                break;
+            default:
+                throw new InvalidOperationException($"Unable to detect fruit type of: '{_type}'.");
+        }
 
-        Sound instance = _type switch
-        {
-            FoodType.Soda => FastRandom.Shared.Choice([Globals.Soda1, Globals.Soda2]),
-            FoodType.Fruit => FastRandom.Shared.Choice([Globals.Fruit1, Globals.Fruit2]),
-            _ => throw new InvalidOperationException($"Unable to detect fruit type of: '{_type}'.")
-        };
-
-        instance.PlayAndForget(Globals.SoundFxVolume);
-
-        Globals.Data.Food += looted;
-        Globals.Data.Looted += looted;
+        BeaconManager.Instance.Publish(GameBecaons.UpdateFood, points);
 
         Destroy();
     }

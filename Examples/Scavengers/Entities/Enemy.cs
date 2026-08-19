@@ -61,10 +61,9 @@ public sealed class Enemy(LDtkEntityInstance inst) : Entity(inst)
 
         if (MapHelper.IsUnitAround(player.Location, Location, false))
         {
+            _anim.Play(AnimType.Attack, false);
             BeaconManager.Instance.Publish(GameBecaons.PlayerHit);
             BeaconManager.Instance.Publish(GameBecaons.UpdateFood, Globals.EnemyFoodReduction);
-
-            _anim.Play(AnimType.Attack, false);
             return;
         }
 

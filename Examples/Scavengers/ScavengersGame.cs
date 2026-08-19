@@ -22,6 +22,9 @@ public sealed class ScavengersGame(GameSettings settings) : Game(settings)
         Globals.FootStep2 = AssetManager.Instance.Load<Sound>("Sounds/Footstep2.wav");
         Globals.Enemy1 = AssetManager.Instance.Load<Sound>("Sounds/Enemy1.wav");
         Globals.Enemy2 = AssetManager.Instance.Load<Sound>("Sounds/Enemy2.wav");
+        Globals.Chop1 = AssetManager.Instance.Load<Sound>("Sounds/Chop1.wav");
+        Globals.Chop2 = AssetManager.Instance.Load<Sound>("Sounds/Chop2.wav");
+        Globals.Die = AssetManager.Instance.Load<Sound>("Sounds/Die.wav");
 
         InputAction.AddAction(GameInputs.MoveUp).AddKey(KeyboardKey.W).AddKey(KeyboardKey.Up).AddGamepad(GamepadButton.DPadUp);
         InputAction.AddAction(GameInputs.MoveRight).AddKey(KeyboardKey.D).AddKey(KeyboardKey.Right).AddGamepad(GamepadButton.DPadRight);

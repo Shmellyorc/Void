@@ -30,11 +30,13 @@ public static class Globals
     public static Texture TempTexture;
     public static LDtkMap Map;
 
-    public static Sound Music;
+    public static Sound Chop1, Chop2;
+    public static Sound Die;
+    public static Sound Enemy1, Enemy2;
+    public static Sound FootStep1, FootStep2;
     public static Sound Fruit1, Fruit2;
     public static Sound Soda1, Soda2;
-    public static Sound FootStep1, FootStep2;
-    public static Sound Enemy1, Enemy2;
+    public static Sound Music;
 
     public static SoundInstance MusicInstance { get; internal set; }
 
