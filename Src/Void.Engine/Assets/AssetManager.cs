@@ -1,3 +1,5 @@
+using Microsoft.VisualBasic;
+
 using Void.Engine.Logs;
 
 namespace Void.Engine.Assets;
@@ -216,8 +218,10 @@ public sealed class AssetManager
             asset = GetOrLoadInternal<T>(path, null);
             return asset != null;
         }
-        catch
+        catch (Exception ex)
         {
+            Logger.Instance.WarningWithCategory("AssetManager",
+                "Failed to load asset '{0}' of type '{1}': {2}", path, typeof(T).Name, ex.Message);
             asset = default;
             return false;
         }
@@ -232,6 +236,36 @@ public sealed class AssetManager
     public Sound LoadSound(string path, SoundPriority priority = SoundPriority.Normal)
         => GetOrLoadInternal(path, (id, data, tag) => new Sound(id, data, tag, priority));
 
+    public Texture LoadTilesetTexture(LDtkMap map, uint tilesetId)
+    {
+        if (map == null)
+            throw new ArgumentNullException(nameof(map));
+        if (tilesetId == uint.MaxValue)
+            throw new InvalidOperationException("Tileset ID is invalid (no tileset assigned).");
+        if (!map.TryGetTilesetById(tilesetId, out var tileset))
+            throw new KeyNotFoundException($"Tileset with ID {tilesetId} was not found in LDTK project");
+
+        var formatted = FileHelper.RemapLDTKPath(tileset.Path, GameSettings.Instance.AppContentRoot);
+        var wanted = FileHelper.Normalize(formatted);
+
+        return Load<Texture>(wanted);
+    }
+    public bool TryLoadTilesetTexture(LDtkMap map, uint tilesetId, out Texture texture)
+    {
+        try
+        {
+            texture = LoadTilesetTexture(map, tilesetId);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.WarningWithCategory("AssetManager",
+                "Failed to load tileset texture for tileset ID {0}: {1}", tilesetId, ex.Message);
+
+            texture = null;
+            return false;
+        }
+    }
     #endregion
 
 

@@ -1,3 +1,5 @@
+using Void.Engine.Logs;
+
 namespace Void.Engine.Assets.Loaders;
 
 public enum SoundPriority
@@ -82,15 +84,21 @@ public sealed class Sound : IAsset
         {
             if (!IsValid)
             {
-#if DEBUG
-                System.Diagnostics.Debug.WriteLine(
-                    $"[Sound] Warning: '{Tag}' was unloaded but CreateInstance() was called. Auto-loading..."
-                );
-#endif
+                Logger.Instance.WarningWithCategory("Sound",
+                    "'{0}' was unloaded but CreateInstance() was called. Auto-loading...", Tag);
                 Load();
             }
 
+            LastAccessTime = DateTime.Now;
+
             var instance = SoundInstancePool.Instance.GetInstance();
+
+            if (instance == null)
+            {
+                Logger.Instance.ErrorWithCategory("Sound",
+                    "Sound pool exhausted! Cannot create instance for '{0}'", Tag);
+                return null;
+            }
 
             instance.Initialize(Buffer, category, Priority);
             instance.SoundName = Tag;

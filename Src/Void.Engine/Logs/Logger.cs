@@ -23,6 +23,8 @@ public sealed class Logger : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private readonly Thread _worker;
     private LogLevel _minimumLevel = LogLevel.Debug;
+    private const int MaxQueueSize = 10000;
+    private const int BatchSize = 100;
 
     private Logger()
     {
@@ -114,7 +116,7 @@ public sealed class Logger : IDisposable
         => Write(LogLevel.Error, null, string.Format(message, args), null);
 
     public void Error(Exception exception)
-        => Write(LogLevel.Error, null, exception.Message, exception);
+        => Write(LogLevel.Error, null, exception.ToString(), exception);
 
     public void Error(Exception exception, string message)
         => Write(LogLevel.Error, null, message, exception);
@@ -126,7 +128,7 @@ public sealed class Logger : IDisposable
         => Write(LogLevel.Error, ToCategoryString(category), string.Format(message, args), null);
 
     public void ErrorWithCategory(string category, Exception exception)
-        => Write(LogLevel.Error, ToCategoryString(category), exception.Message, exception);
+        => Write(LogLevel.Error, ToCategoryString(category), exception.ToString(), exception);
 
     public void ErrorWithCategory(string category, Exception exception, string message)
         => Write(LogLevel.Error, ToCategoryString(category), message, exception);
@@ -137,29 +139,54 @@ public sealed class Logger : IDisposable
         => Write(LogLevel.Fatal, null, message, null);
 
     public void Fatal(string message, params object[] args)
-        => Write(LogLevel.Fatal, null, string.Format(message, args), null);
+    {
+        Write(LogLevel.Fatal, null, string.Format(message, args), null);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     public void Fatal(Exception exception)
-        => Write(LogLevel.Fatal, null, exception.Message, exception);
+    {
+        Write(LogLevel.Fatal, null, exception.ToString(), exception);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     public void Fatal(Exception exception, string message)
-        => Write(LogLevel.Fatal, null, message, exception);
+    {
+        Write(LogLevel.Fatal, null, message, exception);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     public void FatalWithCategory(string category, string message)
-        => Write(LogLevel.Fatal, ToCategoryString(category), message, null);
+    {
+        Write(LogLevel.Fatal, ToCategoryString(category), message, null);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     public void FatalWithCategory(string category, string message, params object[] args)
-        => Write(LogLevel.Fatal, ToCategoryString(category), string.Format(message, args), null);
+    {
+        Write(LogLevel.Fatal, ToCategoryString(category), string.Format(message, args), null);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     public void FatalWithCategory(string category, Exception exception)
-        => Write(LogLevel.Fatal, ToCategoryString(category), exception.Message, exception);
+    {
+        Write(LogLevel.Fatal, ToCategoryString(category), exception.ToString(), exception);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     public void FatalWithCategory(string category, Exception exception, string message)
-        => Write(LogLevel.Fatal, ToCategoryString(category), message, exception);
+    {
+        Write(LogLevel.Fatal, ToCategoryString(category), message, exception);
+        Flush(); // Ensure fatal errors are written before process exits
+    }
 
     private void Write(LogLevel level, string category, string message, Exception exception)
     {
         if (level < _minimumLevel)
+            return;
+
+        // Fix 2: Queue size limit to prevent unbounded memory growth
+        if (_queue.Count >= MaxQueueSize)
             return;
 
         _queue.Enqueue(new LogEntry
@@ -176,11 +203,59 @@ public sealed class Logger : IDisposable
     {
         while (!_cts.IsCancellationRequested)
         {
-            if (_queue.TryDequeue(out var entry))
+            // Fix 3: Batch processing for better throughput
+            var batch = new List<LogEntry>(BatchSize);
+
+            while (batch.Count < BatchSize && _queue.TryDequeue(out var entry))
+            {
+                batch.Add(entry);
+            }
+
+            if (batch.Count > 0)
             {
                 lock (_sinkLock)
                 {
                     foreach (var sink in _sinks)
+                    {
+                        foreach (var entry in batch)
+                        {
+                            try
+                            {
+                                sink.Write(entry);
+                            }
+                            catch
+                            {
+                                // Sink failure shouldn't crash the game
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Thread.Sleep(1);
+            }
+        }
+    }
+
+    // Fix 1: Flush method for fatal errors
+    private void Flush()
+    {
+        // Process remaining queue synchronously
+        var batch = new List<LogEntry>();
+
+        while (_queue.TryDequeue(out var entry))
+        {
+            batch.Add(entry);
+        }
+
+        if (batch.Count > 0)
+        {
+            lock (_sinkLock)
+            {
+                foreach (var sink in _sinks)
+                {
+                    foreach (var entry in batch)
                     {
                         try
                         {
@@ -192,10 +267,6 @@ public sealed class Logger : IDisposable
                         }
                     }
                 }
-            }
-            else
-            {
-                Thread.Sleep(1);
             }
         }
     }
@@ -209,6 +280,7 @@ public sealed class Logger : IDisposable
 
     public void Dispose()
     {
+        Flush(); // Final flush on dispose
         _cts.Cancel();
         _worker.Join(1000);
     }

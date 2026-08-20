@@ -108,8 +108,8 @@ public static class FileHelper
 
     public static string RemapLDTKPath(string ldtkPath, string contentRoot)
     {
-        var logical = ToLogical(ldtkPath);
-        var root = ToLogical(contentRoot);
+        var logical = Normalize(ldtkPath);
+        var root = Normalize(contentRoot);
 
         // Strip contentRoot/ if it's already prefixed
         if (!string.IsNullOrEmpty(root))
@@ -121,30 +121,61 @@ public static class FileHelper
                 logical = string.Empty;
         }
 
-        return logical; // content-root-relative path for AssetManager
+        return logical;
     }
 
-    private static string ToLogical(string p)
+    /// <summary>
+    /// Normalizes a file path to a logical form by:
+    /// - Converting all separators to forward slashes
+    /// - Removing empty segments
+    /// - Resolving "." and ".." segments
+    /// - Preserving absolute/relative path distinction
+    /// </summary>
+    /// <param name="path">The path to normalize.</param>
+    /// <returns>A normalized logical path.</returns>
+    public static string Normalize(string path)
     {
-        if (string.IsNullOrWhiteSpace(p)) return string.Empty;
+        if (string.IsNullOrWhiteSpace(path))
+            return string.Empty;
 
-        bool isAbsolute = p.StartsWith('/') || p.StartsWith('\\');
+        bool isAbsolute = path.StartsWith('/') ||
+            path.StartsWith('\\') ||
+            (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':');
 
-        var parts = p.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string driveLetter = "";
+        if (path.Length >= 2 && char.IsLetter(path[0]) && path[1] == ':')
+        {
+            driveLetter = path.Substring(0, 2);
+            path = path.Substring(2);
+        }
+
+        var parts = path.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
         var stack = new Stack<string>();
 
         foreach (var part in parts)
         {
-            if (part == ".") continue;
+            if (part == ".")
+                continue;
+
             if (part == "..")
             {
-                if (stack.Count > 0) stack.Pop();
+                if (stack.Count > 0 && stack.Peek() != "..")
+                    stack.Pop();
+                else if (!isAbsolute)
+                    stack.Push("..");
                 continue;
             }
+
             stack.Push(part);
         }
 
         var result = string.Join('/', stack.Reverse());
-        return isAbsolute ? "/" + result : result;
+
+        if (!string.IsNullOrEmpty(driveLetter))
+            return driveLetter + "/" + result;
+        else if (isAbsolute)
+            return "/" + result;
+
+        return result;
     }
 }

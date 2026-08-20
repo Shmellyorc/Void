@@ -60,18 +60,21 @@ public class Entity
 
     public virtual void OnEnter()
     {
-        BeaconManager.Instance.Subscribe(GameBecaons.LockUnits, (h) => IsLocked = true);
+        BeaconManager.Instance.Subscribe(GameBecaons.LockUnits, OnLocked);
     }
+
+    private void OnLocked(BeaconHandle handle) => IsLocked = true;
 
     public virtual void OnExit()
     {
+        BeaconManager.Instance.Unsubscribe(GameBecaons.LockUnits, OnLocked);
+
         if (IsDestroyed)
             return;
 
-        BeaconManager.Instance.Unsubscribe(GameBecaons.LockUnits, (h) => IsLocked = true);
-
         IsDestroyed = true;
     }
+
 
     public void Destroy()
     {

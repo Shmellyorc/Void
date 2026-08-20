@@ -2,7 +2,6 @@ namespace System;
 
 public static class SoundExtensions
 {
-    // Single sound operations
     public static SoundInstance PlayOneShot(this Sound sound, float volume = 1f, float pan = 0f, float pitch = 1f, Enum category = null)
     {
         var instance = sound.CreateInstance(category);
@@ -74,7 +73,6 @@ public static class SoundExtensions
         }
     }
 
-    // Collection operations (keep as extensions for consistency)
     public static List<SoundInstance> PlayAll(this IEnumerable<Sound> sounds, float volume = 1f, float pan = 0f, float pitch = 1f)
     {
         return sounds.Select(s => s.PlayOneShot(volume, pan, pitch)).ToList();

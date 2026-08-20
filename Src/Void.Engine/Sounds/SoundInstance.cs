@@ -1,3 +1,5 @@
+using Void.Engine.Logs;
+
 namespace Void.Engine.Sounds;
 
 public enum SoundStatus
@@ -42,16 +44,23 @@ public sealed class SoundInstance : IDisposable
         {
             if (_isDisposed || !_isInitialized)
                 return;
-            if (MathHelper.AlmostEquals(value, _volume, MathHelper.Epsilon))
+            if (MathHelper.AlmostEquals(value, _rawVolume, MathHelper.Epsilon))
                 return;
 
             _rawVolume = Math.Clamp(value, 0f, 1f);
-            _volume = _rawVolume;
-            _sfmlSound.Volume = _volume * 100f;
+
+            if (Category != null)
+                ApplyCategoryVolume(Category);
+            else
+            {
+                _volume = _rawVolume;
+                _sfmlSound.Volume = _volume * 100f;
+            }
         }
     }
     private float _rawVolume = 1f;
     private float _volume = 1f;
+
     internal void ApplyCategoryVolume(Enum category)
     {
         if (_isDisposed || !_isInitialized)
@@ -120,14 +129,13 @@ public sealed class SoundInstance : IDisposable
         get => _looping;
         set
         {
-            if (_isDisposed || !_isInitialized)
-                return;
-            if (_looping == value)
+            if (_isDisposed)
                 return;
 
             _looping = value;
 
-            _sfmlSound.IsLooping = _looping;
+            if (_isInitialized && _sfmlSound != null)
+                _sfmlSound.IsLooping = _looping;
         }
     }
     private bool _looping;
@@ -166,6 +174,7 @@ public sealed class SoundInstance : IDisposable
         _loopCount = 0;
         _wasPlaying = false;
         _wasPaused = false;
+        _looping = false;
     }
 
     internal void Initialize(SFSoundBuffer buffer, Enum category = null, SoundPriority priority = SoundPriority.Normal)
@@ -191,6 +200,10 @@ public sealed class SoundInstance : IDisposable
         _loopCount = 0;
         _wasPlaying = false;
         _wasPaused = false;
+
+        _looping = false;
+        if (_sfmlSound != null)
+            _sfmlSound.IsLooping = false;
     }
 
     internal void Update(float deltaTime)
@@ -246,6 +259,10 @@ public sealed class SoundInstance : IDisposable
             _hasNotifiedCompletion = false;
             _wasPlaying = true;
             _wasPaused = false;
+
+            if (_sfmlSound != null)
+                _sfmlSound.IsLooping = _looping;
+
             _sfmlSound.Play();
         }
         catch (Exception ex)
@@ -312,7 +329,12 @@ public sealed class SoundInstance : IDisposable
             _wasPlaying = false;
             _wasPaused = false;
             _rawVolume = 1f;
+            _volume = 1f;
+            _looping = false;
+            _pitch = 1f;
+            _pan = 0f;
             Category = null;
+            _isDisposed = false;
             return;
         }
 
@@ -321,6 +343,7 @@ public sealed class SoundInstance : IDisposable
             if (_sfmlSound.CPointer != IntPtr.Zero)
             {
                 _sfmlSound?.Stop();
+                _sfmlSound.IsLooping = false;
                 _sfmlSound.SoundBuffer = null;
             }
 
@@ -331,8 +354,13 @@ public sealed class SoundInstance : IDisposable
             _loopCount = 0;
             _wasPlaying = false;
             _wasPaused = false;
+            _looping = false;
             _rawVolume = 1f;
+            _volume = 1f;
+            _pitch = 1f;
+            _pan = 0f;
             Category = null;
+            _isDisposed = false;
         }
         catch (ObjectDisposedException)
         {
@@ -344,8 +372,13 @@ public sealed class SoundInstance : IDisposable
             _loopCount = 0;
             _wasPlaying = false;
             _wasPaused = false;
+            _looping = false;
             _rawVolume = 1f;
+            _volume = 1f;
+            _pitch = 1f;
+            _pan = 0f;
             Category = null;
+            _isDisposed = false;  // ← ADD THIS
         }
         catch (Exception ex)
         {
@@ -368,13 +401,12 @@ public sealed class SoundInstance : IDisposable
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Error during SoundInstance disposable: {ex.Message}");
+            Logger.Instance.ErrorWithCategory("Sound",
+                "Error during SoundInstance disposal: {0}", ex.Message);
         }
         finally
         {
             GC.SuppressFinalize(this);
         }
     }
-
-
 }
