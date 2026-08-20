@@ -10,10 +10,6 @@
 
 namespace Void.Engine.Saves;
 
-/// <summary>
-/// Binary reader with game-specific type support and manifest verification.
-/// Only the save system can create instances.
-/// </summary>
 public sealed class ContentReader : BinaryReader
 {
     private readonly WriteType[] _manifest;
@@ -67,9 +63,9 @@ public sealed class ContentReader : BinaryReader
     {
         VerifyNext(WriteType.String);
 
-        int length = 0;
-        int shift = 0;
+        int length = 0, shift = 0;
         byte b;
+
         do
         {
             b = base.ReadByte();
@@ -78,6 +74,7 @@ public sealed class ContentReader : BinaryReader
         } while ((b & 0x80) != 0);
 
         byte[] bytes = base.ReadBytes(length);
+
         return Encoding.UTF8.GetString(bytes);
     }
 
@@ -122,6 +119,7 @@ public sealed class ContentReader : BinaryReader
         VerifyNext(WriteType.Object);
 
         bool hasValue = base.ReadBoolean();
+
         if (!hasValue)
             return default;
 
@@ -129,7 +127,9 @@ public sealed class ContentReader : BinaryReader
         byte[] data = base.ReadBytes(length);
 
         using var memoryStream = new MemoryStream(data);
-        var serializer = new System.Xml.Serialization.XmlSerializer(typeof(T));
+
+        var serializer = new XmlSerializer(typeof(T));
+
         return (T)serializer.Deserialize(memoryStream);
     }
 }

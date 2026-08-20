@@ -12,6 +12,7 @@ global using System.Runtime.Serialization;
 global using System.Security.Cryptography;
 global using System.Text;
 global using System.Text.Json;
+global using System.Xml.Serialization;
 
 global using Void.Engine.Assets;
 global using Void.Engine.Assets.Loaders;
@@ -27,8 +28,8 @@ global using Void.Engine.Graphics.Atlas;
 global using Void.Engine.Graphics.Atlas.Packers;
 global using Void.Engine.Graphics.Shaders;
 global using Void.Engine.Helpers;
-global using Void.Engine.Inputs;
 global using Void.Engine.Logs;
+global using Void.Engine.Logs.Sinks;
 global using Void.Engine.Resources;
 global using Void.Engine.Sounds;
 global using Void.Engine.Sounds.EventArg;

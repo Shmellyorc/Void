@@ -1,15 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace Void.Engine.Coroutines.Routines.Conditionals;
 
-/// <summary>
-/// A coroutine that waits while a getter returns a non-null value.
-/// Completes once the getter returns null.
-/// </summary>
-/// <typeparam name="T">The type of value to check. Must be a class.</typeparam>
 public sealed class WaitWhileNotNull<T> : IEnumerator where T : class
 {
     private readonly Func<T> _getter;

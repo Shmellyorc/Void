@@ -1,14 +1,7 @@
-using Void.Engine.Assets.Loaders.LDtk.Instances;
-
 namespace Void.Engine.Assets.Loaders.LDtk;
 
-/// <summary>
-/// Represents a parsed LDTK project asset, exposing access to levels, layers, entities, and tilesets.
-/// Manages internal caches for fast hashed and indexed lookups.
-/// </summary>
 public sealed class LDtkMap : IAsset
 {
-    // cached levels, entities, etc:
     private readonly Dictionary<uint, LDtkLevel> _levelCacheById = [];
     private readonly Dictionary<uint, LDtkLevel> _levelCacheByName = [];
     private readonly Dictionary<ulong, LDtkEntityInstance> _entityCacheById = [];
@@ -46,8 +39,6 @@ public sealed class LDtkMap : IAsset
             LastAccessTime = DateTime.Now;
             return;
         }
-
-        // NOTE: Only parse on first load. After LRU unload, data is still cached.
 
         using var doc = JsonDocument.Parse(Data);
         var root = doc.RootElement;

@@ -242,6 +242,12 @@ public sealed class StateMachine : IDisposable
         if (!_running || _paused || _currentState == null)
             return;
 
+        if (_currentState.Current is StateMachine)
+            throw new InvalidOperationException(
+                $"State '{_currentStateName}' yielded a StateMachine. " +
+                "Nested StateMachines are not supported. " +
+                "Use a single StateMachine with well-defined states instead.");
+
         if (_currentState.Current is IEnumerator nested && nested != _currentState)
         {
             if (nested.MoveNext())

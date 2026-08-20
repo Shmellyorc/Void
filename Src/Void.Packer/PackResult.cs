@@ -4,7 +4,7 @@ public sealed class PackResult
 {
     public List<PackContainer> Packs { get; set; } = [];
     public int TotalFilesPacked { get; set; }
-    public long TotalOriginalSize { get; set; }  // Fixed typo
+    public long TotalOriginalSize { get; set; } 
     public long TotalPackedSize { get; set; }
     public double CompressionRatio { get; set; }
     public Dictionary<string, int> FileToPackMap { get; set; } = [];
@@ -16,7 +16,7 @@ public class PackContainer
     public byte[] Key { get; set; }
     public ushort FileCount { get; set; }
     public List<string> VirtualPaths { get; set; } = [];
-    public long OriginalSize { get; set; }  // Fixed typo
+    public long OriginalSize { get; set; } 
     public long PackedSize { get; set; }
 }
 

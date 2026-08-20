@@ -1,137 +1,279 @@
+// ============================================================================
+//  Easing.cs
+// ============================================================================
+//  Comprehensive easing function library with 33 different easing types
+//  covering quadratic, cubic, sine, exponential, circular, back, elastic,
+//  and bounce families with In, Out, InOut, and OutIn directions.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Systems;
 
-
 /// <summary>
-/// All supported easing types, combining easing family 
-/// (e.g., Quadratic, Cubic, Sine) with direction (In, Out, InOut, OutIn).
+/// Defines all supported easing types by combining an easing family with a direction.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Easing functions control the rate of change of a value over time, producing 
-/// different acceleration and deceleration patterns for animations.
+/// Easing functions control the rate of change of a value over time, producing
+/// different acceleration and deceleration patterns for animations, transitions,
+/// and other time-based effects.
 /// </para>
 /// <para>
-/// <b>Directions:</b>
+/// The naming convention follows a pattern where the family name is combined
+/// with a direction suffix:
 /// <list type="bullet">
-/// <item><description><c>In</c> – Starts slow, accelerates towards the end.</description></item>
-/// <item><description><c>Out</c> – Starts fast, decelerates towards the end.</description></item>
-/// <item><description><c>InOut</c> – Starts slow, accelerates, then slows again.</description></item>
-/// <item><description><c>OutIn</c> – Starts fast, slows in the middle, then accelerates again.</description></item>
+/// <item><description><see cref="QuadIn"/> - Quadratic ease-in (starts slow, ends fast)</description></item>
+/// <item><description><see cref="QuadOut"/> - Quadratic ease-out (starts fast, ends slow)</description></item>
+/// <item><description><see cref="QuadInOut"/> - Quadratic with both ease-in and ease-out</description></item>
+/// <item><description><see cref="QuadOutIn"/> - Quadratic with ease-out then ease-in</description></item>
 /// </list>
 /// </para>
+/// <para>
+/// To apply an easing function, pass the desired <see cref="EaseType"/> and
+/// a normalized time value (0-1) to <see cref="Easing.Ease"/>.
+/// </para>
 /// </remarks>
+/// <example>
+/// <code>
+/// float t = 0.5f; // Halfway through the animation
+/// float easedValue = Easing.Ease(EaseType.QuadInOut, t);
+/// // Use easedValue to interpolate between start and end values
+/// </code>
+/// </example>
 public enum EaseType
 {
-    /// <summary>No easing. Linear interpolation.</summary>
+    /// <summary>
+    /// No easing applied. The value progresses linearly from start to end.
+    /// </summary>
     Linear,
 
-    // Quadratic
-    /// <summary>Quadratic ease-in.</summary>
+    /// <summary>
+    /// Quadratic ease-in. The value starts slowly and accelerates toward the end.
+    /// </summary>
     QuadIn,
-    /// <summary>Quadratic ease-out.</summary>
+
+    /// <summary>
+    /// Quadratic ease-out. The value starts quickly and decelerates toward the end.
+    /// </summary>
     QuadOut,
-    /// <summary>Quadratic ease-in-out.</summary>
+
+    /// <summary>
+    /// Quadratic ease-in-out. The value starts slow, accelerates, then decelerates at the end.
+    /// </summary>
     QuadInOut,
-    /// <summary>Quadratic ease-out-in.</summary>
+
+    /// <summary>
+    /// Quadratic ease-out-in. The value starts fast, decelerates in the middle, then accelerates again.
+    /// </summary>
     QuadOutIn,
 
-    // Cubic
-    /// <summary>Cubic ease-in.</summary>
+    /// <summary>
+    /// Cubic ease-in. The value starts very slowly and accelerates toward the end.
+    /// </summary>
     CubicIn,
-    /// <summary>Cubic ease-out.</summary>
+
+    /// <summary>
+    /// Cubic ease-out. The value starts quickly and decelerates toward the end.
+    /// </summary>
     CubicOut,
-    /// <summary>Cubic ease-in-out.</summary>
+
+    /// <summary>
+    /// Cubic ease-in-out. The value starts slow, accelerates, then decelerates at the end.
+    /// </summary>
     CubicInOut,
-    /// <summary>Cubic ease-out-in.</summary>
+
+    /// <summary>
+    /// Cubic ease-out-in. The value starts fast, decelerates in the middle, then accelerates again.
+    /// </summary>
     CubicOutIn,
 
-    // Quartic
-    /// <summary>Quartic ease-in.</summary>
+    /// <summary>
+    /// Quartic ease-in. The value starts very slowly and accelerates strongly toward the end.
+    /// </summary>
     QuartIn,
-    /// <summary>Quartic ease-out.</summary>
+
+    /// <summary>
+    /// Quartic ease-out. The value starts very fast and decelerates strongly toward the end.
+    /// </summary>
     QuartOut,
-    /// <summary>Quartic ease-in-out.</summary>
+
+    /// <summary>
+    /// Quartic ease-in-out. The value starts slow, accelerates strongly, then decelerates at the end.
+    /// </summary>
     QuartInOut,
-    /// <summary>Quartic ease-out-in.</summary>
+
+    /// <summary>
+    /// Quartic ease-out-in. The value starts fast, decelerates strongly in the middle, then accelerates again.
+    /// </summary>
     QuartOutIn,
 
-    // Quintic
-    /// <summary>Quintic ease-in.</summary>
+    /// <summary>
+    /// Quintic ease-in. The value starts extremely slowly and accelerates sharply toward the end.
+    /// </summary>
     QuintIn,
-    /// <summary>Quintic ease-out.</summary>
+
+    /// <summary>
+    /// Quintic ease-out. The value starts extremely fast and decelerates sharply toward the end.
+    /// </summary>
     QuintOut,
-    /// <summary>Quintic ease-in-out.</summary>
+
+    /// <summary>
+    /// Quintic ease-in-out. The value starts slow, accelerates sharply, then decelerates at the end.
+    /// </summary>
     QuintInOut,
-    /// <summary>Quintic ease-out-in.</summary>
+
+    /// <summary>
+    /// Quintic ease-out-in. The value starts fast, decelerates sharply in the middle, then accelerates again.
+    /// </summary>
     QuintOutIn,
 
-    // Sine
-    /// <summary>Sine ease-in.</summary>
+    /// <summary>
+    /// Sine ease-in. The value starts slowly with a smooth sinusoidal curve.
+    /// </summary>
     SineIn,
-    /// <summary>Sine ease-out.</summary>
+
+    /// <summary>
+    /// Sine ease-out. The value ends slowly with a smooth sinusoidal curve.
+    /// </summary>
     SineOut,
-    /// <summary>Sine ease-in-out.</summary>
+
+    /// <summary>
+    /// Sine ease-in-out. The value starts and ends slowly with a smooth sinusoidal curve.
+    /// </summary>
     SineInOut,
-    /// <summary>Sine ease-out-in.</summary>
+
+    /// <summary>
+    /// Sine ease-out-in. The value has a slow middle section with sinusoidal smoothing.
+    /// </summary>
     SineOutIn,
 
-    // Exponential
-    /// <summary>Exponential ease-in.</summary>
+    /// <summary>
+    /// Exponential ease-in. The value starts imperceptibly slow and accelerates extremely fast.
+    /// </summary>
     ExpoIn,
-    /// <summary>Exponential ease-out.</summary>
+
+    /// <summary>
+    /// Exponential ease-out. The value starts extremely fast and decelerates imperceptibly.
+    /// </summary>
     ExpoOut,
-    /// <summary>Exponential ease-in-out.</summary>
+
+    /// <summary>
+    /// Exponential ease-in-out. The value starts imperceptibly slow, accelerates, then decelerates.
+    /// </summary>
     ExpoInOut,
-    /// <summary>Exponential ease-out-in.</summary>
+
+    /// <summary>
+    /// Exponential ease-out-in. The value starts fast, decelerates, then accelerates imperceptibly.
+    /// </summary>
     ExpoOutIn,
 
-    // Circular
-    /// <summary>Circular ease-in.</summary>
+    /// <summary>
+    /// Circular ease-in. The value follows a circular arc starting slowly.
+    /// </summary>
     CircIn,
-    /// <summary>Circular ease-out.</summary>
+
+    /// <summary>
+    /// Circular ease-out. The value follows a circular arc ending slowly.
+    /// </summary>
     CircOut,
-    /// <summary>Circular ease-in-out.</summary>
+
+    /// <summary>
+    /// Circular ease-in-out. The value follows a circular arc starting and ending slowly.
+    /// </summary>
     CircInOut,
-    /// <summary>Circular ease-out-in.</summary>
+
+    /// <summary>
+    /// Circular ease-out-in. The value follows a circular arc with a slow middle.
+    /// </summary>
     CircOutIn,
 
-    // Back (overshoot)
-    /// <summary>Back ease-in (overshoots at start).</summary>
+    /// <summary>
+    /// Back ease-in. The value overshoots the starting point before moving forward.
+    /// </summary>
     BackIn,
-    /// <summary>Back ease-out (overshoots at end).</summary>
+
+    /// <summary>
+    /// Back ease-out. The value overshoots the ending point before settling.
+    /// </summary>
     BackOut,
-    /// <summary>Back ease-in-out (overshoots at both ends).</summary>
+
+    /// <summary>
+    /// Back ease-in-out. The value overshoots both the start and end points.
+    /// </summary>
     BackInOut,
-    /// <summary>Back ease-out-in (overshoots in middle).</summary>
+
+    /// <summary>
+    /// Back ease-out-in. The value overshoots in the middle of the transition.
+    /// </summary>
     BackOutIn,
 
-    // Elastic (oscillatory)
-    /// <summary>Elastic ease-in (spring effect at start).</summary>
+    /// <summary>
+    /// Elastic ease-in. The value oscillates with a spring-like effect at the start.
+    /// </summary>
     ElasticIn,
-    /// <summary>Elastic ease-out (spring effect at end).</summary>
+
+    /// <summary>
+    /// Elastic ease-out. The value oscillates with a spring-like effect at the end.
+    /// </summary>
     ElasticOut,
-    /// <summary>Elastic ease-in-out (spring effect at both ends).</summary>
+
+    /// <summary>
+    /// Elastic ease-in-out. The value oscillates with a spring-like effect at both ends.
+    /// </summary>
     ElasticInOut,
-    /// <summary>Elastic ease-out-in (spring effect in middle).</summary>
+
+    /// <summary>
+    /// Elastic ease-out-in. The value oscillates with a spring-like effect in the middle.
+    /// </summary>
     ElasticOutIn,
 
-    // Bounce (discrete bounces)
-    /// <summary>Bounce ease-in.</summary>
+    /// <summary>
+    /// Bounce ease-in. The value bounces at the start of the transition.
+    /// </summary>
     BounceIn,
-    /// <summary>Bounce ease-out.</summary>
+
+    /// <summary>
+    /// Bounce ease-out. The value bounces at the end of the transition.
+    /// </summary>
     BounceOut,
-    /// <summary>Bounce ease-in-out.</summary>
+
+    /// <summary>
+    /// Bounce ease-in-out. The value bounces at both the start and end.
+    /// </summary>
     BounceInOut,
-    /// <summary>Bounce ease-out-in.</summary>
+
+    /// <summary>
+    /// Bounce ease-out-in. The value bounces in the middle of the transition.
+    /// </summary>
     BounceOutIn,
 }
 
-
+/// <summary>
+/// Provides static methods for evaluating easing functions by type.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="Ease"/> method serves as the primary entry point, accepting
+/// an <see cref="EaseType"/> and a normalized time value. All easing functions
+/// operate on a time range of 0 to 1, with the output also normalized to 0 to 1.
+/// </para>
+/// <para>
+/// This class is typically used in animation systems, tweening libraries, and
+/// any scenario where smooth interpolations are required.
+/// </para>
+/// </remarks>
 public static class Easing
 {
+    /// <summary>
+    /// Evaluates the specified easing function at the given time value.
+    /// </summary>
+    /// <param name="type">The easing type to evaluate.</param>
+    /// <param name="t">The normalized time value between 0 and 1.</param>
+    /// <returns>The eased value between 0 and 1.</returns>
     public static float Ease(EaseType type, float t)
     {
-        // Clamp t to [0,1]
         t = Math.Clamp(t, 0f, 1f);
 
         return type switch
@@ -177,10 +319,13 @@ public static class Easing
             EaseType.BounceOut => BounceOut(t),
             EaseType.BounceInOut => BounceInOut(t),
             EaseType.BounceOutIn => OutIn(BounceOut, BounceIn, t),
-            _ => t, // fallback to linear
+            _ => t,
         };
     }
 
+    /// <summary>
+    /// Combines an ease-out function with an ease-in function to create an Out-In curve.
+    /// </summary>
     private static float OutIn(Func<float, float> easeOut, Func<float, float> easeIn, float t)
     {
         if (t < 0.5f)
@@ -190,23 +335,13 @@ public static class Easing
     }
 
     #region Linear
-    private static float Linear(float t)
-    {
-        return t;
-    }
+    private static float Linear(float t) => t;
     #endregion
 
-
     #region Quadratic
-    private static float QuadIn(float t)
-    {
-        return t * t;
-    }
+    private static float QuadIn(float t) => t * t;
 
-    private static float QuadOut(float t)
-    {
-        return t * (2f - t);
-    }
+    private static float QuadOut(float t) => t * (2f - t);
 
     private static float QuadInOut(float t)
     {
@@ -217,12 +352,8 @@ public static class Easing
     }
     #endregion
 
-
     #region Cubic
-    private static float CubicIn(float t)
-    {
-        return t * t * t;
-    }
+    private static float CubicIn(float t) => t * t * t;
 
     private static float CubicOut(float t)
     {
@@ -233,9 +364,7 @@ public static class Easing
     private static float CubicInOut(float t)
     {
         if (t < 0.5f)
-        {
             return 4f * t * t * t;
-        }
         else
         {
             float p = 2f * t - 2f;
@@ -244,12 +373,8 @@ public static class Easing
     }
     #endregion
 
-
     #region Quartic
-    private static float QuartIn(float t)
-    {
-        return t * t * t * t;
-    }
+    private static float QuartIn(float t) => t * t * t * t;
 
     private static float QuartOut(float t)
     {
@@ -260,9 +385,7 @@ public static class Easing
     private static float QuartInOut(float t)
     {
         if (t < 0.5f)
-        {
             return 8f * t * t * t * t;
-        }
         else
         {
             float p = t - 1f;
@@ -271,12 +394,8 @@ public static class Easing
     }
     #endregion
 
-
     #region Quintic
-    private static float QuintIn(float t)
-    {
-        return t * t * t * t * t;
-    }
+    private static float QuintIn(float t) => t * t * t * t * t;
 
     private static float QuintOut(float t)
     {
@@ -287,9 +406,7 @@ public static class Easing
     private static float QuintInOut(float t)
     {
         if (t < 0.5f)
-        {
             return 16f * t * t * t * t * t;
-        }
         else
         {
             float p = 2f * t - 2f;
@@ -298,35 +415,18 @@ public static class Easing
     }
     #endregion
 
-
     #region Sine
-    private static float SineIn(float t)
-    {
-        return 1f - MathF.Cos(t * MathF.PI / 2f);
-    }
+    private static float SineIn(float t) => 1f - MathF.Cos(t * MathF.PI / 2f);
 
-    private static float SineOut(float t)
-    {
-        return MathF.Sin(t * MathF.PI / 2f);
-    }
+    private static float SineOut(float t) => MathF.Sin(t * MathF.PI / 2f);
 
-    private static float SineInOut(float t)
-    {
-        return -0.5f * (MathF.Cos(MathF.PI * t) - 1f);
-    }
+    private static float SineInOut(float t) => -0.5f * (MathF.Cos(MathF.PI * t) - 1f);
     #endregion
 
-
     #region Exponential
-    private static float ExpoIn(float t)
-    {
-        return t == 0f ? 0f : MathF.Pow(2f, 10f * (t - 1f));
-    }
+    private static float ExpoIn(float t) => t == 0f ? 0f : MathF.Pow(2f, 10f * (t - 1f));
 
-    private static float ExpoOut(float t)
-    {
-        return t == 1f ? 1f : 1f - MathF.Pow(2f, -10f * t);
-    }
+    private static float ExpoOut(float t) => t == 1f ? 1f : 1f - MathF.Pow(2f, -10f * t);
 
     private static float ExpoInOut(float t)
     {
@@ -339,17 +439,10 @@ public static class Easing
     }
     #endregion
 
-
     #region Circular
-    private static float CircIn(float t)
-    {
-        return 1f - MathF.Sqrt(1f - t * t);
-    }
+    private static float CircIn(float t) => 1f - MathF.Sqrt(1f - t * t);
 
-    private static float CircOut(float t)
-    {
-        return MathF.Sqrt(1f - (t - 1f) * (t - 1f));
-    }
+    private static float CircOut(float t) => MathF.Sqrt(1f - (t - 1f) * (t - 1f));
 
     private static float CircInOut(float t)
     {
@@ -360,25 +453,20 @@ public static class Easing
     }
     #endregion
 
-
     #region Back (overshoot)
-    // Standard overshoot constant
-    private const float backS = 1.70158f;
+    private const float BackS = 1.70158f;
 
-    private static float BackIn(float t)
-    {
-        return t * t * ((backS + 1f) * t - backS);
-    }
+    private static float BackIn(float t) => t * t * ((BackS + 1f) * t - BackS);
 
     private static float BackOut(float t)
     {
         float p = t - 1f;
-        return p * p * ((backS + 1f) * p + backS) + 1f;
+        return p * p * ((BackS + 1f) * p + BackS) + 1f;
     }
 
     private static float BackInOut(float t)
     {
-        float s = backS * 1.525f;
+        float s = BackS * 1.525f;
         if (t < 0.5f)
         {
             float p = 2f * t;
@@ -391,7 +479,6 @@ public static class Easing
         }
     }
     #endregion
-
 
     #region Elastic (oscillatory)
     private static float ElasticIn(float t)
@@ -406,47 +493,30 @@ public static class Easing
 
     private static float ElasticOut(float t)
     {
-        if (t == 0f)
-            return 0f;
-        if (t == 1f)
-            return 1f;
-
+        if (t == 0f) return 0f;
+        if (t == 1f) return 1f;
         const float p = 0.3f;
-
         float s = p / 4f;
-
         return MathF.Pow(2f, -10f * t) * MathF.Sin((t - s) * (2f * MathF.PI) / p) + 1f;
     }
 
     private static float ElasticInOut(float t)
     {
-        if (t == 0f)
-            return 0f;
-        if (t == 1f)
-            return 1f;
-
-        const float p = 0.45f; // slightly longer period for InOut
-
+        if (t == 0f) return 0f;
+        if (t == 1f) return 1f;
+        const float p = 0.45f;
         float s = p / 4f;
         float invT = 2f * t - 1f;
 
         if (invT < 0f)
-        {
             return -0.5f * MathF.Pow(2f, 10f * invT) * MathF.Sin((invT - s) * (2f * MathF.PI) / p);
-        }
         else
-        {
             return MathF.Pow(2f, -10f * invT) * MathF.Sin((invT - s) * (2f * MathF.PI) / p) * 0.5f + 1f;
-        }
     }
     #endregion
 
-
     #region Bounce (piecewise)
-    private static float BounceIn(float t)
-    {
-        return 1f - BounceOut(1f - t);
-    }
+    private static float BounceIn(float t) => 1f - BounceOut(1f - t);
 
     private static float BounceOut(float t)
     {
@@ -454,9 +524,7 @@ public static class Easing
         const float d1 = 2.75f;
 
         if (t < 1f / d1)
-        {
             return n1 * t * t;
-        }
         else if (t < 2f / d1)
         {
             float u = t - 1.5f / d1;

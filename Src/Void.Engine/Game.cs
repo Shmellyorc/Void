@@ -1,9 +1,31 @@
-﻿using Void.Engine.Logs;
-using Void.Engine.Logs.Sinks;
-using Void.Engine.Systems;
+﻿// ============================================================================
+//  Game.cs
+// ============================================================================
+//  The core game class. Manages the game loop, window, timing, and application
+//  lifecycle. Create an instance with configured settings and call Run() to 
+//  start.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine;
 
+/// <summary>
+/// The main game class. Create an instance with configured settings and call <see cref="Run"/> to start.
+/// </summary>
+/// <remarks>
+/// Example:
+/// <code>
+/// var settings = GameSettings.Instance
+///     .SetAppCompany("MyStudio")
+///     .SetAppName("MyGame")
+///     .Build();
+/// 
+/// using var game = new Game(settings);
+/// game.Run();
+/// </code>
+/// </remarks>
 public class Game : IDisposable
 {
     private readonly GameSettings _settings;
@@ -15,17 +37,59 @@ public class Game : IDisposable
 
     internal int _scrollWheel;
 
+    /// <summary>
+    /// Gets the singleton instance. Set automatically on first construction.
+    /// </summary>
     public static Game Instance { get; private set; }
+
+    /// <summary>
+    /// Returns true if the game window has focus.
+    /// </summary>
     public bool IsActive => _window.IsFocused;
+
+    /// <summary>
+    /// Gets timing information for the current frame (delta time, fixed timestep, etc.).
+    /// </summary>
     public FrameTime FrameTime => _timing;
+
+    /// <summary>
+    /// Gets the underlying window instance.
+    /// </summary>
     public Window Window => _window;
-    public string ApplicationLogFolder => Path.Combine(ApplicationFolder, "Logs");
-    public string ApplicationSaveFolder => Path.Combine(ApplicationFolder, "Saves");
-    public string ApplicationConfigFolder => Path.Combine(ApplicationFolder, "Config");
-    public string ApplicationTempFolder => Path.Combine(ApplicationFolder, "Temp");
+
+    /// <summary>
+    /// Full path to the log folder. Created during initialization.
+    /// </summary>
+    public string ApplicationLogFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppLogFolder);
+
+    /// <summary>
+    /// Full path to the save data folder. Created during initialization.
+    /// </summary>
+    public string ApplicationSaveFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppSaveFolder);
+
+    /// <summary>
+    /// Full path to the config folder. Created during initialization.
+    /// </summary>
+    public string ApplicationConfigFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppConfigFolder);
+
+    /// <summary>
+    /// Full path to the temp folder. Created during initialization.
+    /// </summary>
+    public string ApplicationTempFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppTempFolder);
+
+    /// <summary>
+    /// Gets the assembly version.
+    /// </summary>
     public string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
+
+    /// <summary>
+    /// Gets a hash of the version string, useful for build verification.
+    /// </summary>
     public string VersionHash => $"{HashHelper.Cache64(Version):X8}";
 
+    /// <summary>
+    /// Gets the root application folder. Uses system app data or local directory based on settings.
+    /// </summary>
     public string ApplicationFolder
     {
         get
@@ -35,7 +99,6 @@ public class Game : IDisposable
 
             string localPath = Path.Combine(AppContext.BaseDirectory, _settings.AppName);
 
-            // If this path is a file (like the executable), use a subfolder instead
             if (File.Exists(localPath) && !Directory.Exists(localPath))
                 return Path.Combine(AppContext.BaseDirectory, _settings.AppName + "Data");
 
@@ -43,7 +106,24 @@ public class Game : IDisposable
         }
     }
 
-
+    /// <summary>
+    /// Creates a new game instance.
+    /// </summary>
+    /// <param name="settings">Configured settings from <see cref="GameSettings.Build"/>.</param>
+    /// <exception cref="ArgumentNullException">Thrown when settings is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when settings hasn't been built.</exception>
+    /// <remarks>
+    /// Example:
+    /// <code>
+    /// var settings = GameSettings.Instance
+    ///     .SetAppCompany("MyStudio")
+    ///     .SetAppName("MyGame")
+    ///     .Build();
+    /// 
+    /// using var game = new Game(settings);
+    /// game.Run();
+    /// </code>
+    /// </remarks>
     public Game(GameSettings settings)
     {
         if (settings == null)
@@ -53,6 +133,8 @@ public class Game : IDisposable
 
         Instance ??= this;
         _settings = settings;
+
+        AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
 
         Logger.Instance.AddSink(new ConsoleSink());
         Logger.Instance.AddSink(new FileSink(ApplicationLogFolder, _settings.LogMaxFileSizeMB, _settings.LogMaxFiles));
@@ -90,8 +172,33 @@ public class Game : IDisposable
         Logger.Instance.Info("Application folders ready");
     }
 
+    private void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        var exception = e.ExceptionObject as Exception;
+
+        if (!string.IsNullOrEmpty(exception?.Message))
+            Logger.Instance.FatalWithCategory("Game", $"Message: {exception.Message}");
+
+        if (!string.IsNullOrEmpty(exception?.StackTrace))
+        {
+            Logger.Instance.FatalWithCategory("Game", "Stack Trace:");
+            Logger.Instance.FatalWithCategory("Game", exception.StackTrace);
+        }
+
+        if (exception == null || (string.IsNullOrEmpty(exception.Message) && string.IsNullOrEmpty(exception.StackTrace)))
+            Logger.Instance.FatalWithCategory("Game", "Unknown crash - no exception details available");
+
+        _settings.OnCrash?.Invoke(exception);
+    }
+
     ~Game() => Dispose();
 
+    /// <summary>
+    /// Starts the game loop. Blocks until the window closes.
+    /// </summary>
+    /// <remarks>
+    /// Supports both fixed and variable timestep modes. Override <see cref="OnUpdate"/> and <see cref="OnDraw"/> for game logic.
+    /// </remarks>
     public void Run()
     {
         OnEnter();
@@ -134,11 +241,31 @@ public class Game : IDisposable
         }
     }
 
+    /// <summary>
+    /// Override to add your update logic. Called once per frame.
+    /// </summary>
+    /// <param name="frameTime">Timing info for this frame.</param>
     protected virtual void OnUpdate(FrameTime frameTime) { }
+
+    /// <summary>
+    /// Override to add your rendering logic. Called once per frame.
+    /// </summary>
+    /// <param name="frameTime">Timing info for this frame.</param>
     protected virtual void OnDraw(FrameTime frameTime) { }
+
+    /// <summary>
+    /// Override for initialization logic before the game loop starts.
+    /// </summary>
     protected virtual void OnEnter() { }
+
+    /// <summary>
+    /// Override for cleanup logic when the game exits.
+    /// </summary>
     protected virtual void OnExit() { }
 
+    /// <summary>
+    /// Cleans up all resources. Called automatically when disposed.
+    /// </summary>
     public void Dispose()
     {
         if (_isDisposed)
@@ -154,5 +281,7 @@ public class Game : IDisposable
 
         GC.SuppressFinalize(this);
         _isDisposed = true;
+
+        AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
     }
 }

@@ -1,7 +1,3 @@
-using Microsoft.VisualBasic;
-
-using Void.Engine.Logs;
-
 namespace Void.Engine.Assets;
 
 public sealed class AssetManager
@@ -54,6 +50,7 @@ public sealed class AssetManager
     public static AssetManager Instance => _instance.Value;
     public IReadOnlyList<IMount> Mounts => _mounts;
     #endregion
+
 
 
     #region Constructor
@@ -272,7 +269,7 @@ public sealed class AssetManager
 
 
     #region Register Custom Assets
-    public static void RegisterAssetType<T>(string[] extensions, Func<uint, byte[], string, T> factory) where T : IAsset
+    public void RegisterAssetType<T>(string[] extensions, Func<uint, byte[], string, T> factory) where T : IAsset
     {
         if (extensions == null || extensions.Length == 0)
             throw new ArgumentException("At least one extension required", nameof(extensions));
@@ -291,10 +288,10 @@ public sealed class AssetManager
         SupportedLoaders[type] = (id, data, tag) => factory(id, data, tag);
     }
 
-    public static bool IsAssetTypeRegistered<T>()
+    public bool IsAssetTypeRegistered<T>()
         => SupportedExtensions.ContainsKey(typeof(T));
 
-    public static void UnregisterAssetType<T>()
+    public void UnregisterAssetType<T>()
     {
         var type = typeof(T);
 
@@ -415,7 +412,7 @@ public sealed class AssetManager
                     v.Tag, evictionMinutes);
 
                 v.Unload();
-                break; // only do one at a time, so it doesnt spike and/or lag
+                break;
             }
         }
     }
@@ -483,9 +480,7 @@ public sealed class AssetManager
             "Clearing {0} assets and {1} mounts", _assets.Count, _mounts.Count);
 
         foreach (var asset in _assets.Values)
-        {
             asset.Dispose();
-        }
         _assets.Clear();
 
         foreach (var mount in _mounts.OfType<IDisposable>())

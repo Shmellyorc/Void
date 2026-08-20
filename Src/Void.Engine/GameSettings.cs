@@ -1,24 +1,59 @@
-using Void.Engine.Logs;
+// ============================================================================
+//  GameSettings.cs
+// ============================================================================
+//  Fluent configuration builder for the game engine. All settings are optional
+//  with sensible defaults. Call Build() to finalize before creating a Game 
+//  instance.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine;
 
+/// <summary>
+/// Fluent configuration builder for the game engine. Use the singleton instance
+/// to chain configuration methods and call <see cref="Build"/> to finalize.
+/// </summary>
+/// <remarks>
+/// Example:
+/// <code>
+/// var settings = GameSettings.Instance
+///     .SetAppCompany("MyStudio")
+///     .SetAppName("MyGame")
+///     .SetWindow(1920, 1080)
+///     .SetFullScreen(true)
+///     .Build();
+/// 
+/// using var game = new Game(settings);
+/// game.Run();
+/// </code>
+/// </remarks>
 public sealed class GameSettings
 {
-    private bool
-        _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet,
+    private static readonly Lazy<GameSettings> _instance = new(() => new GameSettings());
+    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet,
         _isVSyncSet, _useApplicationDataSet, _setLogMinLevel,
         _setWindowScaleMode;
 
-    public static GameSettings Instance { get; private set; }
+    /// <summary>
+    /// Gets the singleton settings instance.
+    /// </summary>
+    public static GameSettings Instance => _instance.Value;
+
+    /// <summary>
+    /// Returns true after <see cref="Build"/> has been called.
+    /// </summary>
     public bool Initialized { get; private set; }
 
-    public GameSettings()
-    {
-        Instance ??= this;
-    }
+    private GameSettings() { }
 
     #region Application Data
 
+    /// <summary>
+    /// Sets whether to use the system's application data folder (e.g., %APPDATA%).
+    /// Default is false (uses local folder).
+    /// </summary>
     public GameSettings SetUseApplicationData(bool value)
     {
         _useApplicationDataSet = true;
@@ -27,61 +62,115 @@ public sealed class GameSettings
     }
     public bool UseApplicationData { get; private set; }
 
-
+    /// <summary>
+    /// Sets the application name. Required.
+    /// </summary>
     public GameSettings SetAppName(string name)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
 
         AppName = name.Trim();
-
         return this;
     }
     public string AppName { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the company name. Required.
+    /// </summary>
     public GameSettings SetAppCompany(string name)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
 
         AppCompany = name.Trim();
-
         return this;
     }
     public string AppCompany { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the window title. Default is "Game".
+    /// </summary>
     public GameSettings SetAppTitle(string name)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
 
         AppTitle = name.Trim();
-
         return this;
     }
     public string AppTitle { get; private set; }
 
+    /// <summary>
+    /// Sets the log folder name. Default is "Logs".
+    /// </summary>
+    public GameSettings SetAppLogFolder(string name)
+    {
+        if (name.IsEmpty())
+            throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
 
+        AppLogFolder = name.Trim();
+        return this;
+    }
+    public string AppLogFolder { get; private set; }
 
+    /// <summary>
+    /// Sets the save data folder name. Default is "Saves".
+    /// </summary>
+    public GameSettings SetAppSaveFolder(string name)
+    {
+        if (name.IsEmpty())
+            throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
+
+        AppSaveFolder = name.Trim();
+        return this;
+    }
+    public string AppSaveFolder { get; private set; }
+
+    /// <summary>
+    /// Sets the config folder name. Default is "Config".
+    /// </summary>
+    public GameSettings SetAppConfigFolder(string name)
+    {
+        if (name.IsEmpty())
+            throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
+
+        AppConfigFolder = name.Trim();
+        return this;
+    }
+    public string AppConfigFolder { get; private set; }
+
+    /// <summary>
+    /// Sets the temp folder name. Default is "Temp".
+    /// </summary>
+    public GameSettings SetAppTempFolder(string name)
+    {
+        if (name.IsEmpty())
+            throw new ArgumentNullException(nameof(name), "name cannot be null or empty");
+
+        AppTempFolder = name.Trim();
+        return this;
+    }
+    public string AppTempFolder { get; private set; }
+
+    /// <summary>
+    /// Sets the content root directory. Defaults to "Content" or "Assets" if found.
+    /// </summary>
     public GameSettings SetContentRoot(string path)
     {
         if (path.IsEmpty())
             throw new ArgumentNullException(nameof(path), "path cannot be null or empty");
         if (!Directory.Exists(path))
-            throw new DirectoryNotFoundException("The specified content root directory does not exist: '{path}'.");
+            throw new DirectoryNotFoundException($"The specified content root directory does not exist: '{path}'.");
 
         AppContentRoot = path;
-
         return this;
     }
     public string AppContentRoot { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the application version. Default is "1.0.0.0".
+    /// </summary>
     public GameSettings SetAppVersion(uint major, uint minor = 0, uint rebuild = 0, uint revision = 0)
     {
         if (major == 0)
@@ -91,12 +180,19 @@ public sealed class GameSettings
         return this;
     }
     public string AppVersion { get; private set; }
+
+    /// <summary>
+    /// Gets a hash of the version string for build verification.
+    /// </summary>
     public string AppVersionHash => $"{HashHelper.Cache64(AppVersion):X8}";
 
     #endregion
 
     #region Window & Viewport
 
+    /// <summary>
+    /// Sets fullscreen mode. Default is false.
+    /// </summary>
     public GameSettings SetFullScreen(bool value)
     {
         _isFullscreenSet = true;
@@ -105,7 +201,9 @@ public sealed class GameSettings
     }
     public bool Fullscreen { get; private set; }
 
-
+    /// <summary>
+    /// Sets VSync. Default is true.
+    /// </summary>
     public GameSettings SetVsync(bool value)
     {
         _isVSyncSet = true;
@@ -114,7 +212,9 @@ public sealed class GameSettings
     }
     public bool VSync { get; private set; }
 
-
+    /// <summary>
+    /// Sets the window resolution. Default is 1280x720.
+    /// </summary>
     public GameSettings SetWindow(uint width, uint height)
     {
         if (width == 0)
@@ -123,13 +223,13 @@ public sealed class GameSettings
             throw new ArgumentOutOfRangeException(nameof(height), "Height is zero");
 
         Window = new Vect2(width, height);
-
         return this;
     }
     public Vect2 Window { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the internal render resolution. Default is 320x180.
+    /// </summary>
     public GameSettings SetViewport(uint width, uint height)
     {
         if (width == 0)
@@ -138,7 +238,6 @@ public sealed class GameSettings
             throw new ArgumentOutOfRangeException(nameof(height), "Height is zero");
 
         Viewport = new Vect2(width, height);
-
         return this;
     }
     public Vect2 Viewport { get; private set; }
@@ -147,6 +246,9 @@ public sealed class GameSettings
 
     #region Frame Timing
 
+    /// <summary>
+    /// Sets fixed timestep mode. Default is true.
+    /// </summary>
     public GameSettings SetFixedTimeStep(bool value)
     {
         _isFixedTimeStepSet = true;
@@ -155,9 +257,9 @@ public sealed class GameSettings
     }
     public bool IsFixedTimeStep { get; private set; }
 
-
-
-
+    /// <summary>
+    /// Sets the target elapsed time in seconds. Default is 1/60.
+    /// </summary>
     public GameSettings SetTargetElapsedTime(float seconds)
     {
         if (seconds <= 0f)
@@ -166,6 +268,10 @@ public sealed class GameSettings
         TargetElapsedTime = seconds;
         return this;
     }
+
+    /// <summary>
+    /// Sets the target FPS. Converts to elapsed time internally.
+    /// </summary>
     public GameSettings SetTargetFPS(float fps)
     {
         if (fps <= 0f)
@@ -176,6 +282,9 @@ public sealed class GameSettings
     }
     public float TargetElapsedTime { get; private set; }
 
+    /// <summary>
+    /// Sets the maximum delta time to prevent spiral of death. Default is 0.1s.
+    /// </summary>
     public GameSettings SetMaxDeltaTime(float seconds)
     {
         if (seconds <= 0f)
@@ -190,26 +299,35 @@ public sealed class GameSettings
 
     #region Graphics
 
+    /// <summary>
+    /// Sets the clear color. Default is cornflower blue (100,149,237).
+    /// </summary>
     public GameSettings SetClearColor(uint red, uint green, uint blue)
     {
         ClearColor = new Color((byte)red, (byte)green, (byte)blue);
-
         return this;
     }
+
+    /// <summary>
+    /// Sets the clear color from a Color object.
+    /// </summary>
     public GameSettings SetClearColor(Color color)
         => SetClearColor(color.R, color.G, color.B);
+
+    /// <summary>
+    /// Sets the clear color from a hex string (e.g., "#3e3f3e").
+    /// </summary>
     public GameSettings SetClearColor(string hex)
     {
         var c = new Color(hex);
-
         SetClearColor(c.R, c.G, c.B);
-
         return this;
     }
     public Color ClearColor { get; private set; }
 
-
-
+    /// <summary>
+    /// Enables half-texel offset for pixel-perfect rendering. Default is false.
+    /// </summary>
     public GameSettings SetHalfTexelOffset(bool value)
     {
         UseHalfTexelOffset = value;
@@ -217,11 +335,12 @@ public sealed class GameSettings
     }
     public bool UseHalfTexelOffset { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets supersampling factor. Default is 4.
+    /// </summary>
     public GameSettings SetSuperSample(uint value)
     {
-        if (value == 0 || value > 16) // Limit to reasonable range
+        if (value == 0 || value > 16)
             throw new ArgumentOutOfRangeException(nameof(value), "SuperSample must be between 1 and 16");
 
         SuperSample = (int)value;
@@ -229,8 +348,9 @@ public sealed class GameSettings
     }
     public int SuperSample { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets how the viewport scales to the window. Default is Fit.
+    /// </summary>
     public GameSettings SetWindowScaleMode(WindowScaleMode mode)
     {
         _setWindowScaleMode = true;
@@ -238,10 +358,14 @@ public sealed class GameSettings
         return this;
     }
     public WindowScaleMode WindowScaleMode { get; private set; }
+
     #endregion
 
     #region Atlas
 
+    /// <summary>
+    /// Sets the atlas defragmentation threshold (5-80%). Default is 30%.
+    /// </summary>
     public GameSettings SetAtlasDefragThreshold(float value)
     {
         if (value < 0.05f || value > 0.80f)
@@ -252,39 +376,41 @@ public sealed class GameSettings
     }
     public float AtlasDefragThreshold { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the atlas page size. Default is 2048.
+    /// </summary>
     public GameSettings SetAtlasPageSize(uint value)
     {
         if (value == 0)
             throw new ArgumentOutOfRangeException(nameof(value));
 
         AtlasPageSize = (int)value;
-
         return this;
     }
     public int AtlasPageSize { get; private set; }
 
-
+    /// <summary>
+    /// Sets the number of atlas pages. Default is 4.
+    /// </summary>
     public GameSettings SetAtlasPageCount(uint value)
     {
         if (value == 0)
             throw new ArgumentOutOfRangeException(nameof(value));
 
         AtlasPageCount = (int)value;
-
         return this;
     }
     public int AtlasPageCount { get; private set; }
 
-
+    /// <summary>
+    /// Sets the atlas packer implementation. Default is SkylinePacker.
+    /// </summary>
     public GameSettings SetAtlasPacker(IAtlasPacker value)
     {
         if (value == null)
             throw new ArgumentNullException(nameof(value));
 
         AtlasPacker = value;
-
         return this;
     }
     public IAtlasPacker AtlasPacker { get; private set; }
@@ -293,10 +419,12 @@ public sealed class GameSettings
 
     #region Asset Management
 
+    /// <summary>
+    /// Sets asset eviction timeout in minutes. Default is 30.
+    /// </summary>
     public GameSettings SetAssetEviction(uint minutes)
     {
         AssetEvictionMinutes = (int)minutes;
-
         return this;
     }
     public int AssetEvictionMinutes { get; private set; }
@@ -305,28 +433,35 @@ public sealed class GameSettings
 
     #region Batch Rendering
 
+    /// <summary>
+    /// Sets sprite batch capacity. Default is 1024.
+    /// </summary>
     public GameSettings SetSpriteBatchCapacity(uint value)
     {
         if (value == 0)
             throw new ArgumentOutOfRangeException(nameof(value), "Capacity must be greater than zero");
 
         SpriteBatchCapacity = (int)value;
-
         return this;
     }
     public int SpriteBatchCapacity { get; private set; }
 
+    /// <summary>
+    /// Sets primitive batch capacity. Default is 4096.
+    /// </summary>
     public GameSettings SetPrimitiveBatchCapacity(uint value)
     {
         if (value == 0)
             throw new ArgumentOutOfRangeException(nameof(value), "Capacity must be greater than zero");
 
         PrimitiveBatchCapacity = (int)value;
-
         return this;
     }
     public int PrimitiveBatchCapacity { get; private set; }
 
+    /// <summary>
+    /// Enables batch sorting. Default is true.
+    /// </summary>
     public GameSettings SetEnableBatchSorting(bool value)
     {
         EnableBatchSorting = value;
@@ -334,6 +469,9 @@ public sealed class GameSettings
     }
     public bool EnableBatchSorting { get; private set; }
 
+    /// <summary>
+    /// Sets the default sort mode. Default is BackToFront.
+    /// </summary>
     public GameSettings SetDefaultSortMode(SortMode value)
     {
         DefaultSortMode = value;
@@ -341,13 +479,15 @@ public sealed class GameSettings
     }
     public SortMode DefaultSortMode { get; private set; }
 
+    /// <summary>
+    /// Sets the default blend mode. Default is Alpha.
+    /// </summary>
     public GameSettings SetDefaultBlendMode(IBlendMode value)
     {
         if (value == null)
             throw new ArgumentNullException(nameof(value));
 
         DefaultBlendMode = value;
-
         return this;
     }
     public IBlendMode DefaultBlendMode { get; private set; }
@@ -356,6 +496,9 @@ public sealed class GameSettings
 
     #region Discoverable
 
+    /// <summary>
+    /// Sets how assemblies are scanned for discoverable types. Default is ExcludeFramework.
+    /// </summary>
     public GameSettings SetDiscoverableScanMode(AssemblyScanMode mode)
     {
         DiscoverableScanMode = mode;
@@ -363,8 +506,9 @@ public sealed class GameSettings
     }
     public AssemblyScanMode DiscoverableScanMode { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets a custom filter for assembly discovery.
+    /// </summary>
     public GameSettings SetDiscoverableAssemblyFilter(Func<Assembly, bool> filter)
     {
         if (filter == null)
@@ -375,8 +519,9 @@ public sealed class GameSettings
     }
     public Func<Assembly, bool> DiscoverableAssemblyFilter { get; private set; }
 
-
-
+    /// <summary>
+    /// Adds an assembly name to include in discovery.
+    /// </summary>
     public GameSettings AddDiscoverableAssembly(string assemblyName)
     {
         if (assemblyName.IsEmpty())
@@ -387,8 +532,9 @@ public sealed class GameSettings
     }
     public HashSet<string> DiscoverableAssemblies { get; } = [];
 
-
-
+    /// <summary>
+    /// Adds a namespace prefix to exclude from discovery.
+    /// </summary>
     public GameSettings AddDiscoverableExcludedPrefix(string prefix)
     {
         if (prefix.IsEmpty())
@@ -403,6 +549,9 @@ public sealed class GameSettings
 
     #region Input
 
+    /// <summary>
+    /// Sets the gamepad dead zone (0-1). Default is 0.15.
+    /// </summary>
     public GameSettings SetDeadZone(float value)
     {
         if (value < 0f || value > 1f)
@@ -413,8 +562,9 @@ public sealed class GameSettings
     }
     public float DeadZone { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets whether to ignore input when the window is unfocused. Default is true.
+    /// </summary>
     public GameSettings SetIgnoreInputWhenUnfocused(bool value)
     {
         _ignoreInputSet = true;
@@ -427,17 +577,20 @@ public sealed class GameSettings
 
     #region Logging
 
+    /// <summary>
+    /// Sets the minimum log level. Default is Info.
+    /// </summary>
     public GameSettings SetLogMinLevel(LogLevel level)
     {
         _setLogMinLevel = true;
         LogMinLevel = level;
-
         return this;
     }
     public LogLevel LogMinLevel { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the maximum log file size in MB. Default is 10.
+    /// </summary>
     public GameSettings SetLogMaxFileSizeMB(uint size)
     {
         if (size == 0)
@@ -448,8 +601,9 @@ public sealed class GameSettings
     }
     public uint LogMaxFileSizeMB { get; private set; }
 
-
-
+    /// <summary>
+    /// Sets the maximum number of log files. Default is 10.
+    /// </summary>
     public GameSettings SetLogMaxFiles(uint count)
     {
         if (count == 0)
@@ -462,6 +616,26 @@ public sealed class GameSettings
 
     #endregion
 
+    #region Trace
+
+    /// <summary>
+    /// Sets a callback for unhandled exceptions.
+    /// </summary>
+    public GameSettings SetOnCrash(Action<Exception> onCrash)
+    {
+        OnCrash = onCrash ?? throw new ArgumentNullException(nameof(onCrash));
+        return this;
+    }
+    public Action<Exception> OnCrash { get; private set; }
+
+    #endregion
+
+    /// <summary>
+    /// Finalizes the configuration and validates all settings.
+    /// Must be called before creating a <see cref="Game"/> instance.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when required settings are missing.</exception>
+    /// <exception cref="DirectoryNotFoundException">Thrown when content root doesn't exist.</exception>
     public GameSettings Build()
     {
         if (Initialized)
@@ -485,11 +659,11 @@ public sealed class GameSettings
                 AppContentRoot = "Assets";
             else
                 throw new DirectoryNotFoundException(
-                    "No content directory found. Excepted to find either a 'Content' or 'Asset' folder."
+                    "No content directory found. Expected to find either a 'Content' or 'Assets' folder."
                 );
         }
 
-
+        // Apply defaults
         AtlasPageSize = AtlasPageSize <= 0 ? 2048 : AtlasPageSize;
         AtlasPageCount = AtlasPageCount <= 0 ? 4 : AtlasPageCount;
         AtlasPacker ??= new SkylinePacker(AtlasPageSize, AtlasPageSize);
@@ -518,9 +692,12 @@ public sealed class GameSettings
         LogMaxFiles = LogMaxFiles == 0 ? 10 : LogMaxFiles;
         SuperSample = SuperSample <= 0 ? 4 : SuperSample;
         WindowScaleMode = !_setWindowScaleMode ? WindowScaleMode.Fit : WindowScaleMode;
+        AppLogFolder = AppLogFolder.IsEmpty() ? "Logs" : AppLogFolder;
+        AppSaveFolder = AppSaveFolder.IsEmpty() ? "Saves" : AppSaveFolder;
+        AppConfigFolder = AppConfigFolder.IsEmpty() ? "Config" : AppConfigFolder;
+        AppTempFolder = AppTempFolder.IsEmpty() ? "Temp" : AppTempFolder;
 
         Initialized = true;
-
         return this;
     }
 }

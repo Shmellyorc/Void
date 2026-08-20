@@ -1,13 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace Void.Engine.Coroutines.Routines.Time;
 
-/// <summary>
-/// A coroutine that wraps another routine and completes after a specified timeout.
-/// </summary>
 public sealed class Timeout : IEnumerator, IDisposable
 {
     private readonly IEnumerator _inner;

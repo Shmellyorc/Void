@@ -54,7 +54,7 @@ internal sealed class Program
     [STAThread]
     private static void Main(string[] _)
     {
-        var setting = new GameSettings()
+        var setting = GameSettings.Instance
             .SetAppCompany("Shmellyorc")
             .SetAppName("Scravengers")
             .SetAppTitle("Scavengers")

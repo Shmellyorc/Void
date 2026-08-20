@@ -3,15 +3,10 @@ namespace Void.Packer;
 public sealed class PackOptions
 {
     public ushort MaxFilesPerPack { get; set; } = ushort.MaxValue;
-
     public bool Encrypt { get; set; } = true;
-
     public CompressionAlgorithm Compression { get; set; } = CompressionAlgorithm.Deflate;
-
     public bool AdaptiveCompression { get; set; } = true;
-
     public bool CaseSensitive { get; set; } = false;
-
     public int CompressionLevel { get; set; } = 6;
 }
 

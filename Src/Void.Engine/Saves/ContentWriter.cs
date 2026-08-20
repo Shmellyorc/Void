@@ -25,6 +25,7 @@ public sealed class ContentWriter : BinaryWriter
     public void Write(Vect2 value)
     {
         _manifest.Add(WriteType.Vect2);
+
         base.Write(value.X);
         base.Write(value.Y);
     }
@@ -32,6 +33,7 @@ public sealed class ContentWriter : BinaryWriter
     public void Write(Rect2 value)
     {
         _manifest.Add(WriteType.Rect2);
+
         base.Write(value.X);
         base.Write(value.Y);
         base.Write(value.Width);
@@ -41,6 +43,7 @@ public sealed class ContentWriter : BinaryWriter
     public void Write(Color value)
     {
         _manifest.Add(WriteType.Color);
+
         base.Write(value.R);
         base.Write(value.G);
         base.Write(value.B);
@@ -52,13 +55,15 @@ public sealed class ContentWriter : BinaryWriter
         _manifest.Add(WriteType.String);
 
         byte[] bytes = Encoding.UTF8.GetBytes(value ?? string.Empty);
-
         int length = bytes.Length;
+
         while (length >= 0x80)
         {
             base.Write((byte)(length | 0x80));
+
             length >>= 7;
         }
+
         base.Write((byte)length);
 
         base.Write(bytes);
@@ -114,9 +119,11 @@ public sealed class ContentWriter : BinaryWriter
 
         using var memoryStream = new MemoryStream();
         var serializer = new System.Xml.Serialization.XmlSerializer(typeof(T));
+
         serializer.Serialize(memoryStream, value);
 
         byte[] data = memoryStream.ToArray();
+        
         base.Write(data.Length);
         base.Write(data);
     }

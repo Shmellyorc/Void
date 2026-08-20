@@ -65,32 +65,25 @@ public abstract class ContentTypeWriterReader<T>
 
     public string SaveFolder => _saveFolder;
 
-    /// <summary>
-    /// No encryption. Adaptive compression always on.
-    /// </summary>
     protected ContentTypeWriterReader()
     {
         _saveFolder = Game.Instance.ApplicationSaveFolder;
         Directory.CreateDirectory(_saveFolder);
     }
 
-    /// <summary>
-    /// With encryption. Adaptive compression always on.
-    /// </summary>
     protected ContentTypeWriterReader(string encryptionKey)
     {
         _encryptionKey = Encoding.UTF8.GetBytes(encryptionKey);
         _saveFolder = Game.Instance.ApplicationSaveFolder;
+
         Directory.CreateDirectory(_saveFolder);
     }
 
-    /// <summary>
-    /// With encryption bytes. Adaptive compression always on.
-    /// </summary>
     protected ContentTypeWriterReader(byte[] encryptionKey)
     {
         _encryptionKey = encryptionKey;
         _saveFolder = Game.Instance.ApplicationSaveFolder;
+
         Directory.CreateDirectory(_saveFolder);
     }
 
@@ -166,6 +159,7 @@ public abstract class ContentTypeWriterReader<T>
             bool compressed = false;
             byte[] dataToWrite = innerData;
             byte[] compressedData = Compress(innerData);
+
             if (compressedData.Length < innerData.Length)
             {
                 dataToWrite = compressedData;
@@ -174,6 +168,7 @@ public abstract class ContentTypeWriterReader<T>
 
             bool encrypted = _encryptionKey != null;
             byte[] finalData = dataToWrite;
+
             if (encrypted)
             {
                 string version = GameSettings.Instance.AppVersion;
@@ -262,6 +257,7 @@ public abstract class ContentTypeWriterReader<T>
 
             byte[] magicBytes = binaryReader.ReadBytes(4);
             string magic = Encoding.ASCII.GetString(magicBytes);
+
             if (magic != Magic)
             {
                 error = SaveError.WrongMagic;
@@ -271,6 +267,7 @@ public abstract class ContentTypeWriterReader<T>
             ulong savedVersionHash = binaryReader.ReadUInt64();
             string version = GameSettings.Instance.AppVersion;
             ulong currentVersionHash = HashHelper.Cache64(version);
+
             if (savedVersionHash != currentVersionHash)
             {
                 error = SaveError.VersionMismatch;
@@ -279,11 +276,10 @@ public abstract class ContentTypeWriterReader<T>
 
             bool encrypted = binaryReader.ReadByte() == 1;
             bool compressed = binaryReader.ReadByte() == 1;
-
             int blobLength = binaryReader.ReadInt32();
             byte[] blob = binaryReader.ReadBytes(blobLength);
-
             byte[] decryptedBlob = blob;
+
             if (encrypted)
             {
                 if (_encryptionKey == null)
@@ -330,6 +326,7 @@ public abstract class ContentTypeWriterReader<T>
 
             using var dataStream = new MemoryStream(dataBytes);
             using var reader = new ContentReader(dataStream, manifest);
+
             data = Read(reader);
 
             if (!reader.IsManifestComplete)
@@ -374,6 +371,7 @@ public abstract class ContentTypeWriterReader<T>
                 return false;
 
             File.Delete(fullPath);
+
             return true;
         }
         catch
@@ -384,8 +382,9 @@ public abstract class ContentTypeWriterReader<T>
 
     private string GetSafePath(string fileName)
     {
-        fileName = fileName.Replace('\\', Path.DirectorySeparatorChar)
-                           .Replace('/', Path.DirectorySeparatorChar);
+        fileName = fileName
+            .Replace('\\', Path.DirectorySeparatorChar)
+            .Replace('/', Path.DirectorySeparatorChar);
 
         string fullPath = Path.GetFullPath(Path.Combine(_saveFolder, fileName));
         string saveFolderFull = Path.GetFullPath(_saveFolder).TrimEnd(Path.DirectorySeparatorChar);
@@ -403,6 +402,7 @@ public abstract class ContentTypeWriterReader<T>
         {
             deflate.Write(data, 0, data.Length);
         }
+
         return output.ToArray();
     }
 
@@ -411,7 +411,9 @@ public abstract class ContentTypeWriterReader<T>
         using var input = new MemoryStream(data);
         using var deflate = new DeflateStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
+
         deflate.CopyTo(output);
+
         return output.ToArray();
     }
 
@@ -419,15 +421,14 @@ public abstract class ContentTypeWriterReader<T>
     {
         byte[] salt = Encoding.ASCII.GetBytes(magic + versionHash);
         byte[] key = Rfc2898DeriveBytes.Pbkdf2(_encryptionKey, salt, 1000, HashAlgorithmName.SHA256, 32);
-
         byte[] nonce = new byte[12];
+
         using (var rng = RandomNumberGenerator.Create())
         {
             rng.GetBytes(nonce);
         }
 
         byte[] aad = Encoding.ASCII.GetBytes(magic + versionHash);
-
         byte[] ciphertext = new byte[data.Length];
         byte[] tag = new byte[16];
 
@@ -446,7 +447,6 @@ public abstract class ContentTypeWriterReader<T>
     {
         byte[] salt = Encoding.ASCII.GetBytes(magic + versionHash);
         byte[] key = Rfc2898DeriveBytes.Pbkdf2(_encryptionKey, salt, 1000, HashAlgorithmName.SHA256, 32);
-
         byte[] nonce = new byte[12];
         byte[] tag = new byte[16];
         byte[] ciphertext = new byte[data.Length - nonce.Length - tag.Length];
@@ -456,7 +456,6 @@ public abstract class ContentTypeWriterReader<T>
         Buffer.BlockCopy(data, nonce.Length + tag.Length, ciphertext, 0, ciphertext.Length);
 
         byte[] aad = Encoding.ASCII.GetBytes(magic + versionHash);
-
         byte[] plaintext = new byte[ciphertext.Length];
 
         using var aesGcm = new AesGcm(key, 16);

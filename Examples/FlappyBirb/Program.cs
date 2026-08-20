@@ -23,7 +23,7 @@
 
 using Void.Engine.Saves;
 
-var settings = new GameSettings()
+var settings = GameSettings.Instance
     .SetAppCompany("Shmellyorc")
     .SetAppName("FlappyBirb")
     .SetAppTitle("Flappy Birb")

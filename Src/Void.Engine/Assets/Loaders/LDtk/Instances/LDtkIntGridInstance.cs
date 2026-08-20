@@ -1,9 +1,5 @@
 namespace Void.Engine.Assets.Loaders.LDtk.Instances;
 
-/// <summary>
-/// Represents a single int grid cell instance in a tile-based map.
-/// Contains grid index data commonly used for collision or logic layers.
-/// </summary>
 public sealed class LDtkIntGridInstance : ILDtkInstance
 {
 	public int Index { get; }

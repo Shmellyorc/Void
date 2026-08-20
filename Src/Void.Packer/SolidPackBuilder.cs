@@ -57,9 +57,7 @@ public sealed class SolidPackBuilder
             );
 
         foreach (var file in _files)
-        {
             ProcessFile(file);
-        }
 
         var headerData = BuildHeader();
         byte[] compressedHeader = null;
