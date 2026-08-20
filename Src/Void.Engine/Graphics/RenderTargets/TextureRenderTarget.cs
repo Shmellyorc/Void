@@ -1,3 +1,4 @@
+using Void.Engine;
 using Void.Engine.Graphics.RenderTargets;
 
 internal sealed class TextureRenderTarget : IRenderTarget
@@ -29,24 +30,25 @@ internal sealed class TextureRenderTarget : IRenderTarget
     {
         _window = window ?? throw new ArgumentNullException(nameof(window));
         _texture = null;
-        _width = (int)_window._renderTexture.Size.X;
-        _height = (int)_window._renderTexture.Size.Y;
+        // Use viewport size, not render texture size
+        _width = (int)GameSettings.Instance.Viewport.X;
+        _height = (int)GameSettings.Instance.Viewport.Y;
         _sRGB = false;
     }
 
     public Texture GetTexture()
     {
         if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-        
+
         var renderTexture = RenderTexture;
         if (renderTexture == null || renderTexture.IsInvalid)
             return null;
-        
+
         var image = renderTexture.Texture.CopyToImage();
-        
+
         var sfTexture = new SFTexture(image);
         image.Dispose();
-        
+
         return new Texture(sfTexture);
     }
 
@@ -83,10 +85,10 @@ internal sealed class TextureRenderTarget : IRenderTarget
     public void Dispose()
     {
         if (_disposed) return;
-        
+
         if (_texture != null)
             _texture.Dispose();
-            
+
         _disposed = true;
         GC.SuppressFinalize(this);
     }

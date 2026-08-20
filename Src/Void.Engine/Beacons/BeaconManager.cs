@@ -2,12 +2,15 @@ namespace Void.Engine.Beacons;
 
 public sealed class BeaconManager
 {
+    private static readonly Lazy<BeaconManager> _instance =
+        new Lazy<BeaconManager>(() => new BeaconManager());
+
     private readonly ConcurrentDictionary<ulong, Action<BeaconHandle>> _topics = [];
 
-    public static BeaconManager Instance { get; private set; }
+    public static BeaconManager Instance => _instance.Value;
     public int Count => _topics.Count;
 
-    internal BeaconManager() => Instance ??= this;
+    private BeaconManager() { }
 
     public void Subscribe(string topic, Action<BeaconHandle> handle)
     {

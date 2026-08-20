@@ -27,6 +27,8 @@ public sealed class AtlasManager
         }
     }
 
+    private static readonly Lazy<AtlasManager> _instance =
+        new Lazy<AtlasManager>(() => new AtlasManager());
     private readonly Dictionary<(uint NativeHandle, Rect2 SrcRect), AtlasSlot> _packedMap;
     private readonly List<AtlasPage> _pages;
     private readonly LinkedList<(uint NativeHandle, Rect2 SrcRect)> _lruList;
@@ -34,13 +36,11 @@ public sealed class AtlasManager
     private int _pageCount;
     private int _evictionCount;
 
-    public static AtlasManager Instance { get; private set; }
+    public static AtlasManager Instance => _instance.Value;
 
 
-    internal AtlasManager()
+    private AtlasManager()
     {
-        Instance ??= this;
-
         _packedMap = new Dictionary<(uint, Rect2), AtlasSlot>();
         _pages = new List<AtlasPage>();
         _lruList = new LinkedList<(uint, Rect2)>();

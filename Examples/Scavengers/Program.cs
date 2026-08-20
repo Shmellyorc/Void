@@ -23,23 +23,8 @@ global using Void.Engine.Inputs.Gamepads;
 global using Void.Engine.Inputs.InputActions;
 global using Void.Engine.Inputs.Keyboards;
 global using Void.Engine.Pathfinding;
+global using Void.Engine.Sounds;
 global using Void.Engine.Systems;
-
-////////////////////////////////////////////////////////////////////////////
-
-var setting = new GameSettings()
-    .SetAppCompany("Shmellyorc")
-    .SetAppName("Scravengers")
-    .SetAppTitle("Scavengers")
-    .SetClearColor(new Color("#3e3f3e"))
-    .SetLogMinLevel(Void.Engine.Logs.LogLevel.Debug)
-    .Build();
-
-using var game = new ScavengersGame(setting);
-
-game.Run();
-
-////////////////////////////////////////////////////////////////////////////
 
 public enum GameInputs
 {
@@ -54,4 +39,31 @@ public enum GameBecaons
     UpdateFood,
     PlayerHit,
     GameOver,
+}
+
+public sealed class GameData
+{
+    public float PlayTime;
+    public int Food;
+    public int Looted;
+    public int Days = 1;
+}
+
+internal sealed class Program
+{
+    [STAThread]
+    private static void Main(string[] _)
+    {
+        var setting = new GameSettings()
+            .SetAppCompany("Shmellyorc")
+            .SetAppName("Scravengers")
+            .SetAppTitle("Scavengers")
+            .SetClearColor(new Color("#3e3f3e"))
+            .SetLogMinLevel(Void.Engine.Logs.LogLevel.Debug)
+            .Build();
+
+        using var game = new ScavengersGame(setting);
+
+        game.Run();
+    }
 }

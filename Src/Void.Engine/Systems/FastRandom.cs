@@ -145,8 +145,9 @@ public sealed class FastRandom
 
     private static int GenerateSeed()
     {
-        // Should be combined of time and other soruces for a decent seed
-        return (int)((uint)Environment.TickCount ^ (uint)Guid.NewGuid().GetHashCode());
+        // Combine a fast tick counter with the current thread's managed ID.
+        // This ensures unique seeds across threads while being zero-allocation.
+        return (int)(Environment.TickCount ^ Environment.CurrentManagedThreadId ^ (uint)DateTime.Now.Ticks);
     }
 
     private uint NextUInt()

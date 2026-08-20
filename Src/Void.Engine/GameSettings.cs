@@ -4,7 +4,10 @@ namespace Void.Engine;
 
 public sealed class GameSettings
 {
-    private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet, _isVSyncSet, _useApplicationDataSet, _setLogMinLevel;
+    private bool
+        _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet,
+        _isVSyncSet, _useApplicationDataSet, _setLogMinLevel,
+        _setWindowScaleMode;
 
     public static GameSettings Instance { get; private set; }
     public bool Initialized { get; private set; }
@@ -207,8 +210,6 @@ public sealed class GameSettings
 
 
 
-
-
     public GameSettings SetHalfTexelOffset(bool value)
     {
         UseHalfTexelOffset = value;
@@ -216,6 +217,27 @@ public sealed class GameSettings
     }
     public bool UseHalfTexelOffset { get; private set; }
 
+
+
+    public GameSettings SetSuperSample(uint value)
+    {
+        if (value == 0 || value > 16) // Limit to reasonable range
+            throw new ArgumentOutOfRangeException(nameof(value), "SuperSample must be between 1 and 16");
+
+        SuperSample = (int)value;
+        return this;
+    }
+    public int SuperSample { get; private set; }
+
+
+
+    public GameSettings SetWindowScaleMode(WindowScaleMode mode)
+    {
+        _setWindowScaleMode = true;
+        WindowScaleMode = mode;
+        return this;
+    }
+    public WindowScaleMode WindowScaleMode { get; private set; }
     #endregion
 
     #region Atlas
@@ -494,6 +516,8 @@ public sealed class GameSettings
         LogMinLevel = !_setLogMinLevel ? LogLevel.Info : LogMinLevel;
         LogMaxFileSizeMB = LogMaxFileSizeMB == 0 ? 10 : LogMaxFileSizeMB;
         LogMaxFiles = LogMaxFiles == 0 ? 10 : LogMaxFiles;
+        SuperSample = SuperSample <= 0 ? 4 : SuperSample;
+        WindowScaleMode = !_setWindowScaleMode ? WindowScaleMode.Fit : WindowScaleMode;
 
         Initialized = true;
 

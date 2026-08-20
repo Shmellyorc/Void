@@ -28,13 +28,15 @@ namespace Void.Engine.Coroutines;
 
 public sealed class CoroutineManager
 {
+    private static readonly Lazy<CoroutineManager> _instance =
+       new(() => new CoroutineManager());
     private readonly List<IEnumerator> _running = [];
     private readonly List<float> _delays = [];
 
-    public static CoroutineManager Instance { get; private set; }
+    public static CoroutineManager Instance => _instance.Value;
     public int Count => _running.Count;
 
-    internal CoroutineManager() => Instance ??= this;
+    private CoroutineManager() { }
 
     public CoroutineHandle Run(float delay, IEnumerator routine)
     {

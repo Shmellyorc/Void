@@ -8,10 +8,6 @@ public class Game : IDisposable
 {
     private readonly GameSettings _settings;
     private readonly Window _window;
-    private readonly BeaconManager _beacon;
-    private readonly CoroutineManager _coroutine;
-    private readonly AssetManager _asset;
-    private readonly AtlasManager _atlas;
     private readonly FrameTime _timing;
     private readonly SFClock _sfClock;
     private SFTime _previousTime;
@@ -84,10 +80,6 @@ public class Game : IDisposable
 
         _sfClock = new SFClock();
         _timing = new FrameTime();
-        _asset = new AssetManager();
-        _atlas = new AtlasManager();
-        _beacon = new BeaconManager();
-        _coroutine = new CoroutineManager();
 
         Logger.Instance.Info("VOID setting up Application folders...");
         FileHelper.EnsureDirectoryExists(ApplicationFolder);
@@ -121,7 +113,7 @@ public class Game : IDisposable
             {
                 while (_timing.Accumulator >= _timing.TargetElapsed)
                 {
-                    _coroutine.Update(_timing.TargetElapsed);
+                    CoroutineManager.Instance.Update(_timing.TargetElapsed);
                     OnUpdate(_timing);
                     _timing.ConsumeFixedUpdate();
                 }
@@ -132,7 +124,7 @@ public class Game : IDisposable
             }
             else
             {
-                _coroutine.Update(_timing.DeltaTime);
+                CoroutineManager.Instance.Update(_timing.DeltaTime);
                 OnUpdate(_timing);
 
                 _window.BeginRender(_settings.ClearColor);
@@ -154,36 +146,13 @@ public class Game : IDisposable
 
         OnExit();
 
-        _coroutine.StopAll();
-        _beacon.Clear();
-        _asset.Clear();
-        _atlas.Clear();
+        CoroutineManager.Instance.StopAll();
+        BeaconManager.Instance.Clear();
+        AssetManager.Instance.Clear();
+        AtlasManager.Instance.Clear();
         _window.Dispose();
 
         GC.SuppressFinalize(this);
         _isDisposed = true;
-    }
-
-
-
-
-    private void CreateFolder(string path, string description)
-    {
-        try
-        {
-            if (FileHelper.EnsureDirectoryExists(path))
-            {
-                Console.WriteLine($"Created {description}: {path}");
-            }
-            else
-            {
-                Console.WriteLine($"{description} already exists: {path}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Error: Unable to create {description} at '{path}'. {ex.Message}");
-            throw new IOException($"Unable to create {description} at '{path}'.", ex);
-        }
     }
 }

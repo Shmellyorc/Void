@@ -8,6 +8,8 @@ public sealed class AssetManager
 {
     #region fields
     private static uint s_id;
+    private static readonly Lazy<AssetManager> _instance =
+        new(() => new AssetManager());
     private static readonly Lock IdLock = new();
     private readonly ConcurrentDictionary<ulong, IAsset> _assets = [];
     private readonly List<IMount> _mounts = [];
@@ -47,17 +49,16 @@ public sealed class AssetManager
 
 
     #region Properties
-    public static AssetManager Instance { get; private set; }
+
+
+    public static AssetManager Instance => _instance.Value;
     public IReadOnlyList<IMount> Mounts => _mounts;
     #endregion
 
 
-
     #region Constructor
-    internal AssetManager()
+    private AssetManager()
     {
-        Instance ??= this;
-
         if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             _mounts.Add(new MacOsMount());
 

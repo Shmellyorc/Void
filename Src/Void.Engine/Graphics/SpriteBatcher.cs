@@ -363,14 +363,21 @@ public sealed partial class SpriteBatcher : BaseBatcher
         {
             float cos = MathF.Cos(cmd.Rotation);
             float sin = MathF.Sin(cmd.Rotation);
-            float centerX = left + cmd.Origin.X * cmd.Scale.X;
-            float centerY = top + cmd.Origin.Y * cmd.Scale.Y;
+
+            // Calculate the center of rotation (should be the sprite's origin)
+            float centerX = left + cmd.Origin.X;
+            float centerY = top + cmd.Origin.Y;
 
             for (int i = 0; i < 4; i++)
             {
                 float dx = corners[i].X - centerX;
                 float dy = corners[i].Y - centerY;
-                corners[i] = new Vect2(centerX + dx * cos - dy * sin, centerY + dx * sin + dy * cos);
+
+                // Apply rotation WITHOUT scale distortion
+                corners[i] = new Vect2(
+                    centerX + dx * cos - dy * sin,
+                    centerY + dx * sin + dy * cos
+                );
             }
         }
 

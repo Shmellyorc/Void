@@ -1,5 +1,3 @@
-using Void.Engine.Sounds;
-
 namespace Scavengers;
 
 public static class Globals
@@ -15,8 +13,7 @@ public static class Globals
     public const int FruitPoints = 4;
     public const int EnemyFoodReduction = -10;
     public const int PlayerMoveFoodReduction = -1;
-    public const int PlayerAttackFoodReduction = -1;
-
+    public const int PlayerAttackFoodReduction = -2;
     public const float MusicVolume = 0.5f;
     public const float SoundFxVolume = 0.25f;
 
@@ -29,7 +26,6 @@ public static class Globals
     public static GameData Data;
     public static Texture TempTexture;
     public static LDtkMap Map;
-
     public static Sound Chop1, Chop2;
     public static Sound Die;
     public static Sound Enemy1, Enemy2;

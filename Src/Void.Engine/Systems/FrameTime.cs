@@ -74,6 +74,21 @@ public sealed class FrameTime
     public float TargetElapsed { get; }
     public float MaxDeltaTime { get; }
 
+    /// <summary>
+    /// Gets or sets the time scale multiplier. 1f = normal speed, 0.5f = half speed, 2f = double speed.
+    /// </summary>
+    public float TimeScale { get; set; }
+
+    /// <summary>
+    /// Gets the scaled delta time (affected by TimeScale).
+    /// </summary>
+    public float DeltaTime => (float)_elapsedTime.TotalSeconds * TimeScale;
+
+    /// <summary>
+    /// Gets the unscaled delta time (always real time, ignores TimeScale).
+    /// </summary>
+    public float UnscaledDeltaTime => (float)_elapsedTime.TotalSeconds;
+
     internal FrameTime()
     {
         var settings = GameSettings.Instance;
@@ -85,6 +100,7 @@ public sealed class FrameTime
         _totalTime = TimeSpan.Zero;
         _elapsedTime = TimeSpan.Zero;
         _accumulator = 0f;
+        TimeScale = 1f;
     }
 
     internal void Update(float rawDelta)
@@ -127,19 +143,4 @@ public sealed class FrameTime
         if (IsFixedTimeStep)
             _accumulator -= TargetElapsed;
     }
-
-    /// <summary>
-    /// Gets or sets the time scale multiplier. 1f = normal speed, 0.5f = half speed, 2f = double speed.
-    /// </summary>
-    public float TimeScale { get; set; } = 1f;
-
-    /// <summary>
-    /// Gets the scaled delta time (affected by TimeScale).
-    /// </summary>
-    public float DeltaTime => (float)_elapsedTime.TotalSeconds * TimeScale;
-
-    /// <summary>
-    /// Gets the unscaled delta time (always real time, ignores TimeScale).
-    /// </summary>
-    public float UnscaledDeltaTime => (float)_elapsedTime.TotalSeconds;
 }

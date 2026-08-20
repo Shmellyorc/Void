@@ -43,24 +43,15 @@ public sealed class ScavengersGame(GameSettings settings) : Game(settings)
     protected override void OnExit()
     {
         Globals.TempTexture.Dispose();
+
         _sceneManager.Clear();
 
         base.OnExit();
     }
 
     protected override void OnUpdate(FrameTime frameTime)
-    {
-
-
-        _sceneManager.Update(frameTime);
-
-        base.OnUpdate(frameTime);
-    }
+        => _sceneManager.Update(frameTime);
 
     protected override void OnDraw(FrameTime frameTime)
-    {
-        _sceneManager.Draw(frameTime);
-
-        base.OnDraw(frameTime);
-    }
+        => _sceneManager.Draw(frameTime);
 }

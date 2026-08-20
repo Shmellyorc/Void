@@ -1,29 +1,42 @@
-global using SFState = SFML.Window.State;
-
-using Void.Engine.Logs;
-
 namespace Void.Engine.Systems;
 
+public enum WindowScaleMode
+{
+    /// <summary>
+    /// Scales the viewport to fill the window exactly (may distort if aspect ratios differ).
+    /// </summary>
+    Stretch,
 
+    /// <summary>
+    /// Scales the viewport up by the largest integer factor that fits, adding borders if needed.
+    /// </summary>
+    PixelPerfect,
+
+    /// <summary>
+    /// Scales the viewport to fit entirely within the window while maintaining aspect ratio.
+    /// Adds black bars on sides (letterboxing/pillarboxing).
+    /// </summary>
+    Fit,
+
+    /// <summary>
+    /// Scales the viewport to fill the entire window while maintaining aspect ratio.
+    /// Crops overflow (no black bars, but content may be cut off).
+    /// </summary>
+    Fill,
+
+    /// <summary>
+    /// No scaling - viewport is displayed at its native resolution centered in the window.
+    /// </summary>
+    None
+}
 
 /// <summary>
 /// Represents a display mode/resolution.
 /// </summary>
 public readonly struct DisplayMode
 {
-    /// <summary>
-    /// Gets the resolution width in pixels.
-    /// </summary>
     public uint Width { get; }
-
-    /// <summary>
-    /// Gets the resolution height in pixels.
-    /// </summary>
     public uint Height { get; }
-
-    /// <summary>
-    /// Gets the bits per pixel.
-    /// </summary>
     public uint BitsPerPixel { get; }
 
     internal DisplayMode(uint width, uint height, uint bitsPerPixel)
@@ -36,26 +49,13 @@ public readonly struct DisplayMode
     public override string ToString() => $"{Width}x{Height} @ {BitsPerPixel}bpp";
 }
 
-
-
 /// <summary>
 /// Defines the window display mode.
 /// </summary>
 public enum WindowMode
 {
-    /// <summary>
-    /// Standard window with title bar and borders.
-    /// </summary>
     Windowed,
-
-    /// <summary>
-    /// Borderless window that fills the screen.
-    /// </summary>
     Borderless,
-
-    /// <summary>
-    /// Exclusive fullscreen mode.
-    /// </summary>
     Fullscreen
 }
 
@@ -88,70 +88,23 @@ public sealed class Window : IDisposable
     private Vect2 _windowSize;
     private Vect2 _renderSize;
     private bool _isDisposed;
+    private readonly int _superSample;
+    private readonly WindowScaleMode _scaleMode;
 
-    /// <summary>
-    /// Gets the current window size in pixels.
-    /// </summary>
     public Vect2 WindowSize => _windowSize;
-
-    /// <summary>
-    /// Gets the render resolution (may differ from window size if scaling is used).
-    /// </summary>
     public Vect2 RenderSize => _renderSize;
-
-    /// <summary>
-    /// Gets the current applied window display mode.
-    /// </summary>
     public WindowMode Mode => _appliedMode;
-
-    /// <summary>
-    /// Gets whether VSync is currently enabled.
-    /// </summary>
     public bool VSyncEnabled => _appliedVSync;
-
-    /// <summary>
-    /// Gets whether the window currently has focus.
-    /// </summary>
     public bool IsFocused { get; private set; }
-
-    /// <summary>
-    /// Gets whether the window is currently open.
-    /// </summary>
     public bool IsOpen => _window?.IsOpen ?? false;
-
-    /// <summary>
-    /// Gets whether there are pending changes that have not been applied yet.
-    /// </summary>
     public bool HasPendingChanges => _hasPendingChanges;
 
-    /// <summary>
-    /// Called when the window is resized. Args: new window size.
-    /// </summary>
     public Action<Vect2> OnWindowResized { get; set; }
-
-    /// <summary>
-    /// Called when the window gains focus.
-    /// </summary>
     public Action OnFocusGained { get; set; }
-
-    /// <summary>
-    /// Called when the window loses focus.
-    /// </summary>
     public Action OnFocusLost { get; set; }
-
-    /// <summary>
-    /// Called when the window is closed by the user (X button).
-    /// </summary>
     public Action OnWindowClosed { get; set; }
-
-    /// <summary>
-    /// Called when the mouse wheel is scrolled. Args: scroll delta.
-    /// </summary>
     public Action<int> OnMouseWheelScrolled { get; set; }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="Window"/> class.
-    /// </summary>
     public Window(int width, int height, string title, WindowMode mode = WindowMode.Windowed, bool vsync = true)
     {
         Logger.Instance.InfoWithCategory("Window", "Creating window: {0}x{1} '{2}' Mode={3} VSync={4}",
@@ -170,14 +123,20 @@ public sealed class Window : IDisposable
         _appliedVSync = vsync;
         _appliedTitle = title;
 
+        _superSample = GameSettings.Instance.SuperSample;
+        _scaleMode = GameSettings.Instance.WindowScaleMode;
+
         _windowSize = new Vect2(width, height);
-        _renderSize = new Vect2(width, height);
+        _renderSize = GameSettings.Instance.Viewport * _superSample;
 
         CreateWindow(width, height, title, mode);
         _window.SetVerticalSyncEnabled(vsync);
 
-        _renderTexture = new SFRenderTexture(new((uint)width, (uint)height));
-        _renderSprite = new SFSprite(_renderTexture.Texture);
+        var windowView = new SFView(new SFFloatRect(Vect2.Zero, new(width, height)));
+        _window.SetView(windowView);
+
+        // Create supersampled render texture
+        RecreateRenderTarget();
 
         _window.Closed += (s, o) =>
         {
@@ -210,9 +169,6 @@ public sealed class Window : IDisposable
         Logger.Instance.InfoWithCategory("Window", "Window created successfully");
     }
 
-    /// <summary>
-    /// Sets the window width. Call <see cref="ApplyChanges"/> to apply.
-    /// </summary>
     public Window SetWidth(int width)
     {
         if (width <= 0)
@@ -222,9 +178,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Sets the window height. Call <see cref="ApplyChanges"/> to apply.
-    /// </summary>
     public Window SetHeight(int height)
     {
         if (height <= 0)
@@ -234,9 +187,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Sets the window size. Call <see cref="ApplyChanges"/> to apply.
-    /// </summary>
     public Window SetSize(int width, int height)
     {
         SetWidth(width);
@@ -244,9 +194,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Sets the window display mode. Call <see cref="ApplyChanges"/> to apply.
-    /// </summary>
     public Window SetMode(WindowMode mode)
     {
         _pendingMode = mode;
@@ -254,9 +201,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Sets VSync. Call <see cref="ApplyChanges"/> to apply.
-    /// </summary>
     public Window SetVSync(bool enabled)
     {
         _pendingVSync = enabled;
@@ -264,9 +208,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Sets the window title. Call <see cref="ApplyChanges"/> to apply.
-    /// </summary>
     public Window SetTitle(string title)
     {
         if (string.IsNullOrEmpty(title))
@@ -276,10 +217,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Applies all pending window changes at once.
-    /// Recreates the window if mode changes (borderless/fullscreen cannot be toggled at runtime).
-    /// </summary>
     public Window ApplyChanges()
     {
         if (!_hasPendingChanges)
@@ -290,7 +227,6 @@ public sealed class Window : IDisposable
         bool modeChanged = _pendingMode != _appliedMode;
         bool sizeChanged = _pendingWidth != _appliedWidth || _pendingHeight != _appliedHeight;
 
-        // Mode changes require recreating the window
         if (modeChanged)
         {
             Logger.Instance.InfoWithCategory("Window", "Mode changed from {0} to {1}, recreating window",
@@ -299,14 +235,15 @@ public sealed class Window : IDisposable
         }
         else
         {
-            // Just apply size/title/vsync
             if (sizeChanged)
             {
                 Logger.Instance.InfoWithCategory("Window", "Size changed to {0}x{1}",
                     _pendingWidth, _pendingHeight);
 
                 _window.Size = new SFVector2u((uint)_pendingWidth, (uint)_pendingHeight);
-                RecreateRenderTarget(_pendingWidth, _pendingHeight);
+
+                var windowView = new SFView(new SFFloatRect(Vect2.Zero, new(_pendingWidth, _pendingHeight)));
+                _window.SetView(windowView);
             }
 
             _window.SetTitle(_pendingTitle);
@@ -321,7 +258,6 @@ public sealed class Window : IDisposable
         _appliedTitle = _pendingTitle;
 
         _windowSize = new Vect2(_appliedWidth, _appliedHeight);
-        _renderSize = new Vect2(_appliedWidth, _appliedHeight);
 
         Logger.Instance.InfoWithCategory("Window", "Window changes applied: {0}x{1} {2} VSync={3}",
             _appliedWidth, _appliedHeight, _appliedMode, _appliedVSync);
@@ -331,9 +267,6 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Convenience method to toggle fullscreen and apply immediately.
-    /// </summary>
     public Window ToggleFullscreen()
     {
         SetMode(_appliedMode == WindowMode.Fullscreen ? WindowMode.Windowed : WindowMode.Fullscreen);
@@ -341,36 +274,65 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>
-    /// Dispatches pending window events. Call once per frame.
-    /// </summary>
     public void DispatchEvents()
     {
         _window?.DispatchEvents();
     }
 
-    /// <summary>
-    /// Begins rendering to the internal render texture.
-    /// </summary>
     public void BeginRender(Color clearColor)
     {
         _renderTexture.Clear(clearColor);
     }
 
-    /// <summary>
-    /// Ends rendering and displays the render texture to the window.
-    /// </summary>
     public void EndRender()
     {
         _renderTexture.Display();
-        _window.Clear();
+
+        var windowView = new SFView(new SFFloatRect(Vect2.Zero, _windowSize));
+        _window.SetView(windowView);
+
+        Vect2 viewportSize = GameSettings.Instance.Viewport;
+        float scaleX = _windowSize.X / viewportSize.X;
+        float scaleY = _windowSize.Y / viewportSize.Y;
+
+        // Calculate the base scale for each mode
+        float baseScale;
+        switch (_scaleMode)
+        {
+            case WindowScaleMode.Stretch:
+                // For stretch, use independent X/Y scaling
+                _renderSprite.Scale = new Vect2(scaleX / _superSample, scaleY / _superSample);
+                break;
+
+            case WindowScaleMode.PixelPerfect:
+                baseScale = MathF.Max(1f, MathF.Floor(MathF.Min(scaleX, scaleY)));
+                _renderSprite.Scale = new Vect2(baseScale / _superSample, baseScale / _superSample);
+                break;
+
+            case WindowScaleMode.Fit:
+                baseScale = MathF.Min(scaleX, scaleY);
+                _renderSprite.Scale = new Vect2(baseScale / _superSample, baseScale / _superSample);
+                break;
+
+            case WindowScaleMode.Fill:
+                baseScale = MathF.Max(scaleX, scaleY);
+                _renderSprite.Scale = new Vect2(baseScale / _superSample, baseScale / _superSample);
+                break;
+
+            case WindowScaleMode.None:
+                _renderSprite.Scale = new Vect2(1f / _superSample, 1f / _superSample);
+                break;
+        }
+
+        // Calculate position to center the scaled sprite
+        Vect2 scaledSize = viewportSize * _renderSprite.Scale * _superSample;
+        _renderSprite.Position = (_windowSize - scaledSize) / 2f;
+
+        _window.Clear(SFColor.Black);
         _window.Draw(_renderSprite);
         _window.Display();
     }
 
-    /// <summary>
-    /// Closes the window.
-    /// </summary>
     public void Close()
     {
         _window?.Close();
@@ -406,7 +368,6 @@ public sealed class Window : IDisposable
         Logger.Instance.InfoWithCategory("Window", "Recreating window: {0}x{1} '{2}' Mode={3}",
             width, height, title, mode);
 
-        // Unsubscribe events
         _window.Closed -= OnWindowClosedHandler;
         _window.GainedFocus -= OnFocusGainedHandler;
         _window.LostFocus -= OnFocusLostHandler;
@@ -416,26 +377,34 @@ public sealed class Window : IDisposable
         _window.Dispose();
         CreateWindow(width, height, title, mode);
 
-        // Resubscribe events
         _window.Closed += OnWindowClosedHandler;
         _window.GainedFocus += OnFocusGainedHandler;
         _window.LostFocus += OnFocusLostHandler;
         _window.Resized += OnResizedHandler;
         _window.MouseWheelScrolled += OnMouseWheelHandler;
 
-        RecreateRenderTarget(width, height);
+        RecreateRenderTarget();
 
         Logger.Instance.InfoWithCategory("Window", "Window recreated");
     }
 
-    private void RecreateRenderTarget(int width, int height)
+    private void RecreateRenderTarget()
     {
-        Logger.Instance.DebugWithCategory("Window", "Recreating render target: {0}x{1}", width, height);
+        Logger.Instance.DebugWithCategory("Window", "Recreating render target with supersampling");
 
         _renderTexture?.Dispose();
         _renderSprite?.Dispose();
-        _renderTexture = new SFRenderTexture(new((uint)width, (uint)height));
+
+        // Use supersampled resolution for smooth rendering
+        Vect2 renderSize = GameSettings.Instance.Viewport * _superSample;
+        _renderTexture = new SFRenderTexture(new((uint)renderSize.X, (uint)renderSize.Y));
         _renderSprite = new SFSprite(_renderTexture.Texture);
+
+        // Set the view to viewport coordinates (logical)
+        var renderView = new SFView(new SFFloatRect(Vect2.Zero, GameSettings.Instance.Viewport));
+        _renderTexture.SetView(renderView);
+
+        _renderSize = renderSize;
     }
 
     private void HandleResize(int width, int height)
@@ -450,10 +419,10 @@ public sealed class Window : IDisposable
         _pendingWidth = width;
         _pendingHeight = height;
 
-        RecreateRenderTarget(width, height);
-
         _windowSize = new Vect2(width, height);
-        _renderSize = new Vect2(width, height);
+
+        var windowView = new SFView(new SFFloatRect(Vect2.Zero, _windowSize));
+        _window.SetView(windowView);
 
         OnWindowResized?.Invoke(_windowSize);
     }
@@ -486,30 +455,12 @@ public sealed class Window : IDisposable
         OnMouseWheelScrolled?.Invoke((int)e.Delta);
     }
 
-
-
-
-
-
-
-
-
-
-
-    /// <summary>
-    /// Gets the current desktop resolution.
-    /// </summary>
-    /// <returns>The desktop resolution as a <see cref="Vect2"/>.</returns>
     public static Vect2 GetDesktopResolution()
     {
         var mode = SFVideoMode.DesktopMode;
         return mode.Size;
     }
 
-    /// <summary>
-    /// Gets all supported fullscreen resolutions.
-    /// </summary>
-    /// <returns>A list of unique resolutions (width, height pairs).</returns>
     public static List<Vect2> GetSupportedResolutions()
     {
         var result = new List<Vect2>();
@@ -525,13 +476,6 @@ public sealed class Window : IDisposable
         return result;
     }
 
-    /// <summary>
-    /// Gets all supported fullscreen resolutions with the specified aspect ratio.
-    /// </summary>
-    /// <param name="ratioWidth">The width component of the aspect ratio (e.g., 16 for 16:9).</param>
-    /// <param name="ratioHeight">The height component of the aspect ratio (e.g., 9 for 16:9).</param>
-    /// <param name="tolerance">Tolerance for floating point comparison. Default is 0.01f.</param>
-    /// <returns>A list of resolutions matching the aspect ratio.</returns>
     public static List<Vect2> GetSupportedResolutionsByAspectRatio(int ratioWidth, int ratioHeight, float tolerance = 0.01f)
     {
         if (ratioWidth <= 0 || ratioHeight <= 0)
@@ -550,12 +494,6 @@ public sealed class Window : IDisposable
         return result;
     }
 
-    /// <summary>
-    /// Gets the closest supported fullscreen resolution to the specified size.
-    /// </summary>
-    /// <param name="width">The target width.</param>
-    /// <param name="height">The target height.</param>
-    /// <returns>The closest supported resolution, or the target if none found.</returns>
     public static Vect2 GetClosestSupportedResolution(int width, int height)
     {
         var resolutions = GetSupportedResolutions();
@@ -578,27 +516,11 @@ public sealed class Window : IDisposable
         return closest;
     }
 
-    /// <summary>
-    /// Checks if the specified resolution is supported for fullscreen mode.
-    /// </summary>
-    /// <param name="width">The width to check.</param>
-    /// <param name="height">The height to check.</param>
-    /// <returns>True if the resolution is supported.</returns>
     public static bool IsResolutionSupported(int width, int height)
     {
         var mode = new SFVideoMode(new((uint)width, (uint)height));
         return mode.IsValid();
     }
-
-
-
-
-
-
-
-
-
-
 
     public static implicit operator SFRenderWindow(Window v) => v._window;
 
@@ -617,4 +539,3 @@ public sealed class Window : IDisposable
         _isDisposed = true;
     }
 }
-
