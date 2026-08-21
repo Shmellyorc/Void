@@ -1,11 +1,28 @@
-using System.IO.Compression;
+// ============================================================================
+//  AdaptiveCompressor.cs
+// ============================================================================
+//  Provides adaptive compression and decompression for data streams using
+//  Deflate or Brotli algorithms. Automatically skips compression for small
+//  data or when compression would not reduce size.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Packer.Encryption;
 
+/// <summary>
+/// Specifies the compression algorithm to use for packing.
+/// </summary>
 public enum CompressionAlgorithm : byte
 {
+    /// <summary>No compression - data is stored as-is.</summary>
     None,
+
+    /// <summary>Deflate compression (zlib compatible).</summary>
     Deflate,
+
+    /// <summary>Brotli compression (higher compression ratio than Deflate).</summary>
     Brotli
 }
 
