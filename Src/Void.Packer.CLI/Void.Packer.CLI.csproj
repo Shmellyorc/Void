@@ -25,7 +25,17 @@
     <ToolCommandName>packer</ToolCommandName>
     <Version>1.0.0</Version>
     <Description>Asset packer for Void Engine games. Packs content files into .pack format with optional encryption and compression.</Description>
+    
+    <!-- NuGet Package Metadata for the tool -->
+    <Authors>Shmellyorc</Authors>
+    <Company>Void Engine</Company>
+    <Copyright>Copyright (c) 2025 Void Engine</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- <PackageProjectUrl>https://github.com/your-repo/Void</PackageProjectUrl> -->
+    <!-- <RepositoryUrl>https://github.com/your-repo/Void</RepositoryUrl> -->
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
+
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />

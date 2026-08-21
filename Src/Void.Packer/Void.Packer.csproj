@@ -5,6 +5,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>Void.Packer</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Shmellyorc</Authors>
+    <Company>Void Engine</Company>
+    <Description>Asset packing library with encryption and compression for Void Engine.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
-
 </Project>

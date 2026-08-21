@@ -5,6 +5,18 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+
+    <!-- NuGet Package Metadata -->
+    <PackageId>Void.Engine</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Shmellyorc</Authors>
+    <Company>Void Engine</Company>
+    <Description>Lightweight 2D game engine with asset management, rendering, and audio support.</Description>
+    <Copyright>Copyright (c) 2025 Void Engine</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <!-- <PackageProjectUrl>https://github.com/your-repo/Void</PackageProjectUrl> -->
+    <!-- <RepositoryUrl>https://github.com/your-repo/Void</RepositoryUrl> -->
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
   <ItemGroup>
