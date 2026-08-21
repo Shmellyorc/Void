@@ -1,23 +1,44 @@
-using System.Runtime.CompilerServices;
-
-using Void.Engine.Graphics.RenderTargets;
-using Void.Engine.Logs;
+// ============================================================================
+//  SpriteBatcher.cs
+// ============================================================================
+//  Batch rendering for sprites with support for textures, transformations,
+//  color modulation, texture effects (flip), depth sorting, and atlas packing.
+//  Also provides text rendering with alignment and wrapping support.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine.Graphics;
 
+/// <summary>
+/// Specifies text alignment relative to a position or bounding box.
+/// </summary>
 public enum TextAlignment
 {
+    /// <summary>Text is aligned to the top-left.</summary>
     TopLeft,
+    /// <summary>Text is centered horizontally at the top.</summary>
     TopCenter,
+    /// <summary>Text is aligned to the top-right.</summary>
     TopRight,
+    /// <summary>Text is vertically centered on the left.</summary>
     CenterLeft,
+    /// <summary>Text is centered both horizontally and vertically.</summary>
     Center,
+    /// <summary>Text is vertically centered on the right.</summary>
     CenterRight,
+    /// <summary>Text is aligned to the bottom-left.</summary>
     BottomLeft,
+    /// <summary>Text is centered horizontally at the bottom.</summary>
     BottomCenter,
+    /// <summary>Text is aligned to the bottom-right.</summary>
     BottomRight
 }
 
+/// <summary>
+/// Specifies text wrapping behavior when text exceeds the bounds.
+/// </summary>
 public enum TextWrapMode
 {
     /// <summary>No wrapping. Text may extend beyond the bounds.</summary>
@@ -28,17 +49,85 @@ public enum TextWrapMode
     Character
 }
 
-public sealed partial class SpriteBatcher : BaseBatcher
+/// <summary>
+/// Batch rendering for sprites with support for textures, transformations,
+/// color modulation, texture effects (flip), depth sorting, and atlas packing.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="SpriteBatcher"/> class provides efficient batch rendering
+/// for sprites and text. It supports:
+/// <list type="bullet">
+///   <item><description>Sprite rendering with textures, source rectangles, and color modulation</description></item>
+///   <item><description>Transformations (position, rotation, scale, origin)</description></item>
+///   <item><description>Horizontal and vertical flipping (TextureEffects)</description></item>
+///   <item><description>Depth sorting (BackToFront, FrontToBack)</description></item>
+///   <item><description>Automatic texture atlasing via <see cref="AtlasManager"/></description></item>
+///   <item><description>Text rendering with alignment and wrapping</description></item>
+///   <item><description>Nine-patch scaling for UI elements</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// var batcher = new SpriteBatcher();
+/// batcher.Begin(SortMode.BackToFront);
+/// 
+/// // Draw a sprite
+/// batcher.Draw(texture, new Vect2(100, 100), Color.White);
+/// 
+/// // Draw a sprite with rotation and scale
+/// batcher.Draw(texture, new Rect2(200, 200, 64, 64), Color.White, 0.5f, new Vect2(2, 2), new Vect2(32, 32), TextureEffects.None, 0.5f);
+/// 
+/// // Draw text
+/// batcher.DrawText(font, "Hello World!", new Vect2(300, 300), Color.Black, TextAlignment.Center);
+/// 
+/// // Draw a nine-patch UI element
+/// batcher.DrawNinePatch(uiTexture, new Rect2(400, 400, 200, 100), new Rect2(0, 0, 64, 64), new Rect2(8, 8, 8, 8), Color.White);
+/// 
+/// batcher.End();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe and should be accessed from the main thread.
+/// </para>
+/// </remarks>
+public sealed class SpriteBatcher : BaseBatcher
 {
+    private struct DrawCommand
+    {
+        public SFTexture Texture;
+        public float Depth;
+        public Rect2 DstRect;
+        public Rect2 SrcRect;
+        public Color Color;
+        public float Rotation;
+        public Vect2 Scale;
+        public Vect2 Origin;
+        public TextureEffects Effects;
+    }
+
     private const int VerticesPerQuad = 6;
     private const int InitialCapacity = 1024;
 
     private DrawCommand[] _cmds;
     private readonly DrawCommandComparer _comparer;
 
+    /// <summary>
+    /// Gets the name of the batcher.
+    /// </summary>
     public override string Name => "SpriteBatcher";
+
+    /// <summary>
+    /// Gets the number of vertices per command (6 for a quad).
+    /// </summary>
     protected override int VerticesPerCommand => VerticesPerQuad;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SpriteBatcher"/> class.
+    /// </summary>
+    /// <param name="capacity">The initial capacity of the batch.</param>
     public SpriteBatcher(int capacity = 0) : base(capacity)
     {
         _capacity = capacity > 0 ? capacity : GetDefaultCapacity();
@@ -46,18 +135,38 @@ public sealed partial class SpriteBatcher : BaseBatcher
         _comparer = new DrawCommandComparer(_sortMode);
     }
 
+    /// <summary>
+    /// Gets the default capacity for the sprite batch.
+    /// </summary>
     protected override int GetDefaultCapacity() => GameSettings.Instance.SpriteBatchCapacity;
 
+    /// <summary>
+    /// Called when batching begins.
+    /// </summary>
     protected override void OnBegin() => _currentTexture = null;
+
+    /// <summary>
+    /// Called when batching ends.
+    /// </summary>
     protected override void OnEnd() { }
+
+    /// <summary>
+    /// Called when the batch is flushed.
+    /// </summary>
     protected override void OnFlush() { }
 
+    /// <summary>
+    /// Sorts the commands for optimal rendering.
+    /// </summary>
     protected override void SortCommands()
     {
         _comparer.UpdateMode(_sortMode);
         Array.Sort(_cmds, 0, _cmdCount, _comparer);
     }
 
+    /// <summary>
+    /// Builds the vertices for all commands.
+    /// </summary>
     protected override unsafe void BuildVertices()
     {
         fixed (SFVertex* vertexPtr = _vertexData)
@@ -71,9 +180,15 @@ public sealed partial class SpriteBatcher : BaseBatcher
         }
     }
 
+    /// <summary>
+    /// Determines whether two commands can be batched together.
+    /// </summary>
     protected override bool CanBatchTogether(int indexA, int indexB)
         => _cmds[indexA].Texture.NativeHandle == _cmds[indexB].Texture.NativeHandle;
 
+    /// <summary>
+    /// Sets the render state for a group of commands.
+    /// </summary>
     protected override void SetRenderStateForGroup(int commandIndex)
     {
         base.SetRenderStateForGroup(commandIndex);
@@ -81,10 +196,13 @@ public sealed partial class SpriteBatcher : BaseBatcher
         var texture = _cmds[commandIndex].Texture;
         _renderStates.Texture = texture;
 
-        if (_currentShader is Shader shader)
-            shader.SetUniform("uTexture", texture);
+        if (_currentShader is Shader shaderAsset)
+            shaderAsset.SetUniform("uTexture", texture);
     }
 
+    /// <summary>
+    /// Resizes the command and vertex buffers.
+    /// </summary>
     protected override void ResizeBuffers()
     {
         Logger.Instance.DebugWithCategory("SpriteBatcher",
@@ -104,63 +222,127 @@ public sealed partial class SpriteBatcher : BaseBatcher
 
     #region Draw Methods
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, destination, source rectangle, and color.
+    /// </summary>
     public void Draw(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float depth = 0f)
         => EngineDraw(texture, dstRect, srcRect, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, rectangle, and color.
+    /// </summary>
     public void Draw(Texture texture, Rect2 rect, Color color, float depth = 0f)
         => EngineDraw(texture, rect, texture.Bounds, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, position, source rectangle, and color.
+    /// </summary>
     public void Draw(Texture texture, Vect2 position, Rect2 srcRect, Color color, float depth = 0f)
         => EngineDraw(texture, new(position, srcRect.Size), srcRect, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, destination, source rectangle, color, and transformations.
+    /// </summary>
     public void Draw(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
         => EngineDraw(texture, dstRect, srcRect, color, rotation, scale, origin, effects, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, rectangle, color, and transformations.
+    /// </summary>
     public void Draw(Texture texture, Rect2 rect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
         => EngineDraw(texture, rect, texture.Bounds, color, rotation, scale, origin, effects, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, position, source rectangle, color, and transformations.
+    /// </summary>
     public void Draw(Texture texture, Vect2 position, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
         => EngineDraw(texture, new(position, srcRect.Size), srcRect, color, rotation, scale, origin, effects, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, position, and color.
+    /// </summary>
     public void Draw(Texture texture, Vect2 position, Color color, float depth = 0f)
         => EngineDraw(texture, new Rect2(position.X, position.Y, texture.Size.X, texture.Size.Y), texture.Bounds, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, position, source rectangle, color, and rotation.
+    /// </summary>
     public void Draw(Texture texture, Vect2 position, Rect2 srcRect, Color color, float rotation, float depth = 0f)
         => EngineDraw(texture, new Rect2(position.X, position.Y, srcRect.Width, srcRect.Height), srcRect, color, rotation, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, destination rectangle, color, and rotation.
+    /// </summary>
     public void Draw(Texture texture, Rect2 dstRect, Color color, float rotation, float depth = 0f)
         => EngineDraw(texture, dstRect, texture.Bounds, color, rotation, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    /// <summary>
+    /// Draws a sprite with the specified texture, position, color, rotation, and scale.
+    /// </summary>
     public void Draw(Texture texture, Vect2 position, Color color, float rotation, Vect2 scale, float depth = 0f)
         => EngineDraw(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
+    #endregion
+
+    #region DrawBypassAtlas Methods
+
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float depth = 0f)
         => EngineDrawBypassAtlas(texture, dstRect, srcRect, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Rect2 rect, Color color, float depth = 0f)
         => EngineDrawBypassAtlas(texture, rect, texture.Bounds, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Vect2 position, Rect2 srcRect, Color color, float depth = 0f)
         => EngineDrawBypassAtlas(texture, new(position, srcRect.Size), srcRect, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system with transformations.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
         => EngineDrawBypassAtlas(texture, dstRect, srcRect, color, rotation, scale, origin, effects, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system with transformations.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Rect2 rect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
         => EngineDrawBypassAtlas(texture, rect, texture.Bounds, color, rotation, scale, origin, effects, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system with transformations.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Vect2 position, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
         => EngineDrawBypassAtlas(texture, new(position, srcRect.Size), srcRect, color, rotation, scale, origin, effects, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Vect2 position, Color color, float depth = 0f)
         => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X, texture.Size.Y), texture.Bounds, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system with rotation.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Vect2 position, Rect2 srcRect, Color color, float rotation, float depth = 0f)
         => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, srcRect.Width, srcRect.Height), srcRect, color, rotation, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system with rotation.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Rect2 dstRect, Color color, float rotation, float depth = 0f)
         => EngineDrawBypassAtlas(texture, dstRect, texture.Bounds, color, rotation, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
+    /// <summary>
+    /// Draws a sprite bypassing the atlas system with rotation and scale.
+    /// </summary>
     public void DrawBypassAtlas(Texture texture, Vect2 position, Color color, float rotation, Vect2 scale, float depth = 0f)
         => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale, Vect2.Zero, TextureEffects.None, depth);
 
@@ -168,42 +350,98 @@ public sealed partial class SpriteBatcher : BaseBatcher
 
     #region DrawText Methods
 
+    /// <summary>
+    /// Draws text at the specified position.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color)
         => DrawTextPosition(font, text, position, color, 0f, Vect2.One, TextAlignment.TopLeft);
 
+    /// <summary>
+    /// Draws text at the specified position with scale.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, Vect2 scale)
         => DrawTextPosition(font, text, position, color, 0f, scale, TextAlignment.TopLeft);
 
+    /// <summary>
+    /// Draws text at the specified position with depth.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, float depth)
         => DrawTextPosition(font, text, position, color, depth, Vect2.One, TextAlignment.TopLeft);
 
+    /// <summary>
+    /// Draws text at the specified position with scale and depth.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, Vect2 scale, float depth)
         => DrawTextPosition(font, text, position, color, depth, scale, TextAlignment.TopLeft);
 
+    /// <summary>
+    /// Draws text at the specified position with alignment.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment)
         => DrawTextPosition(font, text, position, color, 0f, Vect2.One, alignment);
 
+    /// <summary>
+    /// Draws text at the specified position with alignment and scale.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale)
         => DrawTextPosition(font, text, position, color, 0f, scale, alignment);
 
+    /// <summary>
+    /// Draws text at the specified position with alignment, scale, and depth.
+    /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale, float depth)
         => DrawTextPosition(font, text, position, color, depth, scale, alignment);
 
+    /// <summary>
+    /// Draws text within the specified bounds.
+    /// </summary>
     public void DrawText(Font font, string text, Rect2 bounds, Color color)
         => DrawTextBounds(font, text, bounds, color, 0f, Vect2.One, TextAlignment.TopLeft, TextWrapMode.None);
 
+    /// <summary>
+    /// Draws text within the specified bounds with scale.
+    /// </summary>
     public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale)
         => DrawTextBounds(font, text, bounds, color, 0f, scale, TextAlignment.TopLeft, TextWrapMode.None);
 
+    /// <summary>
+    /// Draws text within the specified bounds with depth.
+    /// </summary>
     public void DrawText(Font font, string text, Rect2 bounds, Color color, float depth)
         => DrawTextBounds(font, text, bounds, color, depth, Vect2.One, TextAlignment.TopLeft, TextWrapMode.None);
 
+    /// <summary>
+    /// Draws text within the specified bounds with scale, depth, alignment, and wrapping.
+    /// </summary>
     public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, float depth,
         TextAlignment alignment = TextAlignment.TopLeft, TextWrapMode wrapMode = TextWrapMode.None)
         => DrawTextBounds(font, text, bounds, color, depth, scale, alignment, wrapMode);
 
     #endregion
 
+    /// <summary>
+    /// Draws a nine-patch sprite (scalable UI element).
+    /// </summary>
+    /// <param name="texture">The texture containing the nine-patch.</param>
+    /// <param name="dstRect">The destination rectangle.</param>
+    /// <param name="sourceRect">The source rectangle in the texture.</param>
+    /// <param name="corners">The corner sizes (left, top, right, bottom).</param>
+    /// <param name="color">The color modulation.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    /// <remarks>
+    /// <para>
+    /// A nine-patch divides the source texture into 9 regions:
+    /// <list type="bullet">
+    ///   <item><description>4 corners (fixed size)</description></item>
+    ///   <item><description>4 edges (stretch or repeat)</description></item>
+    ///   <item><description>1 center (stretch or repeat)</description></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// This is commonly used for UI elements like buttons, panels, and windows
+    /// that need to scale to different sizes without distorting the corners.
+    /// </para>
+    /// </remarks>
     public void DrawNinePatch(Texture texture, Rect2 dstRect, Rect2 sourceRect, Rect2 corners, Color color, float depth = 0f)
     {
         var dstRects = CalculateNinePatchRects(dstRect, corners);
@@ -277,13 +515,6 @@ public sealed partial class SpriteBatcher : BaseBatcher
         if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
         if (!IsVisible(dstRect)) return;
         if (_cmdCount >= _cmds.Length) ResizeBuffers();
-
-        // if (canPack)
-        // {
-        //     Logger.Instance.DebugWithCategory("SpriteBatcher",
-        //         "Attempting to pack: valid={0}, size={1}x{2}",
-        //         !texture.IsInvalid, srcRect.Width, srcRect.Height);
-        // }
 
         var scaledDstRect = new Rect2(dstRect.X, dstRect.Y, dstRect.Width * scale.X, dstRect.Height * scale.Y);
 
@@ -364,7 +595,6 @@ public sealed partial class SpriteBatcher : BaseBatcher
             float cos = MathF.Cos(cmd.Rotation);
             float sin = MathF.Sin(cmd.Rotation);
 
-            // Calculate the center of rotation (should be the sprite's origin)
             float centerX = left + cmd.Origin.X;
             float centerY = top + cmd.Origin.Y;
 
@@ -373,7 +603,6 @@ public sealed partial class SpriteBatcher : BaseBatcher
                 float dx = corners[i].X - centerX;
                 float dy = corners[i].Y - centerY;
 
-                // Apply rotation WITHOUT scale distortion
                 corners[i] = new Vect2(
                     centerX + dx * cos - dy * sin,
                     centerY + dx * sin + dy * cos

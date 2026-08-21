@@ -1,3 +1,13 @@
+// ============================================================================
+//  MapHelper.cs
+// ============================================================================
+//  Utility methods for converting between tile-based grid coordinates and
+//  world-space positions, including spatial queries and pathfinding helpers.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Helpers;
 
 /// <summary>
@@ -5,55 +15,76 @@ namespace Void.Engine.Helpers;
 /// and world-space positions.
 /// </summary>
 /// <remarks>
-/// This static utility class includes methods for:
+/// <para>
+/// The <see cref="MapHelper"/> class provides utility methods for tile-based
+/// game development, including coordinate conversion, spatial queries, and
+/// pathfinding helpers.
+/// </para>
+/// <para>
+/// <b>Key Features:</b>
 /// <list type="bullet">
-///   <item>
-///     <description>Mapping grid locations to world-space coordinates (<see cref="MapToWorld"/>).</description>
-///   </item>
-///   <item>
-///     <description>Mapping world-space positions back to grid coordinates (<see cref="WorldToMap"/>).</description>
-///   </item>
-///   <item>
-///     <description>Converting between 1D tile indices and 2D coordinates (<see cref="To2D"/> and <see cref="To1D"/>).</description>
-///   </item>
-///   <item>
-///     <description>Converting between world positions and tile indices (<see cref="WorldToIndex"/> and <see cref="IndexToWorld"/>).</description>
-///   </item>
+///   <item><description>Tile-to-world and world-to-tile coordinate conversion</description></item>
+///   <item><description>1D to 2D index conversion and vice versa</description></item>
+///   <item><description>Spatial queries: circle, ring, line, rectangle, edge</description></item>
+///   <item><description>Distance calculations (Manhattan, Chebyshev)</description></item>
+///   <item><description>Adjacency and flood fill operations</description></item>
 /// </list>
-/// These conversions are useful in tile-based games or applications where
-/// positions need to be translated between logical grid space and pixel space.
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Convert between tile and world coordinates
+/// var worldPos = MapHelper.MapToWorld(new Vect2(5, 3), 32);
+/// var tilePos = MapHelper.WorldToMap(new Vect2(160, 96), 32);
+/// 
+/// // Convert between 1D and 2D indices
+/// var tile2D = MapHelper.To2D(index, mapWidth);
+/// var index = MapHelper.To1D(tile2D, mapWidth);
+/// 
+/// // Spatial queries
+/// var circleTiles = MapHelper.ToCircle(center, 3);
+/// var lineTiles = MapHelper.ToLine(start, end);
+/// var ringTiles = MapHelper.ToRing(center, 2, 5);
+/// 
+/// // Check adjacency
+/// bool isAdjacent = MapHelper.IsUnitAround(pos1, pos2, true);
+/// 
+/// // Flood fill
+/// var walkableTiles = MapHelper.FloodFill(start, tile => IsWalkable(tile));
+/// </code>
+/// </para>
 /// </remarks>
 public static class MapHelper
 {
     /// <summary>
     /// Converts a tile-based grid location into world-space coordinates.
     /// </summary>
-    /// <param name="location">The grid location.</param>
-    /// <param name="tilesize">The size of one tile.</param>
-    /// <returns>World-space coordinates in pixels.</returns>
+    /// <param name="location">The grid location in tile coordinates.</param>
+    /// <param name="tilesize">The size of one tile in world units.</param>
+    /// <returns>The world-space coordinates in pixels.</returns>
     public static Vect2 MapToWorld(in Vect2 location, int tilesize)
         => Vect2.Floor(location * tilesize);
 
     /// <summary>
     /// Converts a world-space position into map grid coordinates.
     /// </summary>
-    /// <param name="position">World-space position.</param>
-    /// <param name="tilesize">The size of one tile.</param>
-    /// <returns>Tile-based grid coordinates.</returns>
+    /// <param name="position">The world-space position in pixels.</param>
+    /// <param name="tilesize">The size of one tile in world units.</param>
+    /// <returns>The tile-based grid coordinates.</returns>
     public static Vect2 WorldToMap(in Vect2 position, int tilesize)
         => Vect2.Floor(position / tilesize);
 
     /// <summary>
-    /// Converts a 1‑dimensional tile index into a 2D coordinate.
+    /// Converts a 1-dimensional tile index into a 2D coordinate.
     /// </summary>
-    /// <param name="index">The flat index.</param>
+    /// <param name="index">The flat tile index.</param>
     /// <param name="mapWidth">The width of the tile grid in tiles.</param>
     /// <returns>A <see cref="Vect2"/> representing the (x, y) tile position.</returns>
     public static Vect2 To2D(int index, int mapWidth) =>
         new(index % mapWidth, index / mapWidth);
 
     /// <summary>
-    /// Converts a 2D tile coordinate into a 1‑dimensional index.
+    /// Converts a 2D tile coordinate into a 1-dimensional index.
     /// </summary>
     /// <param name="location">The (x, y) tile position.</param>
     /// <param name="mapWidth">The width of the tile grid in tiles.</param>
@@ -64,7 +95,7 @@ public static class MapHelper
     /// <summary>
     /// Converts a world-space position into a 1D tile index.
     /// </summary>
-    /// <param name="position">World-space position.</param>
+    /// <param name="position">The world-space position in pixels.</param>
     /// <param name="tileSize">The size of one tile in world units.</param>
     /// <param name="mapWidth">The width of the tile grid in tiles.</param>
     /// <returns>The flat tile index at the given world position.</returns>
@@ -88,30 +119,12 @@ public static class MapHelper
     }
 
     /// <summary>
-    /// Converts a world‑space rectangle into a list of tile coordinates on a grid.
+    /// Converts a world-space size into a list of tile coordinates covering the area.
     /// </summary>
-    /// <param name="size">
-    /// The size of the area in world units.  
-    /// Only whole tiles that fully fit within this size are included.
-    /// </param>
-    /// <param name="location">
-    /// The top‑left tile coordinate where the area begins.  
-    /// This acts as the origin for the generated tile positions.
-    /// </param>
-    /// <param name="tileSize">
-    /// The size of a single tile in world units.  
-    /// Used to determine how many tiles fit horizontally and vertically.
-    /// </param>
-    /// <returns>
-    /// A list of <see cref="Vect2"/> tile coordinates covering the specified area,  
-    /// starting at <paramref name="location"/> and extending for as many whole tiles  
-    /// as fit within <paramref name="size"/>.
-    /// </returns>
-    /// <remarks>
-    /// This method floors the tile count in each dimension, ensuring that only tiles
-    /// fully contained within the given world‑space size are returned.  
-    /// Useful for collision queries, region checks, and tile‑based spatial iteration.
-    /// </remarks>
+    /// <param name="size">The size of the area in world units.</param>
+    /// <param name="location">The top-left tile coordinate where the area begins.</param>
+    /// <param name="tileSize">The size of a single tile in world units.</param>
+    /// <returns>A list of tile coordinates covering the specified area.</returns>
     public static List<Vect2> ToMap(Vect2 size, Vect2 location, int tileSize)
     {
         var xSize = (int)MathF.Floor(size.X / tileSize);
@@ -236,7 +249,7 @@ public static class MapHelper
     /// <param name="tile">The tile coordinate to check.</param>
     /// <param name="mapWidth">The width of the map in tiles.</param>
     /// <param name="mapHeight">The height of the map in tiles.</param>
-    /// <returns><c>true</c> if the tile is within bounds; otherwise, <c>false</c>.</returns>
+    /// <returns><see langword="true"/> if the tile is within bounds; otherwise, <see langword="false"/>.</returns>
     public static bool IsInBounds(Vect2 tile, int mapWidth, int mapHeight)
         => tile.X >= 0 && tile.X < mapWidth && tile.Y >= 0 && tile.Y < mapHeight;
 
@@ -261,33 +274,13 @@ public static class MapHelper
     /// <summary>
     /// Determines whether a unit located at <paramref name="bLocation"/> is adjacent to <paramref name="aLocation"/> on a tile grid.
     /// </summary>
-    /// <remarks>
-    /// <para>This method operates on tile coordinates, not pixel coordinates.</para>
-    /// <list type="bullet">
-    ///   <item>
-    ///     <description>
-    ///       If <paramref name="includeCorners"/> is <c>false</c>, adjacency is restricted to the 
-    ///       four cardinal directions (up, down, left, right).
-    ///     </description>
-    ///   </item>
-    ///   <item>
-    ///     <description>
-    ///       If <paramref name="includeCorners"/> is <c>true</c>, diagonal tiles are also considered 
-    ///       adjacent.
-    ///     </description>
-    ///   </item>
-    /// </list>
-    /// </remarks>
     /// <param name="aLocation">The tile location of the reference unit.</param>
     /// <param name="bLocation">The tile location of the unit being checked.</param>
     /// <param name="includeCorners">
-    /// If <c>true</c>, diagonal tiles are considered adjacent in addition to orthogonal tiles.  
-    /// If <c>false</c>, only orthogonal tiles are considered.
+    /// If <see langword="true"/>, diagonal tiles are considered adjacent.
+    /// If <see langword="false"/>, only orthogonal tiles are considered.
     /// </param>
-    /// <returns>
-    /// <c>true</c> if <paramref name="bLocation"/> is the same tile as <paramref name="aLocation"/> 
-    /// or is an adjacent tile (depending on <paramref name="includeCorners"/>); otherwise, <c>false</c>.
-    /// </returns>
+    /// <returns><see langword="true"/> if <paramref name="bLocation"/> is adjacent to <paramref name="aLocation"/>; otherwise, <see langword="false"/>.</returns>
     public static bool IsUnitAround(Vect2 aLocation, Vect2 bLocation, bool includeCorners)
     {
         if (aLocation == bLocation)
@@ -342,7 +335,7 @@ public static class MapHelper
     /// Performs a flood fill starting from a tile coordinate.
     /// </summary>
     /// <param name="start">The starting tile coordinate.</param>
-    /// <param name="isWalkable">A function that returns <c>true</c> if the tile is walkable.</param>
+    /// <param name="isWalkable">A function that returns <see langword="true"/> if the tile is walkable.</param>
     /// <returns>A list of all connected walkable tile coordinates.</returns>
     public static List<Vect2> FloodFill(Vect2 start, Func<Vect2, bool> isWalkable)
     {

@@ -1,15 +1,130 @@
-using Void.Engine.Logs;
+// ============================================================================
+//  SoundInstance.cs
+// ============================================================================
+//  Represents a single sound instance with playback control, volume management,
+//  panning, pitch adjustment, and event notifications.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine.Sounds;
 
+/// <summary>
+/// Defines the playback status of a sound instance.
+/// </summary>
 public enum SoundStatus
 {
+    /// <summary>
+    /// The sound is stopped and not playing.
+    /// </summary>
     Stopped,
+
+    /// <summary>
+    /// The sound is paused and can be resumed.
+    /// </summary>
     Paused,
+
+    /// <summary>
+    /// The sound is currently playing.
+    /// </summary>
     Playing,
 }
 
-
+/// <summary>
+/// Represents a playable sound instance with full playback control, volume management,
+/// panning, pitch adjustment, and event notifications.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="SoundInstance"/> class provides comprehensive control over
+/// individual sound playback including volume, pitch, panning, looping, and
+/// priority management. It supports category-based volume control and raises
+/// events for completion, stopping, looping, and errors.
+/// </para>
+/// <para>
+/// <b>Creation Flow:</b>
+/// <list type="number">
+///   <item><description>Load a <see cref="Sound"/> asset through <see cref="AssetManager.Load{T}"/></description></item>
+///   <item><description>Call <see cref="Sound.CreateInstance"/> which obtains an instance from the <see cref="SoundInstancePool"/></description></item>
+///   <item><description>The pool initializes the instance with the sound buffer and priority</description></item>
+///   <item><description>Call <see cref="Play"/> to begin playback</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Lifecycle Management:</b>
+/// Sound instances are managed by the <see cref="SoundInstancePool"/> singleton.
+/// The pool maintains a fixed number of pre-allocated instances (default: 255)
+/// that are reused to avoid garbage collection pressure. When an instance is
+/// obtained, it moves from the available queue to the active list. When playback
+/// completes or the instance is disposed, it is reset and returned to the
+/// available queue for reuse.
+/// </para>
+/// <para>
+/// <b>Voice Allocation:</b>
+/// If all instances are active and a new sound needs to play, the pool will:
+/// <list type="bullet">
+///   <item><description>Recycle any stopped instances first</description></item>
+///   <item><description>Steal the lowest priority playing instance if the new sound has higher priority</description></item>
+///   <item><description>Steal the oldest playing instance as a fallback</description></item>
+///   <item><description>Return <see langword="null"/> if no instance can be allocated</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// Example usage:
+/// <code>
+/// // Load sound asset through AssetManager
+/// var soundAsset = AssetManager.Instance.Load&lt;Sound&gt;("explosion.wav");
+/// 
+/// // Create a sound instance from the asset (pool handles allocation)
+/// var sound = soundAsset.CreateInstance(SoundCategory.SFX);
+/// sound.Volume = 0.8f;
+/// sound.Pan = -0.5f;
+/// sound.Play();
+/// 
+/// // Handle completion - instance auto-returns to pool
+/// sound.SoundCompleted += (s, e) =>
+/// {
+///     Console.WriteLine("Sound finished playing");
+///     sound.Dispose(); // Returns the instance to the available pool
+/// };
+/// </code>
+/// </para>
+/// <para>
+/// <b>Volume System:</b>
+/// The effective volume is calculated as: <c>RawVolume × CategoryVolume</c>.
+/// The raw volume is set per-instance, while the category volume is controlled
+/// globally through <see cref="SoundHelper.SetCategoryVolume{T}"/>.
+/// </para>
+/// <para>
+/// <b>Event Order:</b>
+/// <list type="number">
+///   <item><description><see cref="SoundLooped"/> - Fired each loop iteration (if looping)</description></item>
+///   <item><description><see cref="SoundCompleted"/> - Fired when natural playback ends</description></item>
+///   <item><description><see cref="SoundStopped"/> - Fired when stopped manually or interrupted</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Asset Eviction Awareness:</b>
+/// If the underlying <see cref="Sound"/> asset is evicted from the AssetManager
+/// cache, the instance remains valid as long as it holds a reference to the
+/// sound buffer. However, attempting to create new instances from an evicted
+/// asset will automatically reload it.
+/// </para>
+/// <para>
+/// <b>Update Loop:</b>
+/// The <see cref="SoundInstancePool"/> runs a background task that updates all
+/// active sound instances at 60Hz. This task advances playback time, fires
+/// loop events, detects completion, and automatically returns completed
+/// instances to the pool.
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe. All operations should be performed on the
+/// main thread or synchronized appropriately. The underlying pool uses locks
+/// internally for thread safety.
+/// </para>
+/// </remarks>
 public sealed class SoundInstance : IDisposable
 {
     private SFSound _sfmlSound;
@@ -23,9 +138,19 @@ public sealed class SoundInstance : IDisposable
     private bool _wasPlaying;
     private bool _wasPaused;
 
+    /// <summary>
+    /// Gets a value indicating whether the sound instance has been disposed.
+    /// </summary>
     public bool IsDisposed => _isDisposed;
+
+    /// <summary>
+    /// Gets or sets the category of the sound for volume grouping.
+    /// </summary>
     public Enum Category { get; internal set; }
 
+    /// <summary>
+    /// Gets the current playback status of the sound.
+    /// </summary>
     public SoundStatus Status
     {
         get
@@ -37,6 +162,18 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets or sets the volume of the sound between 0 and 1.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The volume is affected by category volume, so the actual output volume
+    /// is the raw volume multiplied by the category volume.
+    /// </para>
+    /// <para>
+    /// Setting this property to 0 mutes the sound, while 1 is maximum volume.
+    /// </para>
+    /// </remarks>
     public float Volume
     {
         get => _volume;
@@ -78,7 +215,15 @@ public sealed class SoundInstance : IDisposable
         _sfmlSound.Volume = _volume * 100f;
     }
 
-
+    /// <summary>
+    /// Gets or sets the pitch of the sound between 0.1 and 10.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Pitch values above 1 speed up playback and increase pitch, while values
+    /// below 1 slow down playback and decrease pitch. A value of 1 is normal speed.
+    /// </para>
+    /// </remarks>
     public float Pitch
     {
         get => _pitch;
@@ -95,7 +240,18 @@ public sealed class SoundInstance : IDisposable
     }
     private float _pitch = 1f;
 
-
+    /// <summary>
+    /// Gets or sets the pan of the sound between -1 (left) and 1 (right).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Panning controls the stereo balance of the sound. A value of -1 pans
+    /// fully to the left, 1 pans fully to the right, and 0 centers the sound.
+    /// </para>
+    /// <para>
+    /// When pan is set to near zero, the sound is reset to normal stereo positioning.
+    /// </para>
+    /// </remarks>
     public float Pan
     {
         get => _pan;
@@ -106,13 +262,11 @@ public sealed class SoundInstance : IDisposable
 
             _pan = Math.Clamp(value, -1f, 1f);
 
-            // NOTE: Near zero, should reset back to normal
             if (MathHelper.AlmostZero(_pan, MathHelper.Epsilon))
             {
                 _sfmlSound.RelativeToListener = false;
                 _sfmlSound.Position = new(0f, 0f, 0f);
                 _pan = 0f;
-
                 return;
             }
 
@@ -122,8 +276,9 @@ public sealed class SoundInstance : IDisposable
     }
     private float _pan = 0f;
 
-
-
+    /// <summary>
+    /// Gets or sets whether the sound should loop.
+    /// </summary>
     public bool Looping
     {
         get => _looping;
@@ -140,30 +295,84 @@ public sealed class SoundInstance : IDisposable
     }
     private bool _looping;
 
-
+    /// <summary>
+    /// Gets the current playback time of the sound in seconds.
+    /// </summary>
     public float PlayTime => _playTime;
+
+    /// <summary>
+    /// Gets the total duration of the sound in seconds.
+    /// </summary>
     public float Duration => _buffer != null && !_buffer.IsInvalid ? _buffer.Duration.AsSeconds() : 0f;
+
+    /// <summary>
+    /// Gets the playback progress as a value between 0 and 1.
+    /// </summary>
     public float Progress => Duration > 0 ? Math.Clamp(_playTime / Duration, 0f, 1f) : 0f;
+
+    /// <summary>
+    /// Gets the number of times the sound has looped.
+    /// </summary>
     public int LoopCount => _loopCount;
+
+    /// <summary>
+    /// Gets a value indicating whether the sound is currently playing.
+    /// </summary>
     public bool IsPlaying => Status == SoundStatus.Playing;
+
+    /// <summary>
+    /// Gets a value indicating whether the sound is currently paused.
+    /// </summary>
     public bool IsPaused => Status == SoundStatus.Paused;
+
+    /// <summary>
+    /// Gets a value indicating whether the sound is currently stopped.
+    /// </summary>
     public bool IsStopped => Status == SoundStatus.Stopped;
+
+    /// <summary>
+    /// Gets a value indicating whether the sound has completed playback and stopped.
+    /// </summary>
     public bool IsComplete => IsStopped && _hasNotifiedCompletion;
+
+    /// <summary>
+    /// Gets a value indicating whether the sound instance is valid and ready for use.
+    /// </summary>
     public bool IsValid => _isInitialized && !_isDisposed;
+
+    /// <summary>
+    /// Gets or sets the priority of the sound for voice allocation.
+    /// </summary>
     public SoundPriority Priority { get; set; } = SoundPriority.Normal;
 
+    /// <summary>
+    /// Gets the name of the sound.
+    /// </summary>
     public string SoundName
     {
         get => _soundName;
         internal set => _soundName = value;
     }
 
-
+    /// <summary>
+    /// Occurs when the sound completes playback.
+    /// </summary>
     public event EventHandler<SoundCompletedEventArgs> SoundCompleted;
-    public event EventHandler<SoundStoppedEventArgs> SoundStopped;
-    public event EventHandler<SoundLoopedEventArgs> SoundLooped;
-    public event EventHandler<SoundErrorEventArgs> SoundError;
 
+    /// <summary>
+    /// Occurs when the sound stops playing.
+    /// </summary>
+    public event EventHandler<SoundStoppedEventArgs> SoundStopped;
+
+    /// <summary>
+    /// Occurs when the sound loops.
+    /// </summary>
+    public event EventHandler<SoundLoopedEventArgs> SoundLooped;
+
+    /// <summary>
+    /// Occurs when an error occurs during sound playback.
+    /// </summary>
+    public event EventHandler<SoundErrorEventArgs> SoundError;
 
     internal SoundInstance()
     {
@@ -226,7 +435,6 @@ public sealed class SoundInstance : IDisposable
 
                 if (!Looping && !_hasNotifiedCompletion && _buffer != null && _playTime >= _buffer.Duration.AsSeconds())
                 {
-                    // Set flag BEFORE firing event to prevent re-entry
                     _hasNotifiedCompletion = true;
                     SoundCompleted?.Invoke(this, new SoundCompletedEventArgs(this, false, _loopCount));
                 }
@@ -235,7 +443,6 @@ public sealed class SoundInstance : IDisposable
             {
                 if (!_hasNotifiedCompletion)
                 {
-                    // Set flag BEFORE firing event to prevent re-entry
                     _hasNotifiedCompletion = true;
                     SoundStopped?.Invoke(this, new SoundStoppedEventArgs(this, _wasPlaying, _wasPaused));
                 }
@@ -247,6 +454,11 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Starts playing the sound.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">Thrown when the sound instance is not initialized.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the sound instance has been disposed.</exception>
     public void Play()
     {
         if (!_isInitialized)
@@ -272,6 +484,9 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Pauses the sound playback.
+    /// </summary>
     public void Pause()
     {
         if (_isDisposed)
@@ -292,6 +507,9 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Stops the sound playback and resets to the beginning.
+    /// </summary>
     public void Stop()
     {
         if (_isDisposed)
@@ -378,7 +596,7 @@ public sealed class SoundInstance : IDisposable
             _pitch = 1f;
             _pan = 0f;
             Category = null;
-            _isDisposed = false;  // ← ADD THIS
+            _isDisposed = false;
         }
         catch (Exception ex)
         {
@@ -386,6 +604,9 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>
+    /// Disposes the sound instance and releases all resources.
+    /// </summary>
     public void Dispose()
     {
         if (_isDisposed)

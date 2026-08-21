@@ -1,7 +1,89 @@
+// ============================================================================
+//  Packer.cs
+// ============================================================================
+//  High-level API for creating, extracting, verifying, and updating SolidPack
+//  archive files.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using Void.Packer.Utils;
+
 namespace Void.Packer;
 
+/// <summary>
+/// High-level API for creating, extracting, verifying, and updating SolidPack
+/// archive files.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="Packer"/> class provides a convenient static interface for
+/// working with SolidPack archives. It supports packing files into a single
+/// archive or splitting across multiple packs, extracting files, verifying
+/// integrity, and updating existing packs.
+/// </para>
+/// <para>
+/// <b>Key Features:</b>
+/// <list type="bullet">
+///   <item><description><see cref="Pack"/> - Creates one or more SolidPack archives from files</description></item>
+///   <item><description><see cref="Unpack"/> - Extracts all files from a SolidPack archive</description></item>
+///   <item><description><see cref="Verify"/> - Checks the integrity of a SolidPack archive</description></item>
+///   <item><description><see cref="ListFiles"/> - Lists all files contained in a SolidPack archive</description></item>
+///   <item><description><see cref="Update"/> - Updates an existing pack with new files</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Create a pack from files
+/// var files = new[]
+/// {
+///     new PackFile { VirtualPath = "textures/player.png", Data = File.ReadAllBytes("player.png") },
+///     new PackFile { VirtualPath = "sounds/explosion.wav", Data = File.ReadAllBytes("explosion.wav") }
+/// };
+/// 
+/// var result = Packer.Pack(files, new PackOptions { MaxFilesPerPack = 100 });
+/// 
+/// // Write the pack to disk
+/// File.WriteAllBytes("assets.pack", result.Packs[0].Data);
+/// 
+/// // Verify the pack
+/// bool isValid = Packer.Verify(File.ReadAllBytes("assets.pack"));
+/// 
+/// // List files in the pack
+/// var fileList = Packer.ListFiles(File.ReadAllBytes("assets.pack"));
+/// 
+/// // Extract all files
+/// var unpackResult = Packer.Unpack(File.ReadAllBytes("assets.pack"));
+/// 
+/// // Update an existing pack
+/// var updateResult = Packer.Update(
+///     File.ReadAllBytes("assets.pack"),
+///     new[] { new PackFile { VirtualPath = "newfile.txt", Data = new byte[] { 1, 2, 3 } } },
+///     filesToRemove: new[] { "oldfile.txt" }
+/// );
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is thread-safe for read operations. Write operations should
+/// be synchronized externally.
+/// </para>
+/// </remarks>
 public static class Packer
 {
+    /// <summary>
+    /// Packs a collection of files into one or more SolidPack archives.
+    /// </summary>
+    /// <param name="files">The files to pack.</param>
+    /// <param name="options">Packing options. If null, default options are used.</param>
+    /// <returns>A <see cref="PackResult"/> containing the packed archives and statistics.</returns>
+    /// <exception cref="ArgumentException">Thrown when no files are provided.</exception>
     public static PackResult Pack(IEnumerable<PackFile> files, PackOptions options = null)
     {
         options ??= new PackOptions();
@@ -16,7 +98,7 @@ public static class Packer
         foreach (var group in groups)
         {
             var builder = new SolidPackBuilder(options);
-            builder.AddFiles(group);  // Fixed typo
+            builder.AddFiles(group);
             var container = builder.Build();
 
             result.Packs.Add(container);
@@ -24,7 +106,6 @@ public static class Packer
             result.TotalOriginalSize += container.OriginalSize;
             result.TotalPackedSize += container.PackedSize;
 
-            // build map:
             foreach (var path in container.VirtualPaths)
             {
                 result.FileToPackMap[path] = result.Packs.Count - 1;
@@ -38,6 +119,12 @@ public static class Packer
         return result;
     }
 
+    /// <summary>
+    /// Extracts all files from a SolidPack archive.
+    /// </summary>
+    /// <param name="packData">The raw pack data.</param>
+    /// <param name="key">The optional encryption key.</param>
+    /// <returns>An <see cref="UnpackResult"/> containing all extracted files.</returns>
     public static UnpackResult Unpack(byte[] packData, byte[] key = null)
     {
         using var reader = new SolidPackReader(packData, key);
@@ -58,6 +145,12 @@ public static class Packer
         return result;
     }
 
+    /// <summary>
+    /// Verifies the integrity of a SolidPack archive.
+    /// </summary>
+    /// <param name="packData">The raw pack data.</param>
+    /// <param name="key">The optional encryption key.</param>
+    /// <returns><see langword="true"/> if the pack is valid; otherwise, <see langword="false"/>.</returns>
     public static bool Verify(byte[] packData, byte[] key = null)
     {
         try
@@ -71,12 +164,28 @@ public static class Packer
         }
     }
 
+    /// <summary>
+    /// Lists all files contained in a SolidPack archive.
+    /// </summary>
+    /// <param name="packData">The raw pack data.</param>
+    /// <param name="key">The optional encryption key.</param>
+    /// <returns>A list of virtual paths contained in the pack.</returns>
     public static List<string> ListFiles(byte[] packData, byte[] key = null)
     {
         using var reader = new SolidPackReader(packData, key);
         return reader.ListFiles().ToList();
     }
 
+    /// <summary>
+    /// Updates an existing SolidPack archive with new files and removed files.
+    /// </summary>
+    /// <param name="existingPackData">The existing pack data.</param>
+    /// <param name="filesToAdd">The files to add or update.</param>
+    /// <param name="filesToRemove">The virtual paths of files to remove.</param>
+    /// <param name="key">The optional encryption key.</param>
+    /// <param name="options">Packing options. If null, default options are used.</param>
+    /// <returns>An <see cref="UpdateResult"/> containing the updated pack data and change information.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when the update results in multiple packs.</exception>
     public static UpdateResult Update(
         byte[] existingPackData,
         IEnumerable<PackFile> filesToAdd,
@@ -102,7 +211,6 @@ public static class Packer
             }
         }
 
-        // Add/Update files
         foreach (var file in filesToAdd)
         {
             string normalizedPath = PathNormalizer.Normalize(file.VirtualPath);

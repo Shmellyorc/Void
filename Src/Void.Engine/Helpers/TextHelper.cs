@@ -1,5 +1,70 @@
+// ============================================================================
+//  TextHelper.cs
+// ============================================================================
+//  Text manipulation utilities including wrapping, truncation, measurement,
+//  and formatting for UI and rendering systems.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+
 namespace Void.Engine.Helpers;
 
+/// <summary>
+/// Provides text manipulation utilities including wrapping, truncation,
+/// measurement, and formatting for UI and rendering systems.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="TextHelper"/> class provides comprehensive text processing
+/// functionality for UI systems including word wrapping, character wrapping,
+/// truncation with ellipsis, and text formatting.
+/// </para>
+/// <para>
+/// <b>Key Features:</b>
+/// <list type="bullet">
+///   <item><description>Word wrapping with font measurement</description></item>
+///   <item><description>Character-by-character wrapping</description></item>
+///   <item><description>Truncation with ellipsis (end and middle)</description></item>
+///   <item><description>Text cleaning and normalization</description></item>
+///   <item><description>Time formatting (M:SS, H:MM:SS)</description></item>
+///   <item><description>Text measurement and line counting</description></item>
+///   <item><description>Indentation support for wrapped text</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Wrap text to fit within a width
+/// string wrapped = TextHelper.WrapText(font, longText, 200f);
+/// 
+/// // Truncate with ellipsis
+/// string truncated = TextHelper.TruncateWithEllipsis(font, text, 100f);
+/// 
+/// // Ellipsize in the middle (useful for file paths)
+/// string path = TextHelper.EllipsizeMiddle(font, "C:/Users/Username/Documents/file.txt", 150f);
+/// 
+/// // Format time
+/// string time = TextHelper.FormatTime(125.5f); // "2:05"
+/// string longTime = TextHelper.FormatTimeLong(3665f); // "1:01:05"
+/// 
+/// // Clean text (normalize line endings)
+/// string cleaned = TextHelper.CleanText(text);
+/// 
+/// // Wrap with indentation
+/// string indented = TextHelper.WrapTextWithIndent(font, text, 200f, 20f);
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe. Caching operations should be performed
+/// from a single thread.
+/// </para>
+/// </remarks>
 public static class TextHelper
 {
     private const int MaxCacheSize = 1000;
@@ -10,10 +75,10 @@ public static class TextHelper
     /// <summary>
     /// Wraps text to fit within a specified width, breaking at word boundaries when possible.
     /// </summary>
-    /// <param name="font">Font used for text measurement.</param>
-    /// <param name="text">Text to wrap.</param>
-    /// <param name="maxWidth">Maximum width in pixels.</param>
-    /// <returns>Wrapped text with newline characters inserted.</returns>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to wrap.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <returns>The wrapped text with newline characters inserted.</returns>
     public static string WrapText(Font font, string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f || font == null)
@@ -69,6 +134,10 @@ public static class TextHelper
     /// <summary>
     /// Wraps text character by character to fit within a specified width.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to wrap.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <returns>The wrapped text with newline characters inserted.</returns>
     public static string WrapTextCharacter(Font font, string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f || font == null)
@@ -130,6 +199,8 @@ public static class TextHelper
     /// <summary>
     /// Splits text into lines at newline characters.
     /// </summary>
+    /// <param name="text">The text to split.</param>
+    /// <returns>An array of lines.</returns>
     public static string[] SplitLines(string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -141,6 +212,10 @@ public static class TextHelper
     /// <summary>
     /// Truncates text with ellipsis to fit within a specified width.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to truncate.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <returns>The truncated text with ellipsis, or the original text if it fits.</returns>
     public static string TruncateWithEllipsis(Font font, string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f || font == null)
@@ -177,8 +252,12 @@ public static class TextHelper
     }
 
     /// <summary>
-    /// Truncates text with ellipsis in the middle (useful for file paths).
+    /// Truncates text with ellipsis in the middle, useful for file paths.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to truncate.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <returns>The truncated text with ellipsis in the middle.</returns>
     public static string EllipsizeMiddle(Font font, string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f || font == null)
@@ -196,7 +275,6 @@ public static class TextHelper
         float availableWidth = maxWidth - ellipsisWidth;
         float halfWidth = availableWidth / 2f;
 
-        // Get prefix
         var prefix = new StringBuilder();
         float prefixWidth = 0f;
         for (int i = 0; i < text.Length; i++)
@@ -208,7 +286,6 @@ public static class TextHelper
             prefixWidth += charWidth;
         }
 
-        // Get suffix
         var suffix = new StringBuilder();
         float suffixWidth = 0f;
         for (int i = text.Length - 1; i >= 0; i--)
@@ -226,12 +303,13 @@ public static class TextHelper
     /// <summary>
     /// Cleans text by normalizing line endings and removing trailing whitespace.
     /// </summary>
+    /// <param name="text">The text to clean.</param>
+    /// <returns>The cleaned text.</returns>
     public static string CleanText(string text)
     {
         if (string.IsNullOrEmpty(text))
             return text;
 
-        // Fix: More efficient approach without creating multiple intermediate arrays
         var result = new StringBuilder(text.Length);
         int lineStart = 0;
 
@@ -268,6 +346,10 @@ public static class TextHelper
     /// <summary>
     /// Measures the height of text after wrapping to a specified width.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to measure.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <returns>The total height of the wrapped text in pixels.</returns>
     public static float MeasureWrappedHeight(Font font, string text, float maxWidth)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f || font == null)
@@ -296,6 +378,8 @@ public static class TextHelper
     /// <summary>
     /// Counts the number of lines in text.
     /// </summary>
+    /// <param name="text">The text to count lines in.</param>
+    /// <returns>The number of lines.</returns>
     public static int CountLines(string text)
     {
         if (string.IsNullOrEmpty(text))
@@ -307,6 +391,9 @@ public static class TextHelper
     /// <summary>
     /// Gets the width of the widest line in text.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to measure.</param>
+    /// <returns>The width of the widest line in pixels.</returns>
     public static float GetWidestLine(Font font, string text)
     {
         if (string.IsNullOrEmpty(text) || font == null)
@@ -328,19 +415,23 @@ public static class TextHelper
     /// <summary>
     /// Pads a number with leading zeros.
     /// </summary>
+    /// <param name="number">The number to pad.</param>
+    /// <param name="digits">The total number of digits.</param>
+    /// <returns>The padded number as a string.</returns>
     public static string PadNumber(int number, int digits)
         => number.ToString($"D{digits}");
 
     /// <summary>
     /// Formats time in seconds to M:SS format.
     /// </summary>
+    /// <param name="seconds">The time in seconds.</param>
+    /// <returns>The formatted time string.</returns>
     public static string FormatTime(float seconds)
     {
         int totalSeconds = (int)Math.Abs(seconds);
         int minutes = totalSeconds / 60;
         int secs = totalSeconds % 60;
 
-        // Fix: Add sign for negative times and pad minutes for consistency
         string sign = seconds < 0 ? "-" : "";
         return $"{sign}{minutes}:{secs:00}";
     }
@@ -348,6 +439,8 @@ public static class TextHelper
     /// <summary>
     /// Formats time in seconds to H:MM:SS format.
     /// </summary>
+    /// <param name="seconds">The time in seconds.</param>
+    /// <returns>The formatted time string.</returns>
     public static string FormatTimeLong(float seconds)
     {
         int totalSeconds = (int)Math.Abs(seconds);
@@ -362,6 +455,11 @@ public static class TextHelper
     /// <summary>
     /// Wraps text with a specified indentation for subsequent lines.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to wrap.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <param name="indentWidth">The indentation width in pixels.</param>
+    /// <returns>The wrapped text with indentation applied.</returns>
     public static string WrapTextWithIndent(Font font, string text, float maxWidth, float indentWidth)
     {
         if (string.IsNullOrEmpty(text) || maxWidth <= 0f || font == null)
@@ -390,6 +488,10 @@ public static class TextHelper
     /// <summary>
     /// Wraps text and returns an array of lines.
     /// </summary>
+    /// <param name="font">The font used for text measurement.</param>
+    /// <param name="text">The text to wrap.</param>
+    /// <param name="maxWidth">The maximum width in pixels.</param>
+    /// <returns>An array of wrapped lines.</returns>
     public static string[] WrapTextToLines(Font font, string text, float maxWidth)
     {
         string wrapped = WrapText(font, text, maxWidth);
@@ -443,8 +545,25 @@ public static class TextHelper
     }
 }
 
-// Extension method for character counting (if not already available)
+/// <summary>
+/// Provides extension methods for string manipulation.
+/// </summary>
 public static class StringExtensions
 {
-    
+    /// <summary>
+    /// Counts the number of occurrences of a character in a string.
+    /// </summary>
+    /// <param name="str">The string to search.</param>
+    /// <param name="ch">The character to count.</param>
+    /// <returns>The number of occurrences.</returns>
+    public static int CountChar(this string str, char ch)
+    {
+        int count = 0;
+        for (int i = 0; i < str.Length; i++)
+        {
+            if (str[i] == ch)
+                count++;
+        }
+        return count;
+    }
 }

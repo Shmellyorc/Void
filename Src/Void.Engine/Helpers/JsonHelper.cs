@@ -1,7 +1,74 @@
+// ============================================================================
+//  JsonHelper.cs
+// ============================================================================
+//  JSON parsing utilities with type-safe property and element extraction
+//  for System.Text.Json, including specialized LDtk field parsing.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Helpers;
 
+/// <summary>
+/// Provides JSON parsing utilities with type-safe property and element
+/// extraction for System.Text.Json, including specialized LDtk field parsing.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="JsonHelper"/> class provides extension methods for
+/// <see cref="JsonElement"/> that simplify extracting values with
+/// type checking and default value support.
+/// </para>
+/// <para>
+/// <b>Supported Types:</b>
+/// <list type="bullet">
+///   <item><description><see cref="string"/></description></item>
+///   <item><description><see cref="int"/></description></item>
+///   <item><description><see cref="uint"/></description></item>
+///   <item><description><see cref="float"/></description></item>
+///   <item><description><see cref="bool"/></description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// using var doc = JsonDocument.Parse(jsonString);
+/// var root = doc.RootElement;
+/// 
+/// // Get a property with default value
+/// string name = root.GetPropertyOrDefault("name", "default");
+/// int age = root.GetPropertyOrDefault("age", 0);
+/// bool enabled = root.GetPropertyOrDefault("enabled", true);
+/// 
+/// // Get an element directly
+/// string value = root.GetElementOrDefault("hello");
+/// 
+/// // LDtk-specific parsing
+/// var settings = JsonHelper.GetSettings(root.GetProperty("fieldInstances"));
+/// </code>
+/// </para>
+/// <para>
+/// <b>LDtk Support:</b>
+/// The helper includes specialized parsing for LDtk map settings, supporting:
+/// <list type="bullet">
+///   <item><description>Primitive types (Int, Float, Bool, String)</description></item>
+///   <item><description>Complex types (Color, Enum, FilePath, Tile, EntityRef, Point)</description></item>
+///   <item><description>Array variants of all supported types</description></item>
+/// </list>
+/// </para>
+/// </remarks>
 public static class JsonHelper
 {
+    /// <summary>
+    /// Gets a property value from a JSON object with a default fallback.
+    /// </summary>
+    /// <typeparam name="T">The type to extract.</typeparam>
+    /// <param name="parent">The parent JSON element (must be an object).</param>
+    /// <param name="propName">The name of the property to extract.</param>
+    /// <param name="defaultValue">The default value if the property is missing or invalid.</param>
+    /// <returns>The extracted value, or the default if extraction failed.</returns>
+    /// <exception cref="ArgumentException">Thrown when the requested type is not supported.</exception>
     public static T GetPropertyOrDefault<T>(this JsonElement parent, string propName, T defaultValue = default!)
     {
         if (parent.ValueKind != JsonValueKind.Object)
@@ -26,6 +93,14 @@ public static class JsonHelper
         };
     }
 
+    /// <summary>
+    /// Gets a value directly from a JSON element with a default fallback.
+    /// </summary>
+    /// <typeparam name="T">The type to extract.</typeparam>
+    /// <param name="parent">The JSON element to extract from.</param>
+    /// <param name="defaultValue">The default value if the element is invalid.</param>
+    /// <returns>The extracted value, or the default if extraction failed.</returns>
+    /// <exception cref="ArgumentException">Thrown when the requested type is not supported.</exception>
     public static T GetElementOrDefault<T>(this JsonElement parent, T defaultValue = default!)
     {
         if (parent.ValueKind == JsonValueKind.Null || parent.ValueKind == JsonValueKind.Undefined)
@@ -79,7 +154,6 @@ public static class JsonHelper
 
             result[HashHelper.Cache32(name)] = type switch
             {
-                // Single items:
                 var x when x.StartsWith("Int") =>
                     new LDtkIntSettings(value.GetElementOrDefault<int>()),
                 var x when x.StartsWith("Float") =>
@@ -101,7 +175,6 @@ public static class JsonHelper
                 var x when x.StartsWith("Point") => new LDtkPointSettings(new Vect2(
                         value.GetPropertyOrDefault<int>("cx"), value.GetPropertyOrDefault<int>("cy"))),
 
-                // Array Items:
                 var x when x.StartsWith("Array<Int") => new LDtkIntArraySettings([.. value.EnumerateArray()
                     .Where(x => x.ValueKind != JsonValueKind.Null)
                     .Select(x => x.GetElementOrDefault<int>())]),

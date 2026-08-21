@@ -630,6 +630,27 @@ public sealed class GameSettings
 
     #endregion
 
+    #region Sound
+    /// <summary>
+    /// Sets the maximum number of concurrent audio instances allowed in the sound pool.
+    /// </summary>
+    /// <param name="value">The maximum number of audio instances. Must be between 32 and 512.</param>
+    /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="value"/> is below 32 or exceeds 512.</exception>
+    public GameSettings SetAudioLimit(uint value)
+    {
+        if (value < 32)
+            throw new ArgumentOutOfRangeException(nameof(value), "Audio limit must be at least 32.");
+        if (value > 512)
+            throw new ArgumentOutOfRangeException(nameof(value), "Audio limit cannot exceed 512.");
+
+        AudioLimit = (int)value;
+        return this;
+    }
+    public int AudioLimit { get; private set; }
+    #endregion
+
+
     /// <summary>
     /// Finalizes the configuration and validates all settings.
     /// Must be called before creating a <see cref="Game"/> instance.
@@ -696,8 +717,10 @@ public sealed class GameSettings
         AppSaveFolder = AppSaveFolder.IsEmpty() ? "Saves" : AppSaveFolder;
         AppConfigFolder = AppConfigFolder.IsEmpty() ? "Config" : AppConfigFolder;
         AppTempFolder = AppTempFolder.IsEmpty() ? "Temp" : AppTempFolder;
+        AudioLimit = AudioLimit <= 0 ? 128 : AudioLimit;
 
         Initialized = true;
+
         return this;
     }
 }

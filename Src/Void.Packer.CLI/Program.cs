@@ -303,7 +303,7 @@ public static class Program
                 AnsiConsole.MarkupLine($"\n[green]Total: {files.Count} files[/]");
             }
 
-            return 0;  // ✅ ADD THIS
+            return 0;
         }
         catch (Exception ex)
         {

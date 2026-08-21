@@ -1,10 +1,57 @@
-using System.Runtime.CompilerServices;
-
-using Void.Engine.Graphics.RenderTargets;
-using Void.Engine.Logs;
+// ============================================================================
+//  PrimitiveBatcher.cs
+// ============================================================================
+//  Batch rendering for primitives including lines, rectangles, circles,
+//  polygons, and triangles. Supports transformations, color modulation,
+//  depth sorting, and multiple primitive types (points, lines, triangles).
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine.Graphics;
 
+/// <summary>
+/// Batch rendering for primitives including lines, rectangles, circles,
+/// polygons, and triangles.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="PrimitiveBatcher"/> class provides efficient batch rendering
+/// for 2D primitives. It supports:
+/// <list type="bullet">
+///   <item><description>Lines, line strips, and points</description></item>
+///   <item><description>Filled and outlined rectangles</description></item>
+///   <item><description>Filled and outlined circles with configurable segments</description></item>
+///   <item><description>Filled and outlined polygons</description></item>
+///   <item><description>Filled and outlined triangles</description></item>
+///   <item><description>Transformations (position, rotation, scale, origin)</description></item>
+///   <item><description>Color modulation and depth sorting</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// var batcher = new PrimitiveBatcher();
+/// batcher.Begin(SortMode.BackToFront);
+/// 
+/// // Draw a filled rectangle
+/// batcher.DrawRect(new Vect2(100, 100), new Vect2(200, 150), Color.Red);
+/// 
+/// // Draw a circle outline
+/// batcher.DrawCircleOutline(new Vect2(300, 300), 50, Color.Blue, 32);
+/// 
+/// // Draw a line
+/// batcher.DrawLine(new Vect2(0, 0), new Vect2(100, 100), Color.Green);
+/// 
+/// batcher.End();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe and should be accessed from the main thread.
+/// </para>
+/// </remarks>
 public sealed class PrimitiveBatcher : BaseBatcher
 {
     private const int MaxCircleSegments = 256;
@@ -24,9 +71,20 @@ public sealed class PrimitiveBatcher : BaseBatcher
     private int _vertexIndex;
     private SFVertex[] _sortedVertexData;
 
+    /// <summary>
+    /// Gets the name of the batcher.
+    /// </summary>
     public override string Name => "PrimitiveBatcher";
+
+    /// <summary>
+    /// Gets the number of vertices per command.
+    /// </summary>
     protected override int VerticesPerCommand => 1;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PrimitiveBatcher"/> class.
+    /// </summary>
+    /// <param name="capacity">The initial capacity of the batch.</param>
     public PrimitiveBatcher(int capacity = 0) : base(capacity)
     {
         if (capacity <= 0)
@@ -38,11 +96,29 @@ public sealed class PrimitiveBatcher : BaseBatcher
         _vertexIndex = 0;
     }
 
+    /// <summary>
+    /// Gets the default capacity for the primitive batch.
+    /// </summary>
     protected override int GetDefaultCapacity() => GameSettings.Instance.PrimitiveBatchCapacity;
+
+    /// <summary>
+    /// Called when batching begins.
+    /// </summary>
     protected override void OnBegin() => _vertexIndex = 0;
+
+    /// <summary>
+    /// Called when batching ends.
+    /// </summary>
     protected override void OnEnd() { }
+
+    /// <summary>
+    /// Called when the batch is flushed.
+    /// </summary>
     protected override void OnFlush() => _vertexIndex = 0;
 
+    /// <summary>
+    /// Sorts the commands for optimal rendering.
+    /// </summary>
     protected override void SortCommands()
     {
         _comparer.UpdateMode(_sortMode);
@@ -75,8 +151,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         Array.Copy(_sortedVertexData, _vertexData, sortedIndex);
     }
 
+    /// <summary>
+    /// Builds the vertices for rendering. (No-op for primitive batcher.)
+    /// </summary>
     protected override void BuildVertices() { }
 
+    /// <summary>
+    /// Flushes all batched commands to the GPU.
+    /// </summary>
     public override void Flush()
     {
         if (_cmdCount == 0) return;
@@ -122,11 +204,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         OnFlush();
     }
 
+    /// <summary>
+    /// Resizes the vertex and command buffers.
+    /// </summary>
     protected override void ResizeBuffers()
     {
-        Logger.Instance.DebugWithCategory("PrimitiveBatcher", 
+        Logger.Instance.DebugWithCategory("PrimitiveBatcher",
             "Resizing buffers: {0} -> {1} commands", _vertexBufferSize, _vertexBufferSize * 2);
-            
+
         int newSize = _vertexBufferSize * 2;
         Array.Resize(ref _vertexData, newSize);
         Array.Resize(ref _sortedVertexData, newSize);
@@ -140,6 +225,9 @@ public sealed class PrimitiveBatcher : BaseBatcher
         _capacity = newCmdSize;
     }
 
+    /// <summary>
+    /// Sets the render state for a group of commands.
+    /// </summary>
     protected override void SetRenderStateForGroup(int commandIndex)
     {
         base.SetRenderStateForGroup(commandIndex);
@@ -171,6 +259,17 @@ public sealed class PrimitiveBatcher : BaseBatcher
         _cmdCount++;
     }
 
+    #region Draw Methods
+
+    /// <summary>
+    /// Draws a line between two points.
+    /// </summary>
+    /// <param name="start">The starting point.</param>
+    /// <param name="end">The ending point.</param>
+    /// <param name="color">The color of the line.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when drawing outside of Begin/End.</exception>
     public void DrawLine(Vect2 start, Vect2 end, Color color, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -184,6 +283,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Lines, 2, depth);
     }
 
+    /// <summary>
+    /// Draws a line strip connecting multiple points.
+    /// </summary>
+    /// <param name="points">The points to connect.</param>
+    /// <param name="color">The color of the lines.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when drawing outside of Begin/End.</exception>
     public void DrawLineStrip(ReadOnlySpan<Vect2> points, Color color, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -198,6 +305,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.LineStrip, points.Length, depth);
     }
 
+    /// <summary>
+    /// Draws a single point.
+    /// </summary>
+    /// <param name="position">The position of the point.</param>
+    /// <param name="color">The color of the point.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when drawing outside of Begin/End.</exception>
     public void DrawPoint(Vect2 position, Color color, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -210,6 +325,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Points, 1, depth);
     }
 
+    /// <summary>
+    /// Draws multiple points.
+    /// </summary>
+    /// <param name="positions">The positions of the points.</param>
+    /// <param name="color">The color of the points.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when drawing outside of Begin/End.</exception>
     public void DrawPoints(ReadOnlySpan<Vect2> positions, Color color, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -223,11 +346,28 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Points, positions.Length, depth);
     }
 
+    /// <summary>
+    /// Draws a filled rectangle.
+    /// </summary>
+    /// <param name="position">The position of the rectangle.</param>
+    /// <param name="size">The size of the rectangle.</param>
+    /// <param name="color">The color of the rectangle.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawRect(Vect2 position, Vect2 size, Color color, float depth = 0f)
     {
         DrawRect(position, size, color, 0f, Vect2.One, Vect2.Zero, depth);
     }
 
+    /// <summary>
+    /// Draws a filled rectangle with transformations.
+    /// </summary>
+    /// <param name="position">The position of the rectangle.</param>
+    /// <param name="size">The size of the rectangle.</param>
+    /// <param name="color">The color of the rectangle.</param>
+    /// <param name="rotation">The rotation in radians.</param>
+    /// <param name="scale">The scale factor.</param>
+    /// <param name="origin">The origin for rotation and scaling.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawRect(Vect2 position, Vect2 size, Color color, float rotation, Vect2 scale, Vect2 origin, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -280,9 +420,26 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Triangles, 6, depth);
     }
 
+    /// <summary>
+    /// Draws a rectangle outline.
+    /// </summary>
+    /// <param name="position">The position of the rectangle.</param>
+    /// <param name="size">The size of the rectangle.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawRectOutline(Vect2 position, Vect2 size, Color color, float depth = 0f)
         => DrawRectOutline(position, size, color, 0f, Vect2.One, Vect2.Zero, depth);
 
+    /// <summary>
+    /// Draws a rectangle outline with transformations.
+    /// </summary>
+    /// <param name="position">The position of the rectangle.</param>
+    /// <param name="size">The size of the rectangle.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="rotation">The rotation in radians.</param>
+    /// <param name="scale">The scale factor.</param>
+    /// <param name="origin">The origin for rotation and scaling.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawRectOutline(Vect2 position, Vect2 size, Color color, float rotation, Vect2 scale, Vect2 origin, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -337,9 +494,28 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Lines, 8, depth);
     }
 
+    /// <summary>
+    /// Draws a filled circle.
+    /// </summary>
+    /// <param name="center">The center of the circle.</param>
+    /// <param name="radius">The radius of the circle.</param>
+    /// <param name="color">The color of the circle.</param>
+    /// <param name="segments">The number of segments (3-256).</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawCircle(Vect2 center, float radius, Color color, int segments = DefaultCircleSegments, float depth = 0f)
         => DrawCircle(center, radius, color, 0f, Vect2.One, Vect2.Zero, segments, depth);
 
+    /// <summary>
+    /// Draws a filled circle with transformations.
+    /// </summary>
+    /// <param name="center">The center of the circle.</param>
+    /// <param name="radius">The radius of the circle.</param>
+    /// <param name="color">The color of the circle.</param>
+    /// <param name="rotation">The rotation in radians.</param>
+    /// <param name="scale">The scale factor.</param>
+    /// <param name="origin">The origin for rotation and scaling.</param>
+    /// <param name="segments">The number of segments (3-256).</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawCircle(Vect2 center, float radius, Color color, float rotation, Vect2 scale, Vect2 origin, int segments = DefaultCircleSegments, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -375,9 +551,28 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.TriangleFan, vertexCount, depth);
     }
 
+    /// <summary>
+    /// Draws a circle outline.
+    /// </summary>
+    /// <param name="center">The center of the circle.</param>
+    /// <param name="radius">The radius of the circle.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="segments">The number of segments (3-256).</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawCircleOutline(Vect2 center, float radius, Color color, int segments = DefaultCircleSegments, float depth = 0f)
         => DrawCircleOutline(center, radius, color, 0f, Vect2.One, Vect2.Zero, segments, depth);
 
+    /// <summary>
+    /// Draws a circle outline with transformations.
+    /// </summary>
+    /// <param name="center">The center of the circle.</param>
+    /// <param name="radius">The radius of the circle.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="rotation">The rotation in radians.</param>
+    /// <param name="scale">The scale factor.</param>
+    /// <param name="origin">The origin for rotation and scaling.</param>
+    /// <param name="segments">The number of segments (3-256).</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawCircleOutline(Vect2 center, float radius, Color color, float rotation, Vect2 scale, Vect2 origin, int segments = DefaultCircleSegments, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -426,9 +621,25 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Lines, vertexCount, depth);
     }
 
+    /// <summary>
+    /// Draws a filled polygon.
+    /// </summary>
+    /// <param name="vertices">The vertices of the polygon.</param>
+    /// <param name="color">The color of the polygon.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawPolygon(ReadOnlySpan<Vect2> vertices, Color color, float depth = 0f)
         => DrawPolygon(vertices, color, Vect2.Zero, 0f, Vect2.One, Vect2.Zero, depth);
 
+    /// <summary>
+    /// Draws a filled polygon with transformations.
+    /// </summary>
+    /// <param name="vertices">The vertices of the polygon.</param>
+    /// <param name="color">The color of the polygon.</param>
+    /// <param name="position">The position offset.</param>
+    /// <param name="rotation">The rotation in radians.</param>
+    /// <param name="scale">The scale factor.</param>
+    /// <param name="origin">The origin for rotation and scaling.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawPolygon(ReadOnlySpan<Vect2> vertices, Color color, Vect2 position, float rotation, Vect2 scale, Vect2 origin, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -466,9 +677,25 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Triangles, vertexCount, depth);
     }
 
+    /// <summary>
+    /// Draws a polygon outline.
+    /// </summary>
+    /// <param name="vertices">The vertices of the polygon.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawPolygonOutline(ReadOnlySpan<Vect2> vertices, Color color, float depth = 0f)
         => DrawPolygonOutline(vertices, color, Vect2.Zero, 0f, Vect2.One, Vect2.Zero, depth);
 
+    /// <summary>
+    /// Draws a polygon outline with transformations.
+    /// </summary>
+    /// <param name="vertices">The vertices of the polygon.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="position">The position offset.</param>
+    /// <param name="rotation">The rotation in radians.</param>
+    /// <param name="scale">The scale factor.</param>
+    /// <param name="origin">The origin for rotation and scaling.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawPolygonOutline(ReadOnlySpan<Vect2> vertices, Color color, Vect2 position, float rotation, Vect2 scale, Vect2 origin, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -508,6 +735,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Lines, vertexCount, depth);
     }
 
+    /// <summary>
+    /// Draws a filled triangle.
+    /// </summary>
+    /// <param name="a">The first vertex.</param>
+    /// <param name="b">The second vertex.</param>
+    /// <param name="c">The third vertex.</param>
+    /// <param name="color">The color of the triangle.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawTriangle(Vect2 a, Vect2 b, Vect2 c, Color color, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -522,6 +757,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
         AddCommand(SFPrimitiveType.Triangles, 3, depth);
     }
 
+    /// <summary>
+    /// Draws a triangle outline.
+    /// </summary>
+    /// <param name="a">The first vertex.</param>
+    /// <param name="b">The second vertex.</param>
+    /// <param name="c">The third vertex.</param>
+    /// <param name="color">The color of the outline.</param>
+    /// <param name="depth">The depth for sorting.</param>
     public void DrawTriangleOutline(Vect2 a, Vect2 b, Vect2 c, Color color, float depth = 0f)
     {
         if (_isDisposed) throw new ObjectDisposedException(Name);
@@ -538,6 +781,8 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
         AddCommand(SFPrimitiveType.Lines, 6, depth);
     }
+
+    #endregion
 
     private sealed class PrimitiveCommandComparer : IComparer<PrimitiveCommand>
     {

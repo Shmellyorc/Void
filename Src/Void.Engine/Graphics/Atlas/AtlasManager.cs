@@ -1,7 +1,69 @@
-using Void.Engine.Logs;
+// ============================================================================
+//  AtlasManager.cs
+// ============================================================================
+//  Manages texture atlasing with automatic page allocation, texture packing,
+//  LRU eviction, and fragmentation management. Provides a unified interface
+//  for packing textures into atlas pages for efficient batching.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine.Graphics.Atlas;
 
+/// <summary>
+/// Manages texture atlasing with automatic page allocation, texture packing,
+/// LRU eviction, and fragmentation management.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="AtlasManager"/> provides a unified system for packing
+/// textures into atlas pages to reduce draw calls and improve rendering
+/// performance. It handles:
+/// <list type="bullet">
+///   <item><description>Automatic page allocation and management</description></item>
+///   <item><description>Texture packing using configurable algorithms (Guillotine, Skyline)</description></item>
+///   <item><description>LRU-based eviction when atlas is full</description></item>
+///   <item><description>Automatic defragmentation when fragmentation exceeds threshold</description></item>
+///   <item><description>Metrics for monitoring atlas usage</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>How It Works:</b>
+/// <list type="number">
+///   <item><description>Textures are packed into atlas pages (default: 2048x2048)</description></item>
+///   <item><description>Each page has a packer that manages free space</description></item>
+///   <item><description>If a page is full, the next page is used</description></item>
+///   <item><description>If all pages are full, LRU eviction frees space</description></item>
+///   <item><description>Fragmentation is monitored and defragmented automatically</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Get the singleton instance
+/// var atlas = AtlasManager.Instance;
+/// 
+/// // Pack a texture
+/// if (atlas.TryPack(sfTexture, srcRect, out var packedRect, out var pageId))
+/// {
+///     // Texture was packed at packedRect on page pageId
+///     var pageTexture = atlas.GetPageTexture(pageId);
+/// }
+/// 
+/// // Get atlas metrics
+/// var metrics = atlas.GetMetrics();
+/// Console.WriteLine($"Atlas usage: {metrics.PercentageFull:F1}%");
+/// 
+/// // Clear all atlas data
+/// atlas.Clear();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe and should be accessed from the main thread.
+/// </para>
+/// </remarks>
 public sealed class AtlasManager
 {
     private struct AtlasSlot
@@ -27,8 +89,7 @@ public sealed class AtlasManager
         }
     }
 
-    private static readonly Lazy<AtlasManager> _instance =
-        new Lazy<AtlasManager>(() => new AtlasManager());
+    private static readonly Lazy<AtlasManager> _instance = new(() => new AtlasManager());
     private readonly Dictionary<(uint NativeHandle, Rect2 SrcRect), AtlasSlot> _packedMap;
     private readonly List<AtlasPage> _pages;
     private readonly LinkedList<(uint NativeHandle, Rect2 SrcRect)> _lruList;
@@ -36,6 +97,10 @@ public sealed class AtlasManager
     private int _pageCount;
     private int _evictionCount;
 
+
+    /// <summary>
+    /// Gets the singleton instance of the atlas manager.
+    /// </summary>
     public static AtlasManager Instance => _instance.Value;
 
 
@@ -68,6 +133,33 @@ public sealed class AtlasManager
         }
     }
 
+    /// <summary>
+    /// Attempts to pack a texture into the atlas.
+    /// </summary>
+    /// <param name="texture">The SFML texture to pack.</param>
+    /// <param name="srcRect">The source rectangle within the texture to pack.</param>
+    /// <param name="packedRect">When this method returns, contains the packed position and size if successful; otherwise, <see langword="default"/>.</param>
+    /// <param name="pageId">When this method returns, contains the page index if successful; otherwise, -1.</param>
+    /// <returns><see langword="true"/> if the texture was successfully packed; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// <para>
+    /// This method attempts to pack the specified texture region into the atlas.
+    /// If the texture is already packed, it returns the existing packed position.
+    /// </para>
+    /// <para>
+    /// The packing process:
+    /// <list type="number">
+    ///   <item><description>Checks if the texture is already packed (cache hit)</description></item>
+    ///   <item><description>Searches for free space in existing pages</description></item>
+    ///   <item><description>Defragments pages if fragmentation exceeds threshold</description></item>
+    ///   <item><description>Evicts least recently used textures if all pages are full</description></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// If successful, the <paramref name="packedRect"/> contains the position
+    /// (X, Y) and size where the texture should be used in the atlas page.
+    /// </para>
+    /// </remarks>
     public bool TryPack(SFTexture texture, Rect2 srcRect, out Rect2 packedRect, out int pageId)
     {
         packedRect = default;
@@ -221,6 +313,20 @@ public sealed class AtlasManager
         renderTexture.Texture.Update(clearImage, new((uint)rect.Left, (uint)rect.Top));
     }
 
+    /// <summary>
+    /// Gets the texture for a specific atlas page.
+    /// </summary>
+    /// <param name="pageId">The page index.</param>
+    /// <returns>The atlas page texture, or <see langword="null"/> if the page is invalid or inactive.</returns>
+    /// <remarks>
+    /// <para>
+    /// This method returns the texture for the specified atlas page. The texture
+    /// contains all packed textures arranged within the page.
+    /// </para>
+    /// <para>
+    /// This is used by the renderer to draw sprites from the atlas.
+    /// </para>
+    /// </remarks>
     public SFTexture GetPageTexture(int pageId)
     {
         if (pageId < 0 || pageId >= _pages.Count)
@@ -253,6 +359,26 @@ public sealed class AtlasManager
         return (float)usedSpace / totalSpace;
     }
 
+    /// <summary>
+    /// Gets metrics about the current atlas usage.
+    /// </summary>
+    /// <returns>An <see cref="AtlasMetrics"/> structure containing usage statistics.</returns>
+    /// <remarks>
+    /// <para>
+    /// This method provides detailed metrics about the atlas state including:
+    /// <list type="bullet">
+    ///   <item><description>Total and used pages</description></item>
+    ///   <item><description>Total and used space in bytes</description></item>
+    ///   <item><description>Percentage full</description></item>
+    ///   <item><description>Number of packed textures</description></item>
+    ///   <item><description>Number of evictions performed</description></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// These metrics are useful for monitoring atlas efficiency and
+    /// diagnosing performance issues.
+    /// </para>
+    /// </remarks>
     public AtlasMetrics GetMetrics()
     {
         int totalSpace = 0;
@@ -281,6 +407,19 @@ public sealed class AtlasManager
         };
     }
 
+    /// <summary>
+    /// Clears all atlas pages and resets the atlas manager to its initial state.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This method removes all packed textures, clears all pages, and resets
+    /// the eviction counter. All atlas textures are disposed and will need
+    /// to be repacked when used again.
+    /// </para>
+    /// <para>
+    /// This is useful when reloading assets or switching scenes.
+    /// </para>
+    /// </remarks>
     public void Clear()
     {
         Logger.Instance.InfoWithCategory("Atlas", "Clearing atlas: {0} textures, {1} pages",

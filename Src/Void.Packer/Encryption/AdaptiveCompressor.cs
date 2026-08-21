@@ -9,7 +9,7 @@ public enum CompressionAlgorithm : byte
     Brotli
 }
 
-public static class AdaptiveCompressor
+internal static class AdaptiveCompressor
 {
     public static (byte[] Data, bool Compressed) Compress(ReadOnlySpan<byte> data, CompressionAlgorithm algorithm, int level = 6)
     {

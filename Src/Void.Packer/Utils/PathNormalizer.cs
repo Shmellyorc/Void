@@ -1,6 +1,15 @@
+// ============================================================================
+//  PathNormalizer.cs
+// ============================================================================
+//  Utility for normalizing file paths to a consistent format for SolidPack.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Packer.Utils;
 
-public static class PathNormalizer
+internal static class PathNormalizer
 {
     public static string Normalize(string path)
     {
@@ -18,15 +27,5 @@ public static class PathNormalizer
             path = path.Replace("//", "/");
 
         return path;
-    }
-
-    private static byte[] UintToBytes(uint value)
-    {
-        return new byte[] {
-        (byte)(value & 0xFF),
-        (byte)((value >> 8) & 0xFF),
-        (byte)((value >> 16) & 0xFF),
-        (byte)((value >> 24) & 0xFF)
-    };
     }
 }

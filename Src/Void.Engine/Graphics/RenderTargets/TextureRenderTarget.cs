@@ -1,5 +1,13 @@
-using Void.Engine;
-using Void.Engine.Graphics.RenderTargets;
+// ============================================================================
+//  TextureRenderTarget.cs
+// ============================================================================
+//  Internal implementation of IRenderTarget that wraps SFML's render texture
+//  for off-screen rendering. Supports both standalone render textures and
+//  window-backed rendering for the main game view.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 internal sealed class TextureRenderTarget : IRenderTarget
 {

@@ -1,3 +1,13 @@
+// ============================================================================
+//  VertexBuffer.cs
+// ============================================================================
+//  Internal implementation of IVertexBuffer that wraps SFML's vertex buffer
+//  for GPU-accelerated vertex data storage and rendering.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Graphics.RenderTargets;
 
 internal sealed class VertexBuffer : IVertexBuffer

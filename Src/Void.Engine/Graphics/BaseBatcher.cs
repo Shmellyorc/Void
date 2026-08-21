@@ -1,9 +1,13 @@
-using System.Runtime.CompilerServices;
-
-using Void.Engine.Graphics.RenderTargets;
-using Void.Engine.Graphics.Shaders;
-
-using SFCoordinateType = SFML.Graphics.CoordinateType;
+// ============================================================================
+//  BaseBatcher.cs
+// ============================================================================
+//  Abstract base class for batch rendering implementations. Provides core
+//  batching functionality including command sorting, vertex buffer management,
+//  render state handling, and performance statistics collection.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine.Graphics;
 
@@ -164,8 +168,8 @@ public abstract class BaseBatcher : IBatcher
 
             SetRenderStateForGroup(groupStart);
 
-            if (_currentShader is Shader shader)
-                _renderStates.Shader = shader.SFShader;
+            if (_currentShader is Shader shaderAsset)
+                _renderStates.Shader = shaderAsset.SFShader;
 
             _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
             drawCalls++;

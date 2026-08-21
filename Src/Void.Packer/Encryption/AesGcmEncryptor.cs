@@ -2,7 +2,7 @@ using System.Security.Cryptography;
 
 namespace Void.Packer.Encryption;
 
-public static class AesGcmEncryptor
+internal static class AesGcmEncryptor
 {
     private const int KeySize = 32;     // 256-bit
     private const int NonceSize = 12;   // 96-bit for GCM
@@ -73,24 +73,6 @@ public static class AesGcmEncryptor
         {
             throw new CryptographicException($"Decryption failed: {ex.Message}", ex);
         }
-
-        // Optional: Re-verify tag manually (this is redundant since AesGcm already verifies, but can stay for debugging)
-        byte[] testCipherText = new byte[plaintext.Length];
-        byte[] testTag = new byte[TagSize];
-        using var testAes = new AesGcm(key.ToArray(), TagSize);
-        testAes.Encrypt(nonce.ToArray(), plaintext, testCipherText, testTag, associatedData.ToArray());
-
-        if (!testTag.SequenceEqual(tag))
-        {
-            throw new CryptographicException("Decryption failed: Tag verification failed (data corrupted or wrong key)");
-        }
-
-        // ❌ REMOVE THIS VERSION CHECK - it doesn't belong here
-        // The decrypted data might be compressed!
-        // if (plaintext.Length < 2 || BitConverter.ToUInt16(plaintext, 0) != PackConstants.CurrentVersion)
-        // {
-        //     throw new CryptographicException($"Decryption failed: Invalid data (version mismatch)");
-        // }
 
         return plaintext;
     }

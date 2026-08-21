@@ -22,11 +22,69 @@
     SOFTWARE.
 */
 
+// ============================================================================
+//  CoroutineHandle.cs
+// ============================================================================
+//  A handle for tracking and controlling a running coroutine.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System.Collections;
+
 namespace Void.Engine.Coroutines;
 
+/// <summary>
+/// A handle for tracking and controlling a running coroutine.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="CoroutineHandle"/> structure provides a lightweight way to
+/// reference and control a coroutine that was started through the
+/// <see cref="CoroutineManager"/>. It can be used to stop the coroutine,
+/// check its status, or wait for its completion.
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Start a coroutine and get a handle
+/// var handle = CoroutineManager.Instance.Run(MyCoroutine());
+/// 
+/// // Check if it's still running
+/// if (handle.IsRunning)
+/// {
+///     // Do something while it runs
+/// }
+/// 
+/// // Stop the coroutine
+/// handle.Stop();
+/// 
+/// // Wait for the coroutine to complete from another coroutine
+/// IEnumerator WaitForCoroutine()
+/// {
+///     yield return handle.Wait();
+///     Console.WriteLine("Coroutine finished!");
+/// }
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This structure is immutable and thread-safe. However, the underlying
+/// coroutine operations are not thread-safe and should only be performed
+/// from the main thread.
+/// </para>
+/// </remarks>
 public readonly struct CoroutineHandle
 {
+    /// <summary>
+    /// Gets the coroutine manager that is running this coroutine.
+    /// </summary>
     public CoroutineManager Runner { get; }
+
+    /// <summary>
+    /// Gets the enumerator representing the coroutine.
+    /// </summary>
     public IEnumerator Enumerator { get; }
 
     internal CoroutineHandle(CoroutineManager runner, IEnumerator enumerator)
@@ -35,8 +93,16 @@ public readonly struct CoroutineHandle
         Enumerator = enumerator;
     }
 
+    /// <summary>
+    /// Stops the coroutine if it is currently running.
+    /// </summary>
+    /// <returns><see langword="true"/> if the coroutine was stopped; otherwise, <see langword="false"/>.</returns>
     public bool Stop() => IsRunning && Runner.Stop(Enumerator);
 
+    /// <summary>
+    /// Returns a coroutine that waits for this coroutine to complete.
+    /// </summary>
+    /// <returns>An enumerator that yields until the coroutine completes.</returns>
     public IEnumerator Wait()
     {
         if (Enumerator != null)
@@ -44,5 +110,8 @@ public readonly struct CoroutineHandle
                 yield return null;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the coroutine is currently running.
+    /// </summary>
     public bool IsRunning => Enumerator != null && Runner.IsRunning(Enumerator);
 }

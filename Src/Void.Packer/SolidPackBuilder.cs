@@ -1,15 +1,100 @@
+// ============================================================================
+//  SolidPackBuilder.cs
+// ============================================================================
+//  Builder for creating SolidPack archives with configurable compression
+//  and encryption.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Packer;
 
+/// <summary>
+/// Represents a file entry in the SolidPack archive.
+/// </summary>
 public class FileEntry
 {
+    /// <summary>
+    /// Gets or sets the virtual path of the file.
+    /// </summary>
     public string VirtualPath { get; set; }
+
+    /// <summary>
+    /// Gets or sets the offset of the file data in the data block.
+    /// </summary>
     public uint OffsetInData { get; set; }
+
+    /// <summary>
+    /// Gets or sets the uncompressed size of the file in bytes.
+    /// </summary>
     public uint UncompressedSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stored (compressed) size of the file in bytes.
+    /// </summary>
     public uint StoredSize { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the file is compressed.
+    /// </summary>
     public bool IsCompressed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CRC32 checksum of the file.
+    /// </summary>
     public uint CRC32 { get; set; }
 }
 
+/// <summary>
+/// Builder for creating SolidPack archives with configurable compression and encryption.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="SolidPackBuilder"/> class provides a fluent API for building
+/// SolidPack archives. It handles file processing, compression, encryption,
+/// and header generation.
+/// </para>
+/// <para>
+/// <b>Features:</b>
+/// <list type="bullet">
+///   <item><description>Add files individually or in batches</description></item>
+///   <item><description>Automatic compression with adaptive detection</description></item>
+///   <item><description>AES-GCM encryption with separate header and data nonces</description></item>
+///   <item><description>CRC32 integrity checking for each file</description></item>
+///   <item><description>Path normalization and duplicate detection</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Create a builder with options
+/// var builder = new SolidPackBuilder(new PackOptions
+/// {
+///     Compression = CompressionAlgorithm.Deflate,
+///     Encrypt = true,
+///     CompressionLevel = 6
+/// });
+/// 
+/// // Add files
+/// builder.AddFile(new PackFile
+/// {
+///     VirtualPath = "textures/player.png",
+///     Data = File.ReadAllBytes("player.png")
+/// });
+/// 
+/// // Build the pack
+/// var container = builder.Build();
+/// 
+/// // Write to disk
+/// File.WriteAllBytes("assets.pack", container.Data);
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe.
+/// </para>
+/// </remarks>
 public sealed class SolidPackBuilder
 {
     private readonly PackOptions _options;
@@ -17,6 +102,10 @@ public sealed class SolidPackBuilder
     private readonly List<FileEntry> _entries;
     private readonly MemoryStream _dataStream;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SolidPackBuilder"/> class.
+    /// </summary>
+    /// <param name="options">The packing options. If null, default options are used.</param>
     public SolidPackBuilder(PackOptions options = null)
     {
         _options = options ?? new PackOptions();
@@ -25,6 +114,13 @@ public sealed class SolidPackBuilder
         _dataStream = new MemoryStream();
     }
 
+    /// <summary>
+    /// Adds a single file to the pack.
+    /// </summary>
+    /// <param name="file">The file to add.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="file"/> has an empty virtual path.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a file with the same virtual path already exists.</exception>
     public void AddFile(PackFile file)
     {
         if (file == null)
@@ -40,12 +136,21 @@ public sealed class SolidPackBuilder
         _files.Add(file);
     }
 
+    /// <summary>
+    /// Adds multiple files to the pack.
+    /// </summary>
+    /// <param name="files">The files to add.</param>
     public void AddFiles(IEnumerable<PackFile> files)
     {
         foreach (var file in files)
             AddFile(file);
     }
 
+    /// <summary>
+    /// Builds the SolidPack archive.
+    /// </summary>
+    /// <returns>A <see cref="PackContainer"/> containing the pack data and metadata.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when no files have been added or the file count exceeds the maximum.</exception>
     public PackContainer Build()
     {
         if (_files.Count == 0)
@@ -90,7 +195,6 @@ public sealed class SolidPackBuilder
             byte[] headerAad = BuildHeaderAad();
             encryptedHeader = AesGcmEncryptor.Encrypt(compressedHeader, key, nonce, headerAad);
 
-            // Derive data nonce from header nonce
             byte[] dataNonce = new byte[nonce.Length];
             Buffer.BlockCopy(nonce, 0, dataNonce, 0, nonce.Length);
             dataNonce[dataNonce.Length - 1] ^= 0x01;
@@ -207,12 +311,12 @@ public sealed class SolidPackBuilder
     }
 
     private PackContainer BuildFinalPack(
-    byte[] encryptedHeader,
-    byte[] encryptedData,
-    byte[] key,
-    byte[] nonce,
-    bool headerCompressed
-)
+        byte[] encryptedHeader,
+        byte[] encryptedData,
+        byte[] key,
+        byte[] nonce,
+        bool headerCompressed
+    )
     {
         using var ms = new MemoryStream();
         using var writer = new BinaryWriter(ms);
@@ -234,10 +338,7 @@ public sealed class SolidPackBuilder
         else
             writer.Write(new byte[PackConstants.NonceSize]);
 
-        // Write compression algorithm to bootstrap
         writer.Write((byte)_options.Compression);
-
-        // Write remaining reserved bytes
         writer.Write(new byte[PackConstants.ReservedSize]);
 
         writer.Write(encryptedHeader);

@@ -1,3 +1,16 @@
+// ============================================================================
+//  AStar2D.cs
+// ============================================================================
+//  High-performance 2D pathfinding system supporting A*, Dijkstra, BFS,
+//  and Greedy Best-First algorithms with flow field computation.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+
 namespace Void.Engine.Pathfinding;
 
 /// <summary>
@@ -6,100 +19,157 @@ namespace Void.Engine.Pathfinding;
 public enum DiagonalMode
 {
     /// <summary>
-    /// The default value, uses diagonals freely.
+    /// Diagonal movement is always allowed without restrictions.
     /// </summary>
     Always,
 
     /// <summary>
-    /// All movement is orthogonal (no diagonals).
+    /// Diagonal movement is never allowed. Only orthogonal movement is permitted.
     /// </summary>
     Never,
 
     /// <summary>
-    /// Allows diagonals, but prevents the path going "between" diagonally placed obstacles.
+    /// Diagonal movement is allowed only if at least one of the two adjacent
+    /// orthogonal cells is walkable, preventing movement between diagonally placed obstacles.
     /// </summary>
     AtLeastOneWalkable,
 
     /// <summary>
-    /// Allows diagonals only in "open" areas, not near obstacles.
+    /// Diagonal movement is allowed only if both adjacent orthogonal cells are walkable,
+    /// preventing movement through diagonal corners.
     /// </summary>
     OnlyIfNoObstacles
 }
 
 /// <summary>
-/// Defines the heuristic function used to estimate cost between two points.
+/// Defines the heuristic function used to estimate the cost between two points.
 /// </summary>
 public enum Heuristic
 {
     /// <summary>
-    /// No heuristic. Effectively turns A* into Dijkstra's algorithm.
+    /// No heuristic is used. Effectively turns A* into Dijkstra's algorithm.
     /// </summary>
     None,
 
     /// <summary>
-    /// Manhattan distance: |dx| + |dy|
-    /// Best for 4-directional movement (no diagonals).
+    /// Manhattan distance: <c>|dx| + |dy|</c>. Best for 4-directional movement with no diagonals.
     /// </summary>
     Manhattan,
 
     /// <summary>
-    /// Euclidean distance: sqrt(dx² + dy²)
-    /// Best for 8-directional movement with arbitrary angles.
+    /// Euclidean distance: <c>sqrt(dx² + dy²)</c>. Best for 8-directional movement with arbitrary angles.
     /// </summary>
     Euclidean,
 
     /// <summary>
-    /// Octile distance: max(|dx|, |dy|) + (sqrt(2) - 1) * min(|dx|, |dy|)
+    /// Octile distance: <c>max(|dx|, |dy|) + (sqrt(2) - 1) * min(|dx|, |dy|)</c>.
     /// Best for 8-directional movement where diagonals cost sqrt(2).
     /// </summary>
     Octile,
 
     /// <summary>
-    /// Chebyshev distance: max(|dx|, |dy|)
-    /// Best for 8-directional movement where diagonals cost the same as orthogonal.
+    /// Chebyshev distance: <c>max(|dx|, |dy|)</c>.
+    /// Best for 8-directional movement where diagonals cost the same as orthogonal movement.
     /// </summary>
     Chebyshev
 }
 
 /// <summary>
-/// Defines the algorithm used for pathfinding.
+/// Defines the pathfinding algorithm to use.
 /// </summary>
 public enum PathAlgorithm
 {
     /// <summary>
-    /// A* algorithm. Uses heuristic to guide search. Fast for single path queries.
-    /// Best balance of speed and optimality.
+    /// A* algorithm. Uses a heuristic to guide the search, providing the best balance of speed and optimality.
     /// </summary>
     AStar,
 
     /// <summary>
-    /// Dijkstra's algorithm. No heuristic. Finds shortest path to all nodes from start.
-    /// Slower for single path, but required for flow fields and when all costs matter equally.
+    /// Dijkstra's algorithm. No heuristic is used. Finds the shortest path to all nodes from the start.
+    /// Required for flow field computation and when all costs matter equally.
     /// </summary>
     Dijkstra,
 
     /// <summary>
-    /// Breadth-first search. Ignores weights entirely, treats all edges as equal cost.
-    /// Fastest for unweighted graphs. Not optimal for weighted graphs.
+    /// Breadth-first search. Ignores all weights and treats every edge as equal cost.
+    /// Fastest algorithm for unweighted graphs.
     /// </summary>
     BFS,
 
     /// <summary>
-    /// Greedy Best-First Search. Uses only heuristic, ignores actual path cost.
+    /// Greedy Best-First Search. Uses only the heuristic and ignores actual path cost.
     /// Very fast but may not find the optimal path.
     /// </summary>
     GreedyBestFirst
 }
 
 /// <summary>
-/// An implementation of A* for finding the shortest path between two vertices on a connected graph in 2D space.
-/// Adapted from Godot's AStar2D with additional algorithm support and flow field computation.
+/// High-performance 2D pathfinding system supporting A*, Dijkstra, BFS, and
+/// Greedy Best-First algorithms with flow field computation.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="AStar2D"/> class provides a complete pathfinding solution for
+/// 2D navigation graphs. It supports multiple algorithms, diagonal movement
+/// modes, heuristic functions, and can compute flow fields for crowd movement.
+/// </para>
+/// <para>
+/// <b>Key Features:</b>
+/// <list type="bullet">
+///   <item><description>Multiple pathfinding algorithms (A*, Dijkstra, BFS, Greedy Best-First)</description></item>
+///   <item><description>Flow field computation for multi-agent pathfinding</description></item>
+///   <item><description>Diagonal movement modes with obstacle avoidance</description></item>
+///   <item><description>Heuristic functions (Manhattan, Euclidean, Octile, Chebyshev)</description></item>
+///   <item><description>Point disabling for dynamic obstacles</description></item>
+///   <item><description>Weight scaling for variable terrain costs</description></item>
+///   <item><description>Neighbor filtering via override delegates</description></item>
+///   <item><description>Pre-allocated arrays for GC-friendly performance</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Create a pathfinding graph
+/// var astar = new AStar2D(100);
+/// 
+/// // Add nodes
+/// astar.AddPoint(0, new Vect2(0, 0));
+/// astar.AddPoint(1, new Vect2(10, 0));
+/// astar.AddPoint(2, new Vect2(10, 10));
+/// astar.AddPoint(3, new Vect2(0, 10));
+/// 
+/// // Connect nodes
+/// astar.ConnectPoints(0, 1);
+/// astar.ConnectPoints(1, 2);
+/// astar.ConnectPoints(2, 3);
+/// astar.ConnectPoints(3, 0);
+/// 
+/// // Find path from node 0 to node 2
+/// var path = astar.GetPath(0, 2);
+/// 
+/// // Compute a flow field for the target
+/// var flowField = astar.ComputeFlowField(2);
+/// var direction = flowField.GetDirection(0);
+/// </code>
+/// </para>
+/// <para>
+/// <b>Performance Considerations:</b>
+/// <list type="bullet">
+///   <item><description>Pre-allocate capacity using <see cref="ReserveSpace"/> before adding many nodes</description></item>
+///   <item><description>Pathfinding is performed on-demand and does not cache results</description></item>
+///   <item><description>Flow field computation is O(N) and should be used when many agents share the same target</description></item>
+///   <item><description>Override delegates add overhead; use them sparingly for maximum performance</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe. All operations should be performed on a single thread.
+/// </para>
+/// </remarks>
 public sealed class AStar2D : IDisposable
 {
     private const float Sqrt2 = 1.4142135623730951f;
 
-    // Point storage
     private Vect2[] _positions;
     private float[] _weightScales;
     private bool[] _disabled;
@@ -110,7 +180,6 @@ public sealed class AStar2D : IDisposable
     private int _capacity;
     private int _nextAvailableId;
 
-    // Pathfinding arrays (pre-allocated)
     private float[] _gScore;
     private float[] _fScore;
     private int[] _cameFrom;
@@ -123,13 +192,23 @@ public sealed class AStar2D : IDisposable
     private int _queueHead;
     private int _queueTail;
 
-    // Default settings
+    /// <summary>
+    /// Gets or sets the default diagonal movement mode for pathfinding queries.
+    /// </summary>
     public DiagonalMode DefaultDiagonalMode { get; set; } = DiagonalMode.Always;
+
+    /// <summary>
+    /// Gets or sets the default heuristic function for pathfinding queries.
+    /// </summary>
     public Heuristic DefaultHeuristic { get; set; } = Heuristic.Octile;
+
+    /// <summary>
+    /// Gets or sets the default algorithm for pathfinding queries.
+    /// </summary>
     public PathAlgorithm DefaultAlgorithm { get; set; } = PathAlgorithm.AStar;
 
     /// <summary>
-    /// If true, enables filtering of neighbors via <see cref="FilterNeighborOverride"/>.
+    /// Gets or sets whether neighbor filtering is enabled.
     /// </summary>
     public bool NeighborFilterEnabled { get; set; }
 
@@ -139,13 +218,12 @@ public sealed class AStar2D : IDisposable
     public Func<int, int, float> ComputeCostOverride { get; set; }
 
     /// <summary>
-    /// Called when estimating the cost between a point and the path's ending point.
+    /// Called when estimating the cost between a point and the target point.
     /// </summary>
     public Func<int, int, float> EstimateCostOverride { get; set; }
 
     /// <summary>
-    /// Called when a neighbor enters processing if <see cref="NeighborFilterEnabled"/> is true.
-    /// Return true to skip the neighbor.
+    /// Called when a neighbor is being processed. Return <see langword="true"/> to skip the neighbor.
     /// </summary>
     public Func<int, int, bool> FilterNeighborOverride { get; set; }
 
@@ -170,9 +248,11 @@ public sealed class AStar2D : IDisposable
 
     /// <summary>
     /// Reserves space internally for the specified number of points.
-    /// Call this before adding many points to avoid reallocations.
     /// </summary>
     /// <param name="numNodes">The number of points to reserve space for.</param>
+    /// <remarks>
+    /// Call this method before adding many points to avoid expensive array reallocations.
+    /// </remarks>
     public void ReserveSpace(int numNodes)
     {
         if (numNodes <= _capacity)
@@ -197,7 +277,6 @@ public sealed class AStar2D : IDisposable
         Array.Resize(ref _openSetPositions, newCapacity);
         Array.Resize(ref _queue, newCapacity);
 
-        // Initialize open set positions to -1 (not in heap)
         for (int i = oldCapacity; i < newCapacity; i++)
             _openSetPositions[i] = -1;
 
@@ -205,11 +284,11 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Adds a new point at the given position with the given identifier.
+    /// Adds a new point at the given position with the specified identifier.
     /// </summary>
-    /// <param name="id">The point's ID. Must be 0 or larger.</param>
+    /// <param name="id">The point's unique identifier. Must be 0 or greater.</param>
     /// <param name="position">The point's position in 2D space.</param>
-    /// <param name="weightScale">The point's weight scale. Lower is preferred. Must be 0 or greater.</param>
+    /// <param name="weightScale">The point's weight scale. Lower values are preferred. Must be 0 or greater.</param>
     public void AddPoint(int id, Vect2 position, float weightScale = 1.0f)
     {
         if (id < 0)
@@ -235,7 +314,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Removes the point associated with the given ID.
+    /// Removes the point with the specified ID from the graph.
     /// </summary>
     /// <param name="id">The ID of the point to remove.</param>
     public void RemovePoint(int id)
@@ -243,7 +322,6 @@ public sealed class AStar2D : IDisposable
         if (id < 0 || id >= _capacity || !_hasPoint[id])
             return;
 
-        // Remove connections from neighbors
         if (_neighbors[id] != null)
         {
             foreach (var neighborId in _neighbors[id])
@@ -260,7 +338,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Clears all points and connections.
+    /// Removes all points and connections from the graph.
     /// </summary>
     public void Clear()
     {
@@ -276,13 +354,13 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns whether a point with the given ID exists.
+    /// Determines whether a point with the specified ID exists in the graph.
     /// </summary>
     public bool HasPoint(int id) =>
         id >= 0 && id < _capacity && _hasPoint[id];
 
     /// <summary>
-    /// Returns the next available point ID with no point associated to it.
+    /// Gets the next available point ID with no associated point.
     /// </summary>
     public int GetAvailablePointId()
     {
@@ -292,11 +370,11 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Creates a connection between the given points.
+    /// Creates a connection between two points.
     /// </summary>
     /// <param name="id">The first point ID.</param>
     /// <param name="toId">The second point ID.</param>
-    /// <param name="bidirectional">If true, creates a two-way connection.</param>
+    /// <param name="bidirectional">If <see langword="true"/>, creates a two-way connection.</param>
     public void ConnectPoints(int id, int toId, bool bidirectional = true)
     {
         if (!HasPoint(id) || !HasPoint(toId))
@@ -308,7 +386,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Removes a connection between the given points.
+    /// Removes a connection between two points.
     /// </summary>
     public void DisconnectPoints(int id, int toId, bool bidirectional = true)
     {
@@ -321,7 +399,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns whether there is a connection between the given points.
+    /// Determines whether two points are connected.
     /// </summary>
     public bool ArePointsConnected(int id, int toId, bool bidirectional = true)
     {
@@ -337,7 +415,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns the IDs of all points that form a connection with the given point.
+    /// Gets the IDs of all points connected to the specified point.
     /// </summary>
     public List<int> GetPointConnections(int id)
     {
@@ -347,7 +425,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns an array of all point IDs.
+    /// Gets a list of all point IDs in the graph.
     /// </summary>
     public List<int> GetPointIds()
     {
@@ -361,7 +439,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Sets the position for the point with the given ID.
+    /// Sets the position of the point with the specified ID.
     /// </summary>
     public void SetPointPosition(int id, Vect2 position)
     {
@@ -371,13 +449,13 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Gets the position of the point with the given ID.
+    /// Gets the position of the point with the specified ID.
     /// </summary>
     public Vect2 GetPointPosition(int id) =>
         HasPoint(id) ? _positions[id] : Vect2.Zero;
 
     /// <summary>
-    /// Sets the weight scale for the point with the given ID.
+    /// Sets the weight scale of the point with the specified ID.
     /// </summary>
     public void SetPointWeightScale(int id, float weightScale)
     {
@@ -389,7 +467,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Gets the weight scale of the point with the given ID.
+    /// Gets the weight scale of the point with the specified ID.
     /// </summary>
     public float GetPointWeightScale(int id) =>
         HasPoint(id) ? _weightScales[id] : 0f;
@@ -405,13 +483,13 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns whether a point is disabled for pathfinding.
+    /// Determines whether a point is disabled for pathfinding.
     /// </summary>
     public bool IsPointDisabled(int id) =>
         HasPoint(id) && _disabled[id];
 
     /// <summary>
-    /// Returns the ID of the closest point to the given position.
+    /// Gets the ID of the closest point to the specified position.
     /// </summary>
     public int GetClosestPoint(Vect2 position, bool includeDisabled = false)
     {
@@ -437,7 +515,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns the closest position to the given position that resides inside a segment between two connected points.
+    /// Gets the closest position to the specified position that lies on a segment between two connected points.
     /// </summary>
     public Vect2 GetClosestPositionInSegment(Vect2 position)
     {
@@ -471,7 +549,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns an array with the IDs of the points that form the path between the given points.
+    /// Gets the IDs of the points that form a path between the specified start and target points.
     /// </summary>
     public List<int> GetIdPath(int fromId, int toId, bool allowPartialPath = false,
         DiagonalMode? diagonalMode = null, Heuristic? heuristic = null, PathAlgorithm? algorithm = null)
@@ -494,7 +572,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Returns an array with the positions of the points that form the path between the given points.
+    /// Gets the positions of the points that form a path between the specified start and target points.
     /// </summary>
     public List<Vect2> GetPointPath(int fromId, int toId, bool allowPartialPath = false,
         DiagonalMode? diagonalMode = null, Heuristic? heuristic = null, PathAlgorithm? algorithm = null)
@@ -509,8 +587,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Convenience method that returns positions between two points.
-    /// Empty list if start == end or no path exists.
+    /// Gets the positions of the points that form a path between the specified start and target points.
     /// </summary>
     public List<Vect2> GetPath(int startId, int endId, bool allowPartialPath = false,
         DiagonalMode? diagonalMode = null, Heuristic? heuristic = null, PathAlgorithm? algorithm = null)
@@ -528,8 +605,7 @@ public sealed class AStar2D : IDisposable
     }
 
     /// <summary>
-    /// Computes a flow field from all reachable points toward the target.
-    /// Uses Dijkstra's algorithm from the target outward.
+    /// Computes a flow field for all reachable points toward the specified target.
     /// </summary>
     /// <param name="targetId">The ID of the target point.</param>
     /// <returns>A <see cref="FlowField"/> containing direction information for all reachable points.</returns>
@@ -541,7 +617,6 @@ public sealed class AStar2D : IDisposable
         var nextNode = new Dictionary<int, int>(_pointCount);
         var direction = new Dictionary<int, Vect2>(_pointCount);
 
-        // Run Dijkstra from target (reverse)
         Array.Clear(_visited, 0, _capacity);
         Array.Fill(_gScore, float.MaxValue, 0, _capacity);
         ClearOpenSet();
@@ -576,7 +651,6 @@ public sealed class AStar2D : IDisposable
             }
         }
 
-        // Build flow field from cameFrom
         for (int i = 0; i < _capacity; i++)
         {
             if (!_hasPoint[i] || !_visited[i] || i == targetId)
@@ -747,7 +821,7 @@ public sealed class AStar2D : IDisposable
                         case PathAlgorithm.GreedyBestFirst:
                             priority = EstimateCost(neighborId, toId, heur);
                             break;
-                        default: // AStar
+                        default:
                             priority = newG + EstimateCost(neighborId, toId, heur);
                             break;
                     }

@@ -1,31 +1,84 @@
+// ============================================================================
+//  DiscoverableHelper.cs
+// ============================================================================
+//  Reflection-based discovery system for locating and managing types marked
+//  with the [Discoverable] attribute across loaded assemblies.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Helpers;
 
 /// <summary>
-/// Defines how discoverable assemblies are scanned.
+/// Defines how discoverable assemblies are scanned for types.
 /// </summary>
 public enum AssemblyScanMode
 {
-    /// <summary>Scan all loaded assemblies.</summary>
+    /// <summary>
+    /// Scan all loaded assemblies without filtering.
+    /// </summary>
     All,
 
-    /// <summary>Exclude framework and Void assemblies. This is the default.</summary>
+    /// <summary>
+    /// Exclude framework and Void assemblies. This is the default mode.
+    /// </summary>
     ExcludeFramework,
 
-    /// <summary>Use a custom assembly filter provided by the developer.</summary>
+    /// <summary>
+    /// Use a custom assembly filter provided by the developer.
+    /// </summary>
     Custom,
 
-    /// <summary>Only scan assemblies explicitly added to the whitelist.</summary>
+    /// <summary>
+    /// Only scan assemblies explicitly added to the whitelist.
+    /// </summary>
     Whitelist,
 
-    /// <summary>Scan all assemblies except those explicitly added to the blacklist.</summary>
+    /// <summary>
+    /// Scan all assemblies except those explicitly added to the blacklist.
+    /// </summary>
     Blacklist
 }
 
 /// <summary>
-/// Provides reflection-based utility methods for working with types marked with the <see cref="DiscoverableAttribute"/>.
-/// This static helper is used by the Snap engine to locate and process classes tagged as <c>[Discoverable]</c>
-/// across loaded assemblies, including engine modules, scripts, and mod/plugin DLLs.
+/// Provides reflection-based discovery for types marked with the <see cref="DiscoverableAttribute"/>.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="DiscoverableHelper"/> class locates and caches types from loaded assemblies
+/// that are decorated with the <see cref="DiscoverableAttribute"/>. It supports filtering by
+/// type, name, category, and priority, and automatically handles assembly loading events.
+/// </para>
+/// <para>
+/// This system is used by the engine to discover mods, plugins, services, and other
+/// dynamically loaded components without requiring manual registration.
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Find all discoverable types implementing or inheriting from T
+/// var types = DiscoverableHelper.FindAll&lt;IMod&gt;();
+/// 
+/// // Find a specific type by name
+/// var type = DiscoverableHelper.FindSingleByName&lt;IMod&gt;("MyMod");
+/// 
+/// // Find types by category
+/// var types = DiscoverableHelper.FindManyByCategory&lt;IService&gt;("Network");
+/// 
+/// // Find by name and category
+/// var types = DiscoverableHelper.FindManyByNameAndCategory&lt;ICommand&gt;("Save", "Game");
+/// 
+/// // Invalidate caches after loading new assemblies
+/// DiscoverableHelper.InvalidateCaches();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is thread-safe and uses concurrent collections and locks for
+/// cache management.
+/// </para>
+/// </remarks>
 public static class DiscoverableHelper
 {
     private static int _loadVersion;
@@ -134,9 +187,10 @@ public static class DiscoverableHelper
         );
 
     /// <summary>
-    /// Retrieves all discoverable types implementing or inheriting T.
-    /// Uses a cache per T to avoid repeated enumeration.
+    /// Retrieves all discoverable types that implement or inherit from the specified type.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <returns>A read-only list of discoverable types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindAll<T>()
     {
         var key = typeof(T);
@@ -150,8 +204,11 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type by name; returns null otherwise.
+    /// Finds a single discoverable type by its internal name.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name of the type to find.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByName<T>(string name)
     {
         var matches = FindManyByName<T>(name);
@@ -159,14 +216,20 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Enum overload for FindSingleByName; uses the enum's string representation.
+    /// Finds a single discoverable type by its internal name using an enum.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByName<T>(Enum name)
         => FindSingleByName<T>(name.ToEnumString());
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type within the specified category.
+    /// Finds a single discoverable type by its category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The category of the type to find.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByCategory<T>(string category)
     {
         var matches = FindManyByCategory<T>(category);
@@ -174,14 +237,21 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Enum overload for FindSingleByCategory; uses the enum's string representation.
+    /// Finds a single discoverable type by its category using an enum.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The enum representing the category.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByCategory<T>(Enum category)
         => FindSingleByCategory<T>(category.ToEnumString());
 
     /// <summary>
-    /// Finds a single discoverable type whose name and category match the given values.
+    /// Finds a single discoverable type by its internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name of the type to find.</param>
+    /// <param name="category">The category of the type to find.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByNameAndCategory<T>(string name, string category)
     {
         var matches = FindManyByNameAndCategory<T>(name, category);
@@ -189,8 +259,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Finds a single discoverable type whose name and category match the given values.
+    /// Finds a single discoverable type by its internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name of the type to find.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByNameAndCategory<T>(string name, Enum category)
     {
         var matches = FindManyByNameAndCategory<T>(name, category);
@@ -198,8 +272,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Finds a single discoverable type whose name and category match the given values.
+    /// Finds a single discoverable type by its internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The category of the type to find.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByNameAndCategory<T>(Enum name, string category)
     {
         var matches = FindManyByNameAndCategory<T>(name, category);
@@ -207,8 +285,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Finds a single discoverable type whose name and category match the given enum values.
+    /// Finds a single discoverable type by its internal name and category using enums.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <returns>The matching type, or null if no match or multiple matches found.</returns>
     public static Type FindSingleByNameAndCategory<T>(Enum name, Enum category)
     {
         var matches = FindManyByNameAndCategory<T>(name, category);
@@ -216,8 +298,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type by name.
+    /// Attempts to find a single discoverable type by its internal name.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name of the type to find.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByName<T>(string name, out Type type)
     {
         type = FindSingleByName<T>(name);
@@ -225,8 +311,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Enum overload for TryFindSingleByName.
+    /// Attempts to find a single discoverable type by its internal name using an enum.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByName<T>(Enum name, out Type type)
     {
         type = FindSingleByName<T>(name);
@@ -234,8 +324,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type within the specified category.
+    /// Attempts to find a single discoverable type by its category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The category of the type to find.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByCategory<T>(string category, out Type type)
     {
         type = FindSingleByCategory<T>(category);
@@ -243,8 +337,12 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Enum overload for TryFindSingleByCategory.
+    /// Attempts to find a single discoverable type by its category using an enum.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The enum representing the category.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByCategory<T>(Enum category, out Type type)
     {
         type = FindSingleByCategory<T>(category);
@@ -252,8 +350,13 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type by name and category.
+    /// Attempts to find a single discoverable type by its internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name of the type to find.</param>
+    /// <param name="category">The category of the type to find.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByNameAndCategory<T>(string name, string category, out Type type)
     {
         type = FindSingleByNameAndCategory<T>(name, category);
@@ -261,8 +364,13 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type by name and category.
+    /// Attempts to find a single discoverable type by its internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name of the type to find.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByNameAndCategory<T>(string name, Enum category, out Type type)
     {
         type = FindSingleByNameAndCategory<T>(name, category);
@@ -270,8 +378,13 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type by name and category.
+    /// Attempts to find a single discoverable type by its internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The category of the type to find.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByNameAndCategory<T>(Enum name, string category, out Type type)
     {
         type = FindSingleByNameAndCategory<T>(name, category);
@@ -279,8 +392,13 @@ public static class DiscoverableHelper
     }
 
     /// <summary>
-    /// Attempts to find exactly one discoverable type by name and category.
+    /// Attempts to find a single discoverable type by its internal name and category using enums.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <param name="type">When this method returns, contains the matching type, or null if not found.</param>
+    /// <returns><see langword="true"/> if exactly one matching type was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryFindSingleByNameAndCategory<T>(Enum name, Enum category, out Type type)
     {
         type = FindSingleByNameAndCategory<T>(name, category);
@@ -290,6 +408,9 @@ public static class DiscoverableHelper
     /// <summary>
     /// Retrieves all discoverable types matching the specified internal name.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name to match.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByName<T>(string name) =>
         Filter<T>()
             .Where(x => string.Equals(x.Meta.InternalName, name, StringComparison.OrdinalIgnoreCase))
@@ -299,14 +420,20 @@ public static class DiscoverableHelper
             .AsReadOnly();
 
     /// <summary>
-    /// Enum overload for FindManyByName; uses the enum's string representation.
+    /// Retrieves all discoverable types matching the specified internal name using an enum.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByName<T>(Enum name) =>
         FindManyByName<T>(name.ToEnumString());
 
     /// <summary>
     /// Retrieves all discoverable types within the specified category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The category to match.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByCategory<T>(string category) =>
         Filter<T>()
             .Where(x => string.Equals(x.Meta.InternalCategory, category, StringComparison.OrdinalIgnoreCase))
@@ -316,14 +443,21 @@ public static class DiscoverableHelper
             .AsReadOnly();
 
     /// <summary>
-    /// Enum overload for FindManyByCategory; uses the enum's string representation.
+    /// Retrieves all discoverable types within the specified category using an enum.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The enum representing the category.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByCategory<T>(Enum category) =>
         FindManyByCategory<T>(category.ToEnumString());
 
     /// <summary>
-    /// Overload combining name and category filters for discoverable types.
+    /// Retrieves all discoverable types matching the specified internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name to match.</param>
+    /// <param name="category">The category to match.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByNameAndCategory<T>(string name, string category) =>
         Filter<T>()
             .Where(x =>
@@ -336,20 +470,32 @@ public static class DiscoverableHelper
             .AsReadOnly();
 
     /// <summary>
-    /// Enum overload for FindManyByNameAndCategory; uses the enum's string representations.
+    /// Retrieves all discoverable types matching the specified internal name and category using enums.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByNameAndCategory<T>(Enum name, Enum category) =>
         FindManyByNameAndCategory<T>(name.ToEnumString(), category.ToEnumString());
 
     /// <summary>
-    /// Enum overload for FindManyByNameAndCategory; uses the enum's string representations.
+    /// Retrieves all discoverable types matching the specified internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name to match.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByNameAndCategory<T>(string name, Enum category) =>
         FindManyByNameAndCategory<T>(name, category.ToEnumString());
 
     /// <summary>
-    /// Enum overload for FindManyByNameAndCategory; uses the enum's string representations.
+    /// Retrieves all discoverable types matching the specified internal name and category.
     /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The category to match.</param>
+    /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByNameAndCategory<T>(Enum name, string category) =>
         FindManyByNameAndCategory<T>(name.ToEnumString(), category);
 
@@ -357,8 +503,8 @@ public static class DiscoverableHelper
         t.GetCustomAttribute<DiscoverableAttribute>(inherit: false);
 
     /// <summary>
-    /// Invalidates all internal caches. Call this when assemblies are loaded/unloaded at runtime
-    /// (e.g., hot-reload or dynamic mod loading).
+    /// Invalidates all internal caches. Call this when assemblies are loaded or unloaded
+    /// at runtime, such as during hot-reload or dynamic mod loading.
     /// </summary>
     public static void InvalidateCaches()
     {
@@ -383,38 +529,57 @@ public sealed class LibraryModAttribute : Attribute
 }
 
 /// <summary>
-/// Marks a class as discoverable by the Snap engine's reflection-based systems.
-/// This attribute is used to identify types that should be automatically found and exposed
-/// for editor tools, debug UIs, runtime registration, scripting, and mod/plugin support.
+/// Marks a class as discoverable by the engine's reflection-based discovery system.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="DiscoverableAttribute"/> is used to identify types that should be
+/// automatically found and registered by the engine for various purposes including:
+/// <list type="bullet">
+///   <item><description>Mod and plugin loading</description></item>
+///   <item><description>Service registration</description></item>
+///   <item><description>Editor tools and debug UI</description></item>
+///   <item><description>Runtime registration systems</description></item>
+///   <item><description>Scripting and reflection-based systems</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// [Discoverable(Name = "MyMod", Category = "Gameplay", Priority = 10)]
+/// public class MyMod : IMod
+/// {
+///     // Implementation
+/// }
+/// </code>
+/// </para>
+/// </remarks>
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
 public sealed class DiscoverableAttribute : Attribute
 {
     /// <summary>
-    /// The display name or identifier for this discoverable item.  
-    /// Can be any object, but typically a string or enum value.
+    /// Gets or sets the display name or identifier for this discoverable item.
     /// </summary>
     public object Name { get; set; }
 
     /// <summary>
-    /// The category under which this discoverable item should be grouped.  
-    /// Can be any object, but typically a string or enum value.
+    /// Gets or sets the category under which this discoverable item should be grouped.
     /// </summary>
     public object Category { get; set; }
 
     /// <summary>
-    /// Ordering priority for this discoverable item within its category.  
+    /// Gets or sets the ordering priority for this discoverable item within its category.
     /// Lower numbers indicate higher priority.
     /// </summary>
     public int Priority { get; set; }
 
     /// <summary>
-    /// Indicates whether this discoverable item is enabled and should be included in searches or registrations.
+    /// Gets or sets whether this discoverable item is enabled and should be included in searches.
     /// </summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>
-    /// Developer-defined metadata associated with this discoverable item.
+    /// Gets or sets developer-defined metadata associated with this discoverable item.
     /// </summary>
     public object Metadata { get; set; }
 
@@ -431,16 +596,24 @@ public sealed class DiscoverableAttribute : Attribute
     /// <summary>
     /// Returns the metadata cast to the specified type, or default if not assignable.
     /// </summary>
+    /// <typeparam name="T">The type to cast the metadata to.</typeparam>
+    /// <returns>The metadata cast to type T, or default if not assignable.</returns>
     public T MetadataAs<T>() => Metadata is T typed ? typed : default;
 
     /// <summary>
     /// Returns the metadata cast to the specified type, or the provided default if not assignable.
     /// </summary>
+    /// <typeparam name="T">The type to cast the metadata to.</typeparam>
+    /// <param name="defaultValue">The default value to return if the metadata is not of type T.</param>
+    /// <returns>The metadata cast to type T, or the provided default.</returns>
     public T MetadataAs<T>(T defaultValue) => Metadata is T typed ? typed : defaultValue;
 
     /// <summary>
-    /// Attempts to cast metadata to the specified type.
+    /// Attempts to cast the metadata to the specified type.
     /// </summary>
+    /// <typeparam name="T">The type to cast the metadata to.</typeparam>
+    /// <param name="result">When this method returns, contains the metadata cast to type T, or default if unsuccessful.</param>
+    /// <returns><see langword="true"/> if the metadata is of type T; otherwise, <see langword="false"/>.</returns>
     public bool TryMetadataAs<T>(out T result)
     {
         if (Metadata is T typed)
@@ -456,11 +629,14 @@ public sealed class DiscoverableAttribute : Attribute
     /// <summary>
     /// Returns the name cast to the specified type, or default if not assignable.
     /// </summary>
+    /// <typeparam name="T">The type to cast the name to.</typeparam>
+    /// <returns>The name cast to type T, or default if not assignable.</returns>
     public T NameAs<T>() => Name is T typed ? typed : default;
 
     /// <summary>
     /// Returns the category cast to the specified type, or default if not assignable.
     /// </summary>
+    /// <typeparam name="T">The type to cast the category to.</typeparam>
+    /// <returns>The category cast to type T, or default if not assignable.</returns>
     public T CategoryAs<T>() => Category is T typed ? typed : default;
 }
-

@@ -1,6 +1,6 @@
 ﻿namespace Void.Packer;
 
-public static class PackConstants
+internal static class PackConstants
 {
     // Bootstrap Header (unencrypted, fixed size)
     public const int MagicOffset = 0;

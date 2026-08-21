@@ -2,7 +2,7 @@ global using System.Reflection;
 
 namespace Void.Engine.Resources;
 
-public static class EmbeddedResources
+internal static class EmbeddedResources
 {
     private static readonly Assembly _assembly = typeof(EmbeddedResources).Assembly;
     

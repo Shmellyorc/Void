@@ -1,5 +1,62 @@
+// ============================================================================
+//  FileSink.cs
+// ============================================================================
+//  Log sink that writes formatted log messages to daily rotating files
+//  with size-based rollover and automatic cleanup of old files.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
 namespace Void.Engine.Logs.Sinks;
 
+/// <summary>
+/// A log sink that writes formatted log messages to daily rotating files
+/// with size-based rollover and automatic cleanup of old files.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="FileSink"/> implements <see cref="ILogSink"/> and writes
+/// log entries to text files in the specified folder. It provides:
+/// <list type="bullet">
+///   <item><description>Daily file rotation with date-based naming</description></item>
+///   <item><description>Size-based rollover to prevent individual files from growing too large</description></item>
+///   <item><description>Automatic cleanup of old files to manage disk usage</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// Each log entry is formatted as:
+/// <c>[dd-MM-yyyy HH:mm:ss.fff] [Level] [Category] Message</c>
+/// If an exception is present, it is included on a new line after the message.
+/// </para>
+/// <para>
+/// <b>File Naming:</b>
+/// Files are named <c>log_dd-MM-yyyy.txt</c> and stored in the specified log folder.
+/// If a file exceeds the maximum size, a new file is created for the same day.
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Add a file sink with 10MB max file size and keep 10 files
+/// var fileSink = new FileSink("Logs/", 10, 10);
+/// Logger.Instance.AddSink(fileSink);
+/// 
+/// // Now all log messages will be written to files
+/// Logger.Instance.Info("Game started");
+/// Logger.Instance.Error("Failed to load texture", exception);
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is thread-safe. A lock is used to ensure that file writes
+/// from multiple threads are properly synchronized.
+/// </para>
+/// </remarks>
 public sealed class FileSink : ILogSink
 {
     private readonly string _logFolder;
@@ -10,6 +67,12 @@ public sealed class FileSink : ILogSink
     private long _currentSize;
     private readonly Lock _lock = new();
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="FileSink"/> class.
+    /// </summary>
+    /// <param name="logFolder">The folder where log files will be stored. The folder is created if it does not exist.</param>
+    /// <param name="maxFileSizeMB">The maximum size of each log file in megabytes. Default is 10.</param>
+    /// <param name="maxFiles">The maximum number of log files to keep. Default is 10.</param>
     public FileSink(string logFolder, long maxFileSizeMB = 10, int maxFiles = 10)
     {
         _logFolder = logFolder;
@@ -19,6 +82,10 @@ public sealed class FileSink : ILogSink
         CreateNewFileIfNeeded();
     }
 
+    /// <summary>
+    /// Writes a log entry to the current log file.
+    /// </summary>
+    /// <param name="entry">The log entry to write.</param>
     public void Write(LogEntry entry)
     {
         lock (_lock)
@@ -66,7 +133,7 @@ public sealed class FileSink : ILogSink
                 }
                 catch
                 {
-                    // Ignore
+                    // Ignore deletion errors to prevent logging failures
                 }
             }
         }

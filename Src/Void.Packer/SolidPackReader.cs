@@ -1,5 +1,72 @@
+// ============================================================================
+//  SolidPackReader.cs
+// ============================================================================
+//  Reader for accessing files from a SolidPack archive.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Text;
+using Void.Packer.Utils;
+
 namespace Void.Packer;
 
+/// <summary>
+/// Reader for accessing files from a SolidPack archive.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="SolidPackReader"/> class provides read-only access to files
+/// stored in a SolidPack archive. It handles decryption, decompression, and
+/// file lookup with case-sensitive or case-insensitive path matching.
+/// </para>
+/// <para>
+/// <b>Key Features:</b>
+/// <list type="bullet">
+///   <item><description>Read files by virtual path</description></item>
+///   <item><description>List all files in the pack</description></item>
+///   <item><description>Get file information (size, compression, CRC32)</description></item>
+///   <item><description>Verify pack integrity</description></item>
+///   <item><description>Case-sensitive or case-insensitive path matching</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Read a pack file
+/// byte[] packData = File.ReadAllBytes("assets.pack");
+/// 
+/// using var reader = new SolidPackReader(packData, key: null, caseSensitive: false);
+/// 
+/// // Check if a file exists
+/// if (reader.FileExists("textures/player.png"))
+/// {
+///     // Read the file
+///     byte[] data = reader.ReadFile("textures/player.png");
+/// }
+/// 
+/// // List all files
+/// foreach (var path in reader.ListFiles())
+/// {
+///     var info = reader.GetFileInfo(path);
+///     Console.WriteLine($"{path}: {info.UncompressedSize} bytes");
+/// }
+/// 
+/// // Verify integrity
+/// bool isValid = reader.VerifyIntegrity();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe.
+/// </para>
+/// </remarks>
 public sealed class SolidPackReader : IDisposable
 {
     private readonly byte[] _packData;
@@ -18,6 +85,15 @@ public sealed class SolidPackReader : IDisposable
     private readonly CompressionAlgorithm _compressionAlgorithm;
     private bool _isDisposed;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SolidPackReader"/> class.
+    /// </summary>
+    /// <param name="packData">The raw pack data.</param>
+    /// <param name="key">The optional encryption key.</param>
+    /// <param name="caseSensitive">Whether paths should be case-sensitive.</param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="packData"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the pack data is too small or encrypted without a key.</exception>
+    /// <exception cref="InvalidDataException">Thrown when the pack data is corrupted or has an invalid format.</exception>
     public SolidPackReader(byte[] packData, byte[] key = null, bool caseSensitive = false)
     {
         _packData = packData ?? throw new ArgumentNullException(nameof(packData));
@@ -52,8 +128,16 @@ public sealed class SolidPackReader : IDisposable
         }
     }
 
+    /// <summary>
+    /// Gets the number of files in the pack.
+    /// </summary>
     public ushort FileCount => _fileCount;
 
+    /// <summary>
+    /// Determines whether a file exists at the specified virtual path.
+    /// </summary>
+    /// <param name="virtualPath">The virtual path to check.</param>
+    /// <returns><see langword="true"/> if the file exists; otherwise, <see langword="false"/>.</returns>
     public bool FileExists(string virtualPath)
     {
         if (_isDisposed)
@@ -67,6 +151,12 @@ public sealed class SolidPackReader : IDisposable
         return _caseInsensitiveMap.ContainsKey(normalized);
     }
 
+    /// <summary>
+    /// Reads a file from the pack and returns its contents as a byte array.
+    /// </summary>
+    /// <param name="virtualPath">The virtual path of the file.</param>
+    /// <returns>The file contents as a byte array.</returns>
+    /// <exception cref="FileNotFoundException">Thrown when the file does not exist in the pack.</exception>
     public byte[] ReadFile(string virtualPath)
     {
         if (_isDisposed)
@@ -91,6 +181,11 @@ public sealed class SolidPackReader : IDisposable
         return ReadFileData(entry);
     }
 
+    /// <summary>
+    /// Gets information about a file in the pack.
+    /// </summary>
+    /// <param name="virtualPath">The virtual path of the file.</param>
+    /// <returns>A <see cref="FileInfo"/> object containing file metadata, or null if the file does not exist.</returns>
     public FileInfo GetFileInfo(string virtualPath)
     {
         if (_isDisposed)
@@ -122,6 +217,10 @@ public sealed class SolidPackReader : IDisposable
         };
     }
 
+    /// <summary>
+    /// Lists all virtual paths in the pack.
+    /// </summary>
+    /// <returns>An enumerable of virtual paths.</returns>
     public IEnumerable<string> ListFiles()
     {
         if (_isDisposed)
@@ -130,6 +229,10 @@ public sealed class SolidPackReader : IDisposable
         return _fileIndex.Keys;
     }
 
+    /// <summary>
+    /// Verifies the integrity of all files in the pack using CRC32 checksums.
+    /// </summary>
+    /// <returns><see langword="true"/> if all files are valid; otherwise, <see langword="false"/>.</returns>
     public bool VerifyIntegrity()
     {
         if (_isDisposed)
@@ -153,6 +256,9 @@ public sealed class SolidPackReader : IDisposable
         }
     }
 
+    /// <summary>
+    /// Disposes the reader and releases resources.
+    /// </summary>
     public void Dispose()
     {
         if (_isDisposed)
@@ -162,7 +268,7 @@ public sealed class SolidPackReader : IDisposable
     }
 
     private void ParseBootstrap(out bool encrypted, out bool headerCompressed, out uint headerEncryptedSize, out ushort fileCount,
-    out byte[] nonce, out CompressionAlgorithm algorithm)
+        out byte[] nonce, out CompressionAlgorithm algorithm)
     {
         int offset = 0;
 
@@ -194,7 +300,6 @@ public sealed class SolidPackReader : IDisposable
         Buffer.BlockCopy(_packData, offset, nonce, 0, PackConstants.NonceSize);
         offset += PackConstants.NonceSize;
 
-        // Read compression algorithm from bootstrap
         algorithm = (CompressionAlgorithm)_packData[offset];
         offset += PackConstants.AlgorithmSize;
 
@@ -214,7 +319,7 @@ public sealed class SolidPackReader : IDisposable
             (int)_headerEncryptedSize
         );
 
-        _encryptedHeaderData = encryptedHeader; // SAVE THIS
+        _encryptedHeaderData = encryptedHeader;
 
         byte[] headerData;
 
@@ -294,7 +399,7 @@ public sealed class SolidPackReader : IDisposable
             throw new InvalidDataException($"Compression algorithm mismatch: header={headerCompression}, bootstrap={_compressionAlgorithm}");
         offset += 1;
 
-        offset += PackConstants.HeaderReservedSize; // Skip reserved bytes
+        offset += PackConstants.HeaderReservedSize;
 
         offset = PackConstants.HeaderBlockFixedSize;
 
@@ -339,16 +444,13 @@ public sealed class SolidPackReader : IDisposable
 
     private byte[] ReadFileData(FileEntry entry)
     {
-        // Get the raw data section
         int dataSectionLength = _packData.Length - (int)_dataEncryptedOffset;
         byte[] dataSection = new byte[dataSectionLength];
         Buffer.BlockCopy(_packData, (int)_dataEncryptedOffset, dataSection, 0, dataSectionLength);
 
-        // Decrypt if needed
         byte[] decryptedData;
         if (_encrypted)
         {
-            // Derive data nonce from stored nonce
             byte[] dataNonce = new byte[_nonce.Length];
             Buffer.BlockCopy(_nonce, 0, dataNonce, 0, _nonce.Length);
             dataNonce[dataNonce.Length - 1] ^= 0x01;
@@ -361,7 +463,6 @@ public sealed class SolidPackReader : IDisposable
             decryptedData = dataSection;
         }
 
-        // Now read the file from decrypted data
         if (entry.OffsetInData + entry.StoredSize > decryptedData.Length)
             throw new InvalidDataException($"File data extends beyond decrypted data");
 

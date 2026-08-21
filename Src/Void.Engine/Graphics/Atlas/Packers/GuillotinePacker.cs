@@ -1,5 +1,72 @@
+// ============================================================================
+//  GuillotinePacker.cs
+// ============================================================================
+//  A texture atlas packer that uses the Guillotine packing algorithm.
+//  Selects the best free rectangle that fits the requested size,
+//  prioritizing the smallest area that can contain the texture.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Graphics.Atlas.Packers;
 
+/// <summary>
+/// A texture atlas packer that uses the Guillotine packing algorithm.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="GuillotinePacker"/> implements the Guillotine packing
+/// algorithm for texture atlases. It selects the best free rectangle that
+/// fits the requested size, prioritizing the smallest area that can contain
+/// the texture (best area fit).
+/// </para>
+/// <para>
+/// <b>How It Works:</b>
+/// <list type="number">
+///   <item><description>Maintains a list of free rectangles in the atlas</description></item>
+///   <item><description>When packing, finds the free rectangle with the smallest area that fits the texture</description></item>
+///   <item><description>Splits the chosen rectangle into remaining free space</description></item>
+///   <item><description>When freeing, merges adjacent free rectangles to reduce fragmentation</description></item>
+///   <item><description>Defragmentation repacks all textures to optimize space</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Performance Characteristics:</b>
+/// <list type="bullet">
+///   <item><description>O(n) search time where n is the number of free rectangles</description></item>
+///   <item><description>Good packing efficiency for textures of varying sizes</description></item>
+///   <item><description>Tends to create more fragmentation than Skyline algorithm</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// var packer = new GuillotinePacker(2048, 2048);
+/// 
+/// // Pack textures
+/// if (packer.TryPack(128, 128, out var rect1))
+///     // Packed at rect1.X, rect1.Y
+/// 
+/// if (packer.TryPack(256, 256, out var rect2))
+///     // Packed at rect2.X, rect2.Y
+/// 
+/// // Check fragmentation
+/// float frag = packer.Fragmentation;
+/// 
+/// // Free a texture
+/// packer.Free(rect1);
+/// 
+/// // Defrag if fragmentation is high
+/// if (packer.Fragmentation > 0.3f)
+///     packer.Defrag();
+/// </code>
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe and should be used from a single thread.
+/// </para>
+/// </remarks>
 public sealed class GuillotinePacker : IAtlasPacker
 {
     private readonly int _width, _height;
@@ -7,9 +74,28 @@ public sealed class GuillotinePacker : IAtlasPacker
     private readonly List<Rect2> _packedRects;
     private int _usedSpace;
 
+    /// <summary>
+    /// Gets the total amount of space currently used by packed rectangles.
+    /// </summary>
+    /// <value>The total area (in pixels) occupied by packed textures.</value>
     public int UsedSpace => _usedSpace;
+
+    /// <summary>
+    /// Gets the total available space in the atlas.
+    /// </summary>
+    /// <value>The total area (in pixels) of the atlas (width × height).</value>
     public int TotalSpace => _width * _height;
 
+    /// <summary>
+    /// Gets the fragmentation percentage of the atlas.
+    /// </summary>
+    /// <value>
+    /// A value between 0 and 1 representing the percentage of wasted space
+    /// due to fragmentation. Higher values indicate more wasted space.
+    /// </value>
+    /// <remarks>
+    /// Fragmentation is calculated as: <c>1 - (UsedSpace / TotalSpace)</c>
+    /// </remarks>
     public float Fragmentation
     {
         get
@@ -19,6 +105,12 @@ public sealed class GuillotinePacker : IAtlasPacker
         }
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GuillotinePacker"/> class.
+    /// </summary>
+    /// <param name="width">The width of the atlas in pixels.</param>
+    /// <param name="height">The height of the atlas in pixels.</param>
+    /// <exception cref="ArgumentException">Thrown when width or height is less than or equal to zero.</exception>
     public GuillotinePacker(int width, int height)
     {
         _width = width;
@@ -28,6 +120,29 @@ public sealed class GuillotinePacker : IAtlasPacker
         _usedSpace = 0;
     }
 
+    /// <summary>
+    /// Attempts to pack a rectangle of the specified size into the atlas.
+    /// </summary>
+    /// <param name="width">The width of the rectangle to pack.</param>
+    /// <param name="height">The height of the rectangle to pack.</param>
+    /// <param name="packedRect">
+    /// When this method returns, contains the packed position and size if successful;
+    /// otherwise, <see langword="default"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> if the rectangle was successfully packed;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <remarks>
+    /// <para>
+    /// This method uses the best area fit strategy, finding the free rectangle
+    /// with the smallest area that can accommodate the requested size.
+    /// </para>
+    /// <para>
+    /// After placing the rectangle, the remaining space is split into new
+    /// free rectangles for future packing.
+    /// </para>
+    /// </remarks>
     public bool TryPack(int width, int height, out Rect2 packedRect)
     {
         packedRect = default;
@@ -73,6 +188,20 @@ public sealed class GuillotinePacker : IAtlasPacker
         return true;
     }
 
+    /// <summary>
+    /// Frees a previously packed rectangle, making its space available for reuse.
+    /// </summary>
+    /// <param name="rect">The rectangle to free, as returned from <see cref="TryPack"/>.</param>
+    /// <remarks>
+    /// <para>
+    /// This method marks the specified rectangle as free space and then
+    /// attempts to merge it with adjacent free rectangles to reduce fragmentation.
+    /// </para>
+    /// <para>
+    /// The rectangle must match exactly the rectangle that was returned from
+    /// a previous successful call to <see cref="TryPack"/>.
+    /// </para>
+    /// </remarks>
     public void Free(Rect2 rect)
     {
         _packedRects.Remove(rect);
@@ -125,6 +254,20 @@ public sealed class GuillotinePacker : IAtlasPacker
         return false;
     }
 
+    /// <summary>
+    /// Clears all packed rectangles from the atlas.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This method resets the packer to its initial state, removing all
+    /// packed rectangles and resetting used space to zero. The entire atlas
+    /// becomes available for new textures.
+    /// </para>
+    /// <para>
+    /// This does not dispose or release any underlying GPU resources.
+    /// It only resets the packer's internal tracking state.
+    /// </para>
+    /// </remarks>
     public void Clear()
     {
         _freeRects.Clear();
@@ -133,6 +276,25 @@ public sealed class GuillotinePacker : IAtlasPacker
         _usedSpace = 0;
     }
 
+    /// <summary>
+    /// Defragments the atlas by repacking all textures in order of size.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This method sorts all packed rectangles by area (largest first) and
+    /// repacks them into a clean atlas. This consolidates free space and
+    /// reduces fragmentation.
+    /// </para>
+    /// <para>
+    /// This is an expensive operation that should be performed sparingly,
+    /// such as when <see cref="Fragmentation"/> exceeds a threshold.
+    /// </para>
+    /// <para>
+    /// After defragmentation, existing references to packed rectangles become
+    /// invalid and must be updated. The <see cref="AtlasManager"/> handles
+    /// this automatically.
+    /// </para>
+    /// </remarks>
     public void Defrag()
     {
         if (_packedRects.Count == 0) return;

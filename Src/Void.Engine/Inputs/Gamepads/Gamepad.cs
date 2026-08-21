@@ -1,11 +1,83 @@
+// ============================================================================
+//  Gamepad.cs
+// ============================================================================
+//  Provides access to gamepad input with SDL database mapping support for
+//  up to four connected gamepads.
+//
+//  Copyright (c) 2025 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Inputs.Gamepads;
 
+/// <summary>
+/// Provides access to gamepad input for up to four connected gamepads with
+/// SDL database mapping support for button and axis remapping.
+/// </summary>
+/// <remarks>
+/// <para>
+/// The <see cref="Gamepad"/> class manages gamepad input through the joystick
+/// subsystem, supporting up to four simultaneous controllers. It uses the
+/// SDL gamepad database to map hardware-specific button and axis indices to
+/// a standardized set of gamepad controls.
+/// </para>
+/// <para>
+/// <b>Key Features:</b>
+/// <list type="bullet">
+///   <item><description>Support for up to four gamepads</description></item>
+///   <item><description>SDL database mapping for button and axis remapping</description></item>
+///   <item><description>Dead zone filtering for thumbsticks and triggers</description></item>
+///   <item><description>Snapshot-based state with no live polling</description></item>
+///   <item><description>Fallback mapping for unrecognized controllers</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// // Update all gamepads once per frame
+/// Gamepad.UpdateAll();
+/// 
+/// // Get the state of the first gamepad
+/// var state = Gamepad.GetState();
+/// if (state.IsConnected)
+/// {
+///     if (state.IsButtonPressed(GamepadButton.A))
+///     {
+///         // Handle A button press
+///     }
+///     
+///     // Check stick position
+///     Vect2 leftStick = state.LeftStick;
+///     float trigger = state.LeftTrigger;
+/// }
+/// 
+/// // Get state for a specific player
+/// var playerState = Gamepad.GetState(PlayerIndex.One);
+/// </code>
+/// </para>
+/// <para>
+/// <b>Mapping System:</b>
+/// The gamepad uses a mapping database derived from SDL's gamepad mapping
+/// format. Each controller is identified by a GUID derived from its vendor
+/// and product IDs. If a mapping is found, buttons and axes are remapped to
+/// the standard <see cref="GamepadButton"/> and axis layout. If no mapping
+/// exists, a fallback mapping is used that assumes an Xbox-like layout.
+/// </para>
+/// <para>
+/// <b>Thread Safety:</b>
+/// This class is not thread-safe. All operations should be performed from
+/// the main thread.
+/// </para>
+/// </remarks>
 public static class Gamepad
 {
     private const int MaxGamepads = 4;
     private static readonly GamepadState[] _states = new GamepadState[MaxGamepads];
     private static bool _initialized;
 
+    /// <summary>
+    /// Initializes the gamepad system and loads the SDL mapping database.
+    /// </summary>
     public static void Initialize()
     {
         if (_initialized) return;
@@ -13,9 +85,21 @@ public static class Gamepad
         _initialized = true;
     }
 
+    /// <summary>
+    /// Gets the current state of the gamepad for the specified player.
+    /// </summary>
     public static GamepadState GetState(PlayerIndex player) => GetState((int)player);
+
+    /// <summary>
+    /// Updates the gamepad state for the specified player.
+    /// </summary>
     public static void Update(PlayerIndex player) => Update((int)player);
 
+    /// <summary>
+    /// Gets the current state of the gamepad at the specified index.
+    /// </summary>
+    /// <param name="index">The gamepad index (0-3).</param>
+    /// <returns>The current <see cref="GamepadState"/> for the specified gamepad.</returns>
     public static GamepadState GetState(int index = 0)
     {
         Initialize();
@@ -24,6 +108,9 @@ public static class Gamepad
         return _states[index];
     }
 
+    /// <summary>
+    /// Updates the gamepad state for the specified index.
+    /// </summary>
     public static void Update(int index)
     {
         Initialize();
@@ -31,6 +118,12 @@ public static class Gamepad
         UpdateState(index);
     }
 
+    /// <summary>
+    /// Updates the state of all connected gamepads.
+    /// </summary>
+    /// <remarks>
+    /// This method should be called once per frame to keep gamepad states current.
+    /// </remarks>
     public static void UpdateAll()
     {
         Initialize();
