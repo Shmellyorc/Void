@@ -1,6 +1,6 @@
 namespace Void.Engine.Graphics.Shaders;
 
-public static class ShaderState
+internal static class ShaderState
 {
     private static SFShader _currentShader;
 

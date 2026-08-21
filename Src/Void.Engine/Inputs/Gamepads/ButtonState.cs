@@ -37,7 +37,7 @@ namespace Void.Engine.Inputs.Gamepads;
 /// <para>
 /// <b>State Transitions:</b>
 /// For frame-by-frame input handling, use the action system's
-/// <see cref="ActionState"/> which tracks Pressed, Held, Released, and Up states.
+/// <see cref="InputActions.ActionState"/> which tracks Pressed, Held, Released, and Up states.
 /// </para>
 /// </remarks>
 public enum ButtonState

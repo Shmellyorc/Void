@@ -8,6 +8,7 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
+namespace System;
 
 /// <summary>
 /// Provides extension methods for string operations including validation,

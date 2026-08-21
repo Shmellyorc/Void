@@ -7,18 +7,15 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
-using System.Collections;
-
 namespace Void.Engine.Coroutines.Routines.Time;
 
 /// <summary>
-/// A coroutine that waits for the next frame.
+/// A coroutine yield instruction that resumes execution on the next frame.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="WaitForNextFrame"/> class pauses the coroutine execution
-/// until the next frame. This is the smallest possible delay in a coroutine.
+/// The <see cref="WaitForNextFrame"/> class is used as a yield instruction
+/// in coroutines to pause execution and resume on the next frame update.
 /// </para>
 /// <para>
 /// This is useful for:
@@ -31,12 +28,13 @@ namespace Void.Engine.Coroutines.Routines.Time;
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
+/// </para>
 /// <code>
 /// // Wait for the next frame
 /// yield return new WaitForNextFrame();
 /// 
 /// // Wait for 5 frames (repeats the wait)
-/// for (int i = 0; i < 5; i++)
+/// for (int i = 0; i &lt; 5; i++)
 ///     yield return new WaitForNextFrame();
 /// 
 /// // In a sequence
@@ -46,7 +44,6 @@ namespace Void.Engine.Coroutines.Routines.Time;
 /// );
 /// CoroutineManager.Instance.Run(sequence);
 /// </code>
-/// </para>
 /// <para>
 /// <b>Thread Safety:</b>
 /// This class is not thread-safe and should be used on the main thread.

@@ -166,6 +166,9 @@ public sealed class Sound : IAsset
         LastAccessTime = DateTime.Now;
     }
 
+    /// <summary>
+    /// Finalizer that ensures resources are cleaned up if <see cref="Dispose"/> wasn't called.
+    /// </summary>
     ~Sound()
     {
         try

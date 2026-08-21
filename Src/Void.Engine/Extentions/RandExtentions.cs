@@ -9,7 +9,7 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
+namespace System;
 
 /// <summary>
 /// Provides extension methods for <see cref="FastRandom"/> with convenient

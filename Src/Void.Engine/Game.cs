@@ -191,6 +191,9 @@ public class Game : IDisposable
         _settings.OnCrash?.Invoke(exception);
     }
 
+    /// <summary>
+    /// Finalizer that ensures resources are cleaned up if <see cref="Dispose"/> wasn't called.
+    /// </summary>
     ~Game() => Dispose();
 
     /// <summary>

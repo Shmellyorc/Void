@@ -74,7 +74,7 @@ public class PostProcessor : IDisposable
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="shader"/> is <see langword="null"/>.</exception>
     /// <remarks>
     /// <para>
-    /// The render target is allocated from the pool using <see cref="RenderTarget.Get"/>.
+    /// The render target is allocated from the pool using <see cref="RenderTarget.Get(Vect2, bool)"/>.
     /// It will be automatically returned to the pool when the post-processor is disposed.
     /// </para>
     /// </remarks>

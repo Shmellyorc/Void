@@ -117,6 +117,9 @@ public sealed class Shader : IAsset, IShader
         LastAccessTime = DateTime.Now;
     }
 
+    /// <summary>
+    /// Finalizer that ensures resources are cleaned up if <see cref="Dispose"/> wasn't called.
+    /// </summary>
     ~Shader() => Dispose();
 
     /// <summary>

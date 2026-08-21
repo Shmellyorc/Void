@@ -196,6 +196,9 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         IsValid = true;
     }
 
+    /// <summary>
+    /// Finalizer that ensures resources are cleaned up if <see cref="Dispose"/> wasn't called.
+    /// </summary>
     ~Texture() => Dispose();
 
     /// <summary>

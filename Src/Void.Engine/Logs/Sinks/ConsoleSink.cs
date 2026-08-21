@@ -55,6 +55,32 @@ public sealed class ConsoleSink : ILogSink
 {
     private readonly Lock _lock = new();
 
+    /// <summary>
+    /// Writes a log entry to the console with color-coded output.
+    /// </summary>
+    /// <param name="entry">The log entry to write.</param>
+    /// <remarks>
+    /// <para>
+    /// This method formats the log entry and writes it to the console using
+    /// the appropriate color for the log level:
+    /// <list type="bullet">
+    ///   <item><description><see cref="LogLevel.Debug"/> - Gray</description></item>
+    ///   <item><description><see cref="LogLevel.Info"/> - White</description></item>
+    ///   <item><description><see cref="LogLevel.Warning"/> - Yellow</description></item>
+    ///   <item><description><see cref="LogLevel.Error"/> - Red</description></item>
+    ///   <item><description><see cref="LogLevel.Fatal"/> - Dark Red</description></item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// The entry is formatted as: <c>[HH:mm:ss] [Level] [Category] Message</c>
+    /// If the entry contains an exception, it is written on a new line
+    /// with a red color, regardless of the log level.
+    /// </para>
+    /// <para>
+    /// This method is thread-safe and uses a lock to prevent output
+    /// from multiple threads from being interleaved.
+    /// </para>
+    /// </remarks>
     public void Write(LogEntry entry)
     {
         var line = Format(entry);

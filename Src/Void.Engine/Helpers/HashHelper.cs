@@ -28,7 +28,7 @@ namespace Void.Engine.Helpers;
 ///   <item><description>Caching for frequently accessed strings</description></item>
 ///   <item><description>Stack allocation for small strings (≤256 characters)</description></item>
 ///   <item><description>Array pool usage for large strings to minimize allocations</description></item>
-///   <item><description>Enum support via <see cref="EnumHelper.ToEnumString"/></description></item>
+///   <item><description>Enum support via <see cref="System.StringExtensions.ToEnumString(Enum)"/></description></item>
 /// </list>
 /// </para>
 /// <para>

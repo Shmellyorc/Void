@@ -8,9 +8,7 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
+namespace System;
 
 /// <summary>
 /// Provides extension methods for <see cref="Sound"/> and <see cref="SoundInstance"/>

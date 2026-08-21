@@ -112,7 +112,7 @@ public static class RenderTarget
     /// </para>
     /// <para>
     /// The target is pooled by its size and sRGB setting. Future calls to
-    /// <see cref="Get"/> with matching settings may reuse this target.
+    /// <see cref="Get(Vect2, bool)"/> with matching settings may reuse this target.
     /// </para>
     /// </remarks>
     public static void Return(IRenderTarget target)

@@ -60,6 +60,10 @@ public sealed class GameSettings
         UseApplicationData = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether the engine should use the system's application data folder.
+    /// </summary>
     public bool UseApplicationData { get; private set; }
 
     /// <summary>
@@ -73,6 +77,10 @@ public sealed class GameSettings
         AppName = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the application name.
+    /// </summary>
     public string AppName { get; private set; }
 
     /// <summary>
@@ -86,6 +94,10 @@ public sealed class GameSettings
         AppCompany = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the company name.
+    /// </summary>
     public string AppCompany { get; private set; }
 
     /// <summary>
@@ -99,6 +111,10 @@ public sealed class GameSettings
         AppTitle = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the window title.
+    /// </summary>
     public string AppTitle { get; private set; }
 
     /// <summary>
@@ -112,6 +128,10 @@ public sealed class GameSettings
         AppLogFolder = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the log folder name.
+    /// </summary>
     public string AppLogFolder { get; private set; }
 
     /// <summary>
@@ -125,6 +145,10 @@ public sealed class GameSettings
         AppSaveFolder = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the save data folder name.
+    /// </summary>
     public string AppSaveFolder { get; private set; }
 
     /// <summary>
@@ -138,6 +162,10 @@ public sealed class GameSettings
         AppConfigFolder = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the config folder name.
+    /// </summary>
     public string AppConfigFolder { get; private set; }
 
     /// <summary>
@@ -151,6 +179,10 @@ public sealed class GameSettings
         AppTempFolder = name.Trim();
         return this;
     }
+
+    /// <summary>
+    /// Gets the temp folder name.
+    /// </summary>
     public string AppTempFolder { get; private set; }
 
     /// <summary>
@@ -166,6 +198,10 @@ public sealed class GameSettings
         AppContentRoot = path;
         return this;
     }
+
+    /// <summary>
+    /// Gets the content root directory.
+    /// </summary>
     public string AppContentRoot { get; private set; }
 
     /// <summary>
@@ -179,6 +215,10 @@ public sealed class GameSettings
         AppVersion = new Version((int)major, (int)minor, (int)rebuild, (int)revision).ToString();
         return this;
     }
+
+    /// <summary>
+    /// Gets the application version.
+    /// </summary>
     public string AppVersion { get; private set; }
 
     /// <summary>
@@ -199,6 +239,10 @@ public sealed class GameSettings
         Fullscreen = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether the game should run in fullscreen mode.
+    /// </summary>
     public bool Fullscreen { get; private set; }
 
     /// <summary>
@@ -210,6 +254,10 @@ public sealed class GameSettings
         VSync = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether VSync is enabled.
+    /// </summary>
     public bool VSync { get; private set; }
 
     /// <summary>
@@ -225,6 +273,10 @@ public sealed class GameSettings
         Window = new Vect2(width, height);
         return this;
     }
+
+    /// <summary>
+    /// Gets the window resolution.
+    /// </summary>
     public Vect2 Window { get; private set; }
 
     /// <summary>
@@ -240,6 +292,10 @@ public sealed class GameSettings
         Viewport = new Vect2(width, height);
         return this;
     }
+
+    /// <summary>
+    /// Gets the internal render resolution.
+    /// </summary>
     public Vect2 Viewport { get; private set; }
 
     #endregion
@@ -255,6 +311,10 @@ public sealed class GameSettings
         IsFixedTimeStep = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether fixed timestep mode is enabled.
+    /// </summary>
     public bool IsFixedTimeStep { get; private set; }
 
     /// <summary>
@@ -280,6 +340,10 @@ public sealed class GameSettings
         TargetElapsedTime = 1f / fps;
         return this;
     }
+
+    /// <summary>
+    /// Gets the target elapsed time in seconds.
+    /// </summary>
     public float TargetElapsedTime { get; private set; }
 
     /// <summary>
@@ -293,6 +357,10 @@ public sealed class GameSettings
         MaxDeltaTime = seconds;
         return this;
     }
+
+    /// <summary>
+    /// Gets the maximum delta time in seconds.
+    /// </summary>
     public float MaxDeltaTime { get; private set; }
 
     #endregion
@@ -323,6 +391,10 @@ public sealed class GameSettings
         SetClearColor(c.R, c.G, c.B);
         return this;
     }
+
+    /// <summary>
+    /// Gets the clear color used to clear the render target each frame.
+    /// </summary>
     public Color ClearColor { get; private set; }
 
     /// <summary>
@@ -333,6 +405,10 @@ public sealed class GameSettings
         UseHalfTexelOffset = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether half-texel offset is enabled for pixel-perfect rendering.
+    /// </summary>
     public bool UseHalfTexelOffset { get; private set; }
 
     /// <summary>
@@ -346,6 +422,10 @@ public sealed class GameSettings
         SuperSample = (int)value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the supersampling factor (1-16).
+    /// </summary>
     public int SuperSample { get; private set; }
 
     /// <summary>
@@ -357,6 +437,10 @@ public sealed class GameSettings
         WindowScaleMode = mode;
         return this;
     }
+
+    /// <summary>
+    /// Gets how the viewport scales to the window.
+    /// </summary>
     public WindowScaleMode WindowScaleMode { get; private set; }
 
     #endregion
@@ -374,6 +458,10 @@ public sealed class GameSettings
         AtlasDefragThreshold = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the atlas defragmentation threshold.
+    /// </summary>
     public float AtlasDefragThreshold { get; private set; }
 
     /// <summary>
@@ -387,6 +475,10 @@ public sealed class GameSettings
         AtlasPageSize = (int)value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the atlas page size in pixels.
+    /// </summary>
     public int AtlasPageSize { get; private set; }
 
     /// <summary>
@@ -400,6 +492,10 @@ public sealed class GameSettings
         AtlasPageCount = (int)value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the number of atlas pages.
+    /// </summary>
     public int AtlasPageCount { get; private set; }
 
     /// <summary>
@@ -413,6 +509,10 @@ public sealed class GameSettings
         AtlasPacker = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the atlas packer implementation.
+    /// </summary>
     public IAtlasPacker AtlasPacker { get; private set; }
 
     #endregion
@@ -427,6 +527,10 @@ public sealed class GameSettings
         AssetEvictionMinutes = (int)minutes;
         return this;
     }
+
+    /// <summary>
+    /// Gets the asset eviction timeout in minutes.
+    /// </summary>
     public int AssetEvictionMinutes { get; private set; }
 
     #endregion
@@ -444,6 +548,10 @@ public sealed class GameSettings
         SpriteBatchCapacity = (int)value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the sprite batch capacity.
+    /// </summary>
     public int SpriteBatchCapacity { get; private set; }
 
     /// <summary>
@@ -457,6 +565,10 @@ public sealed class GameSettings
         PrimitiveBatchCapacity = (int)value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the primitive batch capacity.
+    /// </summary>
     public int PrimitiveBatchCapacity { get; private set; }
 
     /// <summary>
@@ -467,6 +579,10 @@ public sealed class GameSettings
         EnableBatchSorting = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether batch sorting is enabled.
+    /// </summary>
     public bool EnableBatchSorting { get; private set; }
 
     /// <summary>
@@ -477,6 +593,10 @@ public sealed class GameSettings
         DefaultSortMode = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the default sort mode.
+    /// </summary>
     public SortMode DefaultSortMode { get; private set; }
 
     /// <summary>
@@ -490,6 +610,10 @@ public sealed class GameSettings
         DefaultBlendMode = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the default blend mode.
+    /// </summary>
     public IBlendMode DefaultBlendMode { get; private set; }
 
     #endregion
@@ -504,6 +628,10 @@ public sealed class GameSettings
         DiscoverableScanMode = mode;
         return this;
     }
+
+    /// <summary>
+    /// Gets how assemblies are scanned for discoverable types.
+    /// </summary>
     public AssemblyScanMode DiscoverableScanMode { get; private set; }
 
     /// <summary>
@@ -517,6 +645,10 @@ public sealed class GameSettings
         DiscoverableAssemblyFilter = filter;
         return this;
     }
+
+    /// <summary>
+    /// Gets the custom assembly filter for discovery.
+    /// </summary>
     public Func<Assembly, bool> DiscoverableAssemblyFilter { get; private set; }
 
     /// <summary>
@@ -530,6 +662,10 @@ public sealed class GameSettings
         DiscoverableAssemblies.Add(assemblyName.Trim());
         return this;
     }
+
+    /// <summary>
+    /// Gets the set of assembly names to include in discovery.
+    /// </summary>
     public HashSet<string> DiscoverableAssemblies { get; } = [];
 
     /// <summary>
@@ -543,6 +679,10 @@ public sealed class GameSettings
         DiscoverableExcludedPrefixes.Add(prefix.Trim());
         return this;
     }
+
+    /// <summary>
+    /// Gets the list of namespace prefixes to exclude from discovery.
+    /// </summary>
     public List<string> DiscoverableExcludedPrefixes { get; } = [];
 
     #endregion
@@ -560,6 +700,10 @@ public sealed class GameSettings
         DeadZone = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets the gamepad dead zone value (0-1).
+    /// </summary>
     public float DeadZone { get; private set; }
 
     /// <summary>
@@ -571,6 +715,10 @@ public sealed class GameSettings
         IgnoreInputWhenUnfocused = value;
         return this;
     }
+
+    /// <summary>
+    /// Gets whether input is ignored when the window is unfocused.
+    /// </summary>
     public bool IgnoreInputWhenUnfocused { get; private set; }
 
     #endregion
@@ -586,6 +734,10 @@ public sealed class GameSettings
         LogMinLevel = level;
         return this;
     }
+
+    /// <summary>
+    /// Gets the minimum log level.
+    /// </summary>
     public LogLevel LogMinLevel { get; private set; }
 
     /// <summary>
@@ -599,6 +751,10 @@ public sealed class GameSettings
         LogMaxFileSizeMB = size;
         return this;
     }
+
+    /// <summary>
+    /// Gets the maximum log file size in megabytes.
+    /// </summary>
     public uint LogMaxFileSizeMB { get; private set; }
 
     /// <summary>
@@ -612,6 +768,10 @@ public sealed class GameSettings
         LogMaxFiles = (int)count;
         return this;
     }
+
+    /// <summary>
+    /// Gets the maximum number of log files to keep.
+    /// </summary>
     public int LogMaxFiles { get; private set; }
 
     #endregion
@@ -626,11 +786,16 @@ public sealed class GameSettings
         OnCrash = onCrash ?? throw new ArgumentNullException(nameof(onCrash));
         return this;
     }
+
+    /// <summary>
+    /// Gets the callback for unhandled exceptions.
+    /// </summary>
     public Action<Exception> OnCrash { get; private set; }
 
     #endregion
 
     #region Sound
+
     /// <summary>
     /// Sets the maximum number of concurrent audio instances allowed in the sound pool.
     /// </summary>
@@ -647,9 +812,13 @@ public sealed class GameSettings
         AudioLimit = (int)value;
         return this;
     }
-    public int AudioLimit { get; private set; }
-    #endregion
 
+    /// <summary>
+    /// Gets the maximum number of concurrent audio instances.
+    /// </summary>
+    public int AudioLimit { get; private set; }
+
+    #endregion
 
     /// <summary>
     /// Finalizes the configuration and validates all settings.

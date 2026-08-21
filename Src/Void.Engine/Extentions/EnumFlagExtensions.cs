@@ -7,7 +7,7 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
+namespace System;
 
 /// <summary>
 /// Provides extension methods for bitwise operations on flag-based enumerations.

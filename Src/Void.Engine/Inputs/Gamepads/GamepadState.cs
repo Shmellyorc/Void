@@ -19,7 +19,7 @@ using Void.Engine.Inputs.Gamepads;
 /// connection status at the moment the state was captured.
 /// </para>
 /// <para>
-/// This structure is returned by <see cref="Gamepad.GetState"/> and should
+/// This structure is returned by <see cref="Gamepad.GetState(PlayerIndex)"/> and should
 /// be used for all gamepad input queries within a frame. It is immutable
 /// and thread-safe.
 /// </para>

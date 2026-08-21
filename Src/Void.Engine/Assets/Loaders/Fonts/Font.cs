@@ -52,10 +52,32 @@ namespace Void.Engine.Assets.Loaders.Fonts;
 /// </remarks>
 public abstract class Font : IAsset
 {
+    /// <summary>
+    /// Array of glyphs for the font's character set.
+    /// </summary>
     protected Glyph[] _glyphs = Array.Empty<Glyph>();
+
+    /// <summary>
+    /// The ASCII code of the first character in the font's character set.
+    /// </summary>
+    /// <remarks>
+    /// Default is 32 (space). This determines the starting index for the glyph array.
+    /// </remarks>
     protected int _firstCharacter = 32;
+
+    /// <summary>
+    /// The total number of characters in the font's character set.
+    /// </summary>
     protected int _characterCount = 0;
+
+    /// <summary>
+    /// The texture containing all glyphs for the font.
+    /// </summary>
     protected SFTexture _texture;
+
+    /// <summary>
+    /// The image used to build the font texture.
+    /// </summary>
     protected SFImage _image;
 
     /// <summary>

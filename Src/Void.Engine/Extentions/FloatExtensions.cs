@@ -8,7 +8,7 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
+namespace System;
 
 /// <summary>
 /// Provides extension methods for floating-point operations including

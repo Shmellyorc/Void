@@ -30,7 +30,7 @@ namespace Void.Engine.Sounds;
 /// <para>
 /// <b>How It Works:</b>
 /// <list type="number">
-///   <item><description>On creation, the pool pre-allocates <see cref="_defaultMaxSounds"/> instances</description></item>
+///   <item><description>On creation, the pool pre-allocates <see cref="GameSettings.SetAudioLimit(uint)"/> instances</description></item>
 ///   <item><description>Instances are stored in an available queue and an active list</description></item>
 ///   <item><description>A background task updates all active instances at 60Hz</description></item>
 ///   <item><description>Completed or stopped instances are automatically returned to the pool</description></item>
