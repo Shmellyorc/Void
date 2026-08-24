@@ -332,6 +332,13 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     public static implicit operator SFTexture(Texture v)
     {
         v.LastAccessTime = DateTime.Now;
+
+        if (v.Type == AssetType.Normal)
+        {
+            if (v._texture == null || !v.IsValid || v._texture.IsInvalid)
+                v.Load();
+        }
+
         return v._texture;
     }
 }

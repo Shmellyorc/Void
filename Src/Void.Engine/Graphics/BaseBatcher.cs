@@ -493,8 +493,12 @@ public abstract class BaseBatcher : IBatcher
         _vertexBuffer?.Dispose();
         _vertexBuffer = null;
         _cmdCount = 0;
-        _isDisposed = true;
+
+        if (_vertexData != null)
+            Array.Clear(_vertexData, 0, _vertexData.Length);
 
         OnDispose();
+
+        _isDisposed = true;
     }
 }

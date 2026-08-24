@@ -815,6 +815,19 @@ public sealed class SpriteBatcher : BaseBatcher
 
     #endregion
 
+    /// <summary>
+    /// Disposes the batcher and releases all resources.
+    /// </summary>
+    protected override void OnDispose()
+    {
+        if (_isDisposed) return;
+
+        if (_cmds != null)
+            Array.Clear(_cmds, 0, _cmds.Length);
+
+        base.OnDispose();
+    }
+
     private sealed class DrawCommandComparer : IComparer<DrawCommand>
     {
         private SortMode _sortMode;

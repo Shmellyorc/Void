@@ -239,6 +239,12 @@ public abstract class Font : IAsset
     {
         font.LastAccessTime = DateTime.Now;
 
+        if (font.Type == AssetType.Normal)
+        {
+            if (font._texture == null || !font.IsValid || font._texture.IsInvalid)
+                font.Load();
+        }
+
         return font._texture;
     }
 }
