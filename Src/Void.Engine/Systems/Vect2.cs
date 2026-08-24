@@ -463,7 +463,7 @@ public struct Vect2 : IEquatable<Vect2>
     /// <param name="target">The target vector.</param>
     /// <param name="t">The interpolation factor between 0 and 1.</param>
     /// <returns>The smoothly interpolated vector.</returns>
-    public readonly Vect2 SmoothStep(in Vect2 target, float t)
+    public readonly Vect2 SmoothStep(Vect2 target, float t)
         => SmoothStep(this, target, t);
 
     /// <summary>
@@ -473,8 +473,33 @@ public struct Vect2 : IEquatable<Vect2>
     /// <param name="b">The ending vector.</param>
     /// <param name="t">The interpolation factor between 0 and 1.</param>
     /// <returns>The smoothly interpolated vector.</returns>
-    public static Vect2 SmoothStep(in Vect2 a, in Vect2 b, float t) => new(
+    public static Vect2 SmoothStep(Vect2 a, Vect2 b, float t) => new(
         MathHelper.SmoothStep(a.X, b.X, t), MathHelper.SmoothStep(a.Y, b.Y, t));
+    #endregion
+
+    #region Direction
+    /// <summary>
+    /// Calculates the normalized direction vector from this vector to a target vector.
+    /// </summary>
+    /// <param name="target">The target vector to point towards.</param>
+    /// <returns>A normalized direction vector pointing from this vector to the target.</returns>
+    /// <remarks>
+    /// If the distance between the vectors is zero or nearly zero, a zero vector is returned.
+    /// </remarks>
+    public readonly Vect2 Direction(Vect2 target)
+        => Normalize(target - this);
+
+    /// <summary>
+    /// Calculates the normalized direction vector from one vector to another.
+    /// </summary>
+    /// <param name="from">The starting vector.</param>
+    /// <param name="to">The ending vector.</param>
+    /// <returns>A normalized direction vector pointing from the first vector to the second.</returns>
+    /// <remarks>
+    /// If the distance between the vectors is zero or nearly zero, a zero vector is returned.
+    /// </remarks>
+    public static Vect2 Direction(in Vect2 from, in Vect2 to)
+        => Normalize(to - from);
     #endregion
 
     #region Wrap
@@ -618,7 +643,7 @@ public struct Vect2 : IEquatable<Vect2>
     /// <param name="target">The target vector.</param>
     /// <param name="t">The interpolation factor between 0 and 1.</param>
     /// <returns>The interpolated vector.</returns>
-    public readonly Vect2 Lerp(in Vect2 target, float t)
+    public readonly Vect2 Lerp(Vect2 target, float t)
         => Lerp(this, target, t);
 
     /// <summary>
@@ -628,7 +653,7 @@ public struct Vect2 : IEquatable<Vect2>
     /// <param name="b">The ending vector.</param>
     /// <param name="t">The interpolation factor between 0 and 1.</param>
     /// <returns>The interpolated vector.</returns>
-    public static Vect2 Lerp(in Vect2 a, in Vect2 b, float t)
+    public static Vect2 Lerp(Vect2 a, Vect2 b, float t)
         => new(MathHelper.Lerp(a.X, b.X, t), MathHelper.Lerp(a.Y, b.Y, t));
     #endregion
 

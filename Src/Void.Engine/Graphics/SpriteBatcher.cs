@@ -824,6 +824,13 @@ public sealed class SpriteBatcher : BaseBatcher
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(DrawCommand a, DrawCommand b)
         {
+            bool aValue = a.Texture != null && !a.Texture.IsInvalid;
+            bool bValue = b.Texture != null && !b.Texture.IsInvalid;
+
+            if (!aValue && !bValue) return 0;
+            if (!bValue) return -1;
+            if (!bValue) return 1;
+
             if (_sortMode == SortMode.BackToFront)
             {
                 if (a.Depth < b.Depth) return -1;
@@ -839,6 +846,7 @@ public sealed class SpriteBatcher : BaseBatcher
             uint texB = b.Texture.NativeHandle;
             if (texA < texB) return -1;
             if (texA > texB) return 1;
+
             return 0;
         }
 

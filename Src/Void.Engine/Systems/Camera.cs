@@ -30,6 +30,7 @@ public sealed class Camera
     internal readonly SFView _view;
 
     private Vect2 _position;
+    private Rect2 _bounds;
     private float _zoom = 1f;
 
     /// <summary>
@@ -41,7 +42,21 @@ public sealed class Camera
         set
         {
             _position = value;
+            ApplyBounds();
             _view.Center = _position;
+        }
+    }
+
+    /// <summary>
+    /// Gets or sets the camera's clamping bounds.
+    /// </summary>
+    public Rect2 Bounds
+    {
+        get => _bounds;
+        set
+        {
+            _bounds = value;
+            ApplyBounds();
         }
     }
 
@@ -103,7 +118,7 @@ public sealed class Camera
     {
         var sfPos = new SFVector2i((int)screenPos.X, (int)screenPos.Y);
         var worldPos = Game.Instance.Window._renderTexture.MapPixelToCoords(sfPos, _view);
-        
+
         return new Vect2(worldPos.X, worldPos.Y);
     }
 
@@ -124,4 +139,17 @@ public sealed class Camera
     /// Implicitly converts Camera to SFView for rendering.
     /// </summary>
     public static implicit operator SFView(Camera v) => v._view;
+
+
+
+    private void ApplyBounds()
+    {
+        if (_bounds.IsEmpty) return;
+
+        float halfWidth = ViewBounds.Width / 2f;
+        float halfHeight = ViewBounds.Height / 2f;
+
+        _position.X = Math.Clamp(_position.X, Bounds.Left + halfWidth, Bounds.Right - halfWidth);
+        _position.Y = Math.Clamp(_position.Y, Bounds.Top + halfHeight, Bounds.Bottom - halfHeight);
+    }
 }
