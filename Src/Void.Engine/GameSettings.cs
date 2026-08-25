@@ -400,6 +400,7 @@ public sealed class GameSettings
     /// <summary>
     /// Enables half-texel offset for pixel-perfect rendering. Default is false.
     /// </summary>
+    [Obsolete("No longer needed. May cause gaps in rendering. Will be removed in a future version.")]
     public GameSettings SetHalfTexelOffset(bool value)
     {
         UseHalfTexelOffset = value;
@@ -499,21 +500,33 @@ public sealed class GameSettings
     public int AtlasPageCount { get; private set; }
 
     /// <summary>
-    /// Sets the atlas packer implementation. Default is SkylinePacker.
+    /// Sets the atlas packer implementation type. Default is SkylinePacker.
     /// </summary>
-    public GameSettings SetAtlasPacker(IAtlasPacker value)
+    /// <param name="packerType">
+    /// The packer type. Must implement <see cref="IAtlasPacker"/>.
+    /// </param>
+    /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="packerType"/> is null.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="packerType"/> does not implement <see cref="IAtlasPacker"/>.
+    /// </exception>
+    public GameSettings SetAtlasPacker(Type packerType)
     {
-        if (value == null)
-            throw new ArgumentNullException(nameof(value));
+        if (packerType == null)
+            throw new ArgumentNullException(nameof(packerType));
+        if (!typeof(IAtlasPacker).IsAssignableFrom(packerType))
+            throw new ArgumentException($"Type '{packerType.Name}' must implement IAtlasPacker.", nameof(packerType));
 
-        AtlasPacker = value;
+        AtlasPacker = packerType;
         return this;
     }
 
     /// <summary>
     /// Gets the atlas packer implementation.
     /// </summary>
-    public IAtlasPacker AtlasPacker { get; private set; }
+    public Type AtlasPacker { get; private set; }
 
 
 
@@ -1006,7 +1019,8 @@ public sealed class GameSettings
         // Apply defaults
         AtlasPageSize = AtlasPageSize <= 0 ? 2048 : AtlasPageSize;
         AtlasPageCount = AtlasPageCount <= 0 ? 4 : AtlasPageCount;
-        AtlasPacker ??= new SkylinePacker(AtlasPageSize, AtlasPageSize);
+        // AtlasPacker ??= new SkylinePacker(AtlasPageSize, AtlasPageSize);
+        AtlasPacker ??= typeof(SkylinePacker);
         AppTitle = AppTitle.IsEmpty() ? "Game" : AppTitle;
         Window = Window.IsZero ? new Vect2(1280, 720) : Window;
         Viewport = Viewport.IsZero ? new Vect2(320, 180) : Viewport;

@@ -142,7 +142,7 @@ public sealed class AtlasManager
         for (int i = 0; i < _pageCount; i++)
         {
             var pagePacker = settings.AtlasPacker != null
-                ? (IAtlasPacker)Activator.CreateInstance(settings.AtlasPacker.GetType(), [_pageSize, _pageSize])
+                ? (IAtlasPacker)Activator.CreateInstance(settings.AtlasPacker, [_pageSize, _pageSize])
                 : new SkylinePacker(_pageSize, _pageSize);
 
             _pages.Add(new AtlasPage(_pageSize, _pageSize, pagePacker));
