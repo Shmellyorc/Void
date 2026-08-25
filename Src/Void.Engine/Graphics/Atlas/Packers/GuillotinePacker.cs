@@ -59,7 +59,10 @@ namespace Void.Engine.Graphics.Atlas.Packers;
 /// 
 /// // Defrag if fragmentation is high
 /// if (packer.Fragmentation > 0.3f)
-///     packer.Defrag();
+/// {
+///     var moves = packer.Defrag();
+///     // moves contains (oldRect, newRect) pairs for relocated textures
+/// }
 /// </code>
 /// </para>
 /// <para>
@@ -113,6 +116,11 @@ public sealed class GuillotinePacker : IAtlasPacker
     /// <exception cref="ArgumentException">Thrown when width or height is less than or equal to zero.</exception>
     public GuillotinePacker(int width, int height)
     {
+        if (width <= 0)
+            throw new ArgumentException("Width must be greater than zero.", nameof(width));
+        if (height <= 0)
+            throw new ArgumentException("Height must be greater than zero.", nameof(height));
+
         _width = width;
         _height = height;
         _freeRects = new List<Rect2> { new(0, 0, width, height) };
@@ -146,6 +154,9 @@ public sealed class GuillotinePacker : IAtlasPacker
     public bool TryPack(int width, int height, out Rect2 packedRect)
     {
         packedRect = default;
+
+        if (width <= 0 || height <= 0)
+            return false;
 
         if (width > _width || height > _height)
             return false;
@@ -181,7 +192,7 @@ public sealed class GuillotinePacker : IAtlasPacker
         float remainingHeight = freeRect.Height - height;
 
         if (remainingWidth > 0)
-            _freeRects.Add(new Rect2(freeRect.Left + width, freeRect.Top, remainingHeight, height));
+            _freeRects.Add(new Rect2(freeRect.Left + width, freeRect.Top, remainingWidth, height));
         if (remainingHeight > 0)
             _freeRects.Add(new Rect2(freeRect.Left, freeRect.Top + height, freeRect.Width, remainingHeight));
 
@@ -204,6 +215,9 @@ public sealed class GuillotinePacker : IAtlasPacker
     /// </remarks>
     public void Free(Rect2 rect)
     {
+        if (!_packedRects.Contains(rect))
+            return;
+
         _packedRects.Remove(rect);
         _freeRects.Add(rect);
         _usedSpace -= (int)(rect.Width * rect.Height);
@@ -279,11 +293,21 @@ public sealed class GuillotinePacker : IAtlasPacker
     /// <summary>
     /// Defragments the atlas by repacking all textures in order of size.
     /// </summary>
+    /// <returns>
+    /// A list of moves, where each item contains the old rectangle and the
+    /// new rectangle for textures that were relocated during defragmentation.
+    /// Rectangles that did not move are not included in the list.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// This method sorts all packed rectangles by area (largest first) and
     /// repacks them into a clean atlas. This consolidates free space and
     /// reduces fragmentation.
+    /// </para>
+    /// <para>
+    /// The returned move list is essential for the <see cref="AtlasManager"/> to
+    /// physically move texture data on the render texture. Without this, the
+    /// atlas texture will contain stale pixel data at old positions.
     /// </para>
     /// <para>
     /// This is an expensive operation that should be performed sparingly,
@@ -295,9 +319,12 @@ public sealed class GuillotinePacker : IAtlasPacker
     /// this automatically.
     /// </para>
     /// </remarks>
-    public void Defrag()
+    public List<(Rect2 OldRect, Rect2 NewRect)> Defrag()
     {
-        if (_packedRects.Count == 0) return;
+        var moves = new List<(Rect2 OldRect, Rect2 NewRect)>();
+
+        if (_packedRects.Count == 0)
+            return moves;
 
         var sorted = _packedRects.OrderByDescending(r => r.Width * r.Height).ToList();
 
@@ -306,15 +333,29 @@ public sealed class GuillotinePacker : IAtlasPacker
         _usedSpace = 0;
 
         var newRects = new List<Rect2>();
-        foreach (var rect in sorted)
+        foreach (var oldRect in sorted)
         {
-            if (TryPack((int)rect.Width, (int)rect.Height, out var newRect))
+            if (TryPack((int)oldRect.Width, (int)oldRect.Height, out var newRect))
             {
+                if (oldRect != newRect)
+                {
+                    moves.Add((oldRect, newRect));
+                }
                 newRects.Add(newRect);
+            }
+            else
+            {
+                newRects.Add(oldRect);
+                _usedSpace += (int)(oldRect.Width * oldRect.Height);
+                _freeRects.Add(oldRect);
+                
+                MergeFreeRects();
             }
         }
 
         _packedRects.Clear();
         _packedRects.AddRange(newRects);
+
+        return moves;
     }
 }

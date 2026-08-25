@@ -94,7 +94,7 @@ public sealed class Spritesheet : IAsset
     /// <summary>
     /// Gets the last access time of the spritesheet for eviction tracking.
     /// </summary>
-    public DateTime LastAccessTime { get; private set; }
+    public ushort LastAccessTick { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Spritesheet"/> class.
@@ -108,7 +108,6 @@ public sealed class Spritesheet : IAsset
         Data = data;
         Tag = tag;
         Type = AssetType.Normal;
-        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -118,7 +117,6 @@ public sealed class Spritesheet : IAsset
     {
         if (IsValid)
         {
-            LastAccessTime = DateTime.Now;
             return;
         }
 
@@ -185,7 +183,6 @@ public sealed class Spritesheet : IAsset
             }
         }
 
-        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -242,7 +239,7 @@ public sealed class Spritesheet : IAsset
         if (value.Bounds.IsEmpty)
             throw new InvalidOperationException("Bounds is empty");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
 
         return value.Bounds;
     }
@@ -306,7 +303,7 @@ public sealed class Spritesheet : IAsset
         if (value.Patch.IsEmpty)
             throw new InvalidOperationException("Patch is empty");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
 
         return value.Patch;
     }
@@ -370,7 +367,7 @@ public sealed class Spritesheet : IAsset
         if (value.Pivot.IsZero)
             throw new InvalidOperationException("Pivot is empty");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
 
         return value.Pivot;
     }

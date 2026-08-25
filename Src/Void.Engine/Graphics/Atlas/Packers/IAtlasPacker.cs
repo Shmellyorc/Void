@@ -44,7 +44,10 @@ namespace Void.Engine.Graphics.Atlas;
 /// // Check fragmentation
 /// float frag = packer.Fragmentation;
 /// if (frag > 0.3f) // 30% wasted space
-///     packer.Defrag();
+/// {
+///     var moves = packer.Defrag();
+///     // Update texture data based on moves
+/// }
 /// 
 /// // Free a texture when no longer needed
 /// packer.Free(packedRect);
@@ -98,11 +101,22 @@ public interface IAtlasPacker
     /// <summary>
     /// Defragments the atlas to reduce fragmentation and recover wasted space.
     /// </summary>
+    /// <returns>
+    /// A list of moves, where each item contains the old rectangle and the
+    /// new rectangle for textures that were relocated during defragmentation.
+    /// Rectangles that did not move are not included in the list.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// Over time, packing and freeing textures can leave fragmented free space
     /// that cannot be used for larger textures. Defragmentation rearranges
     /// packed textures to consolidate free space into larger contiguous blocks.
+    /// </para>
+    /// <para>
+    /// The returned move list is essential for atlas managers to physically
+    /// copy texture data from old positions to new positions on the render
+    /// texture. Without this, the atlas texture will contain stale pixel data
+    /// at the old positions, causing visual artifacts.
     /// </para>
     /// <para>
     /// Defragmentation is typically an expensive operation that should be
@@ -115,7 +129,7 @@ public interface IAtlasPacker
     /// this automatically.
     /// </para>
     /// </remarks>
-    void Defrag();
+    List<(Rect2 OldRect, Rect2 NewRect)> Defrag();
 
     /// <summary>
     /// Frees a previously packed rectangle, making its space available for reuse.

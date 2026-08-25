@@ -58,7 +58,10 @@ namespace Void.Engine.Graphics.Atlas.Packers;
 /// 
 /// // Defrag if fragmentation is high
 /// if (packer.Fragmentation > 0.3f)
-///     packer.Defrag();
+/// {
+///     var moves = packer.Defrag();
+///     // moves contains (oldRect, newRect) pairs for relocated textures
+/// }
 /// </code>
 /// </para>
 /// <para>
@@ -120,6 +123,11 @@ public sealed class SkylinePacker : IAtlasPacker
     /// <exception cref="ArgumentException">Thrown when width or height is less than or equal to zero.</exception>
     public SkylinePacker(int width, int height)
     {
+        if (width <= 0)
+            throw new ArgumentException("Width must be greater than zero.", nameof(width));
+        if (height <= 0)
+            throw new ArgumentException("Height must be greater than zero.", nameof(height));
+
         _width = width;
         _height = height;
         _skyline = new List<SkylineNode> { new() { X = 0, Y = 0, Width = width } };
@@ -155,56 +163,56 @@ public sealed class SkylinePacker : IAtlasPacker
     {
         packedRect = default;
 
+        if (width <= 0 || height <= 0)
+            return false;
+
         if (width > _width || height > _height)
             return false;
 
         int bestIndex = -1;
         int bestY = int.MaxValue;
-        int bestWidth = int.MaxValue;
+        int bestX = int.MaxValue;
 
         for (int i = 0; i < _skyline.Count; i++)
         {
-            int y = _skyline[i].Y;
-
             int currentX = _skyline[i].X;
-            int currnetWidth = 0;
-            int maxHeight = 0;
+            int currentWidth = 0;
+            int maxY = 0;  // Start at 0, not _skyline[i].Y
 
             for (int j = i; j < _skyline.Count; j++)
             {
-                if (currentX + currnetWidth + width > _width)
-                    break;
+                if (_skyline[j].Y > maxY)
+                    maxY = _skyline[j].Y;
 
-                currnetWidth += _skyline[j].Width;
-                if (_skyline[j].Y > maxHeight)
-                    maxHeight = _skyline[j].Y;
+                currentWidth += _skyline[j].Width;
 
-                if (currnetWidth >= width)
-                    break;
-            }
-
-            if (currnetWidth >= width && y + height <= _height)
-            {
-                if (y < bestY || (y == bestY && currentX < bestWidth))
+                if (currentWidth >= width)
                 {
-                    bestY = y;
-                    bestIndex = i;
-                    bestWidth = currnetWidth;
+                    if (maxY + height <= _height)
+                    {
+                        if (maxY < bestY || (maxY == bestY && currentX < bestX))
+                        {
+                            bestY = maxY;
+                            bestX = currentX;
+                            bestIndex = i;
+                        }
+                    }
+                    break;
                 }
+
+                if (currentX + currentWidth >= _width)
+                    break;
             }
         }
 
         if (bestIndex == -1)
             return false;
 
-        int packX = _skyline[bestIndex].X;
-        int packY = _skyline[bestIndex].Y;
-
-        packedRect = new Rect2(packX, packY, width, height);
+        packedRect = new Rect2(bestX, bestY, width, height);
         _usedSpace += width * height;
         _packedRects.Add(packedRect);
 
-        UpdateSkyline(bestIndex, packX, packY, width, height);
+        UpdateSkyline(bestIndex, bestX, bestY, width, height);
 
         return true;
     }
@@ -225,6 +233,9 @@ public sealed class SkylinePacker : IAtlasPacker
     /// </remarks>
     public void Free(Rect2 rect)
     {
+        if (!_packedRects.Contains(rect))
+            return;
+
         _packedRects.Remove(rect);
         _usedSpace -= (int)(rect.Width * rect.Height);
         if (_usedSpace < 0) _usedSpace = 0;
@@ -232,40 +243,45 @@ public sealed class SkylinePacker : IAtlasPacker
         InsertFreeSpace(rect);
     }
 
+    /// <summary>
+    /// Inserts freed space back into the skyline, lowering the skyline at the freed rectangle's position.
+    /// </summary>
+    /// <param name="rect">The rectangle being freed.</param>
     private void InsertFreeSpace(Rect2 rect)
     {
         int insertX = (int)rect.X;
         int insertY = (int)rect.Y;
         int insertWidth = (int)rect.Width;
+        int insertEndX = insertX + insertWidth;
 
+        // Find nodes that overlap with the freed rectangle and lower them
         for (int i = 0; i < _skyline.Count; i++)
         {
             var node = _skyline[i];
-            if (node.X <= insertX && node.X + node.Width >= insertX + insertWidth)
+            int nodeEndX = node.X + node.Width;
+
+            // Check if this node overlaps with the freed rectangle
+            if (nodeEndX > insertX && node.X < insertEndX)
             {
-                if (node.X < insertX)
+                // Lower the overlapping portion to the freed rectangle's Y
+                if (node.Y > insertY)
                 {
-                    _skyline.Insert(i, new SkylineNode { X = node.X, Y = node.Y, Width = insertX - node.X });
-                    i++;
+                    _skyline[i] = new SkylineNode
+                    {
+                        X = node.X,
+                        Y = insertY,
+                        Width = node.Width
+                    };
                 }
-
-                _skyline.Insert(i, new SkylineNode { X = insertX, Y = insertY, Width = insertWidth });
-                i++;
-
-                int remainingX = insertX + insertWidth;
-                if (remainingX < node.X + node.Width)
-                {
-                    _skyline.Insert(i, new SkylineNode { X = remainingX, Y = node.Y, Width = node.X + node.Width - remainingX });
-                }
-
-                _skyline.RemoveAt(i);
-                break;
             }
         }
 
         MergeSkylineNodes();
     }
 
+    /// <summary>
+    /// Merges adjacent skyline nodes that have the same Y position.
+    /// </summary>
     private void MergeSkylineNodes()
     {
         for (int i = 0; i < _skyline.Count - 1; i++)
@@ -309,11 +325,21 @@ public sealed class SkylinePacker : IAtlasPacker
     /// <summary>
     /// Defragments the atlas by repacking all textures in order of position.
     /// </summary>
+    /// <returns>
+    /// A list of moves, where each item contains the old rectangle and the
+    /// new rectangle for textures that were relocated during defragmentation.
+    /// Rectangles that did not move are not included in the list.
+    /// </returns>
     /// <remarks>
     /// <para>
     /// This method sorts all packed rectangles by their Y position (top to bottom)
     /// and then by X position (left to right), and repacks them into a clean atlas.
     /// This consolidates free space and reduces fragmentation.
+    /// </para>
+    /// <para>
+    /// The returned move list is essential for the <see cref="AtlasManager"/> to
+    /// physically move texture data on the render texture. Without this, the
+    /// atlas texture will contain stale pixel data at old positions.
     /// </para>
     /// <para>
     /// This is an expensive operation that should be performed sparingly,
@@ -325,9 +351,12 @@ public sealed class SkylinePacker : IAtlasPacker
     /// this automatically.
     /// </para>
     /// </remarks>
-    public void Defrag()
+    public List<(Rect2 OldRect, Rect2 NewRect)> Defrag()
     {
-        if (_packedRects.Count == 0) return;
+        var moves = new List<(Rect2 OldRect, Rect2 NewRect)>();
+
+        if (_packedRects.Count == 0)
+            return moves;
 
         var sorted = _packedRects.OrderBy(r => r.Top).ThenBy(r => r.Left).ToList();
 
@@ -336,44 +365,133 @@ public sealed class SkylinePacker : IAtlasPacker
         _usedSpace = 0;
 
         var newRects = new List<Rect2>();
-        foreach (var rect in sorted)
+        foreach (var oldRect in sorted)
         {
-            if (TryPack((int)rect.Width, (int)rect.Height, out var newRect))
+            if (TryPack((int)oldRect.Width, (int)oldRect.Height, out var newRect))
             {
+                if (oldRect != newRect)
+                {
+                    moves.Add((oldRect, newRect));
+                }
                 newRects.Add(newRect);
+            }
+            else
+            {
+                newRects.Add(oldRect);
+                _usedSpace += (int)(oldRect.Width * oldRect.Height);
+                InsertFreeSpace(oldRect);
             }
         }
 
         _packedRects.Clear();
         _packedRects.AddRange(newRects);
+
+        return moves;
     }
 
+    /// <summary>
+    /// Updates the skyline after placing a new rectangle at the specified position.
+    /// </summary>
+    /// <param name="index">The index of the skyline node where packing started.</param>
+    /// <param name="x">The X position of the packed rectangle.</param>
+    /// <param name="y">The Y position of the packed rectangle.</param>
+    /// <param name="width">The width of the packed rectangle.</param>
+    /// <param name="height">The height of the packed rectangle.</param>
+    /// <remarks>
+    /// <para>
+    /// This method raises the skyline to the top of the newly packed rectangle
+    /// for the span of X coordinates that the rectangle occupies.
+    /// </para>
+    /// <para>
+    /// The skyline is represented as a list of nodes where each node has an X position,
+    /// a Y position (the top of occupied space), and a width. After packing a rectangle,
+    /// the skyline must be raised to at least the bottom of the new rectangle for the
+    /// X span it occupies.
+    /// </para>
+    /// </remarks>
     private void UpdateSkyline(int index, int x, int y, int width, int height)
     {
-        var newNode = new SkylineNode { X = x, Y = y + height, Width = width };
+        int newY = y + height;
+        int endX = x + width;
 
-        var existing = _skyline[index];
-        if (existing.Width > width)
-        {
-            _skyline[index] = new SkylineNode { X = x + width, Y = existing.Y, Width = existing.Width - width };
-            _skyline.Insert(index, newNode);
-        }
-        else
-            _skyline[index] = newNode;
+        // Collect all nodes that overlap with the rectangle
+        var overlappingNodes = new List<(int Index, SkylineNode Node)>();
+        int currentIndex = 0;
 
-        for (int i = 0; i < _skyline.Count - 1; i++)
+        // Find all nodes that overlap with [x, endX)
+        while (currentIndex < _skyline.Count)
         {
-            if (_skyline[i].Y == _skyline[i + 1].Y)
+            var node = _skyline[currentIndex];
+            int nodeEndX = node.X + node.Width;
+
+            if (nodeEndX > x && node.X < endX)
             {
-                _skyline[i] = new SkylineNode
+                overlappingNodes.Add((currentIndex, node));
+            }
+            else if (node.X >= endX)
+            {
+                break; // Past the rectangle, stop searching
+            }
+            currentIndex++;
+        }
+
+        if (overlappingNodes.Count == 0)
+            return;
+
+        // Remove all overlapping nodes from the skyline
+        for (int i = overlappingNodes.Count - 1; i >= 0; i--)
+        {
+            _skyline.RemoveAt(overlappingNodes[i].Index);
+        }
+
+        // Create new nodes for the parts not covered by the rectangle
+        var newNodes = new List<SkylineNode>();
+
+        foreach (var (_, node) in overlappingNodes)
+        {
+            int nodeEndX = node.X + node.Width;
+
+            // Left part (before rectangle) - keeps old Y
+            if (node.X < x)
+            {
+                int leftWidth = x - node.X;
+                newNodes.Add(new SkylineNode
                 {
-                    X = _skyline[i].X,
-                    Y = _skyline[i].Y,
-                    Width = _skyline[i].Width + _skyline[i + 1].Width
-                };
-                _skyline.RemoveAt(i + 1);
-                i--;
+                    X = node.X,
+                    Y = node.Y,
+                    Width = leftWidth
+                });
+            }
+
+            // Right part (after rectangle) - keeps old Y
+            if (nodeEndX > endX)
+            {
+                int rightWidth = nodeEndX - endX;
+                newNodes.Add(new SkylineNode
+                {
+                    X = endX,
+                    Y = node.Y,
+                    Width = rightWidth
+                });
             }
         }
+
+        // Add the raised part for the rectangle span
+        newNodes.Add(new SkylineNode
+        {
+            X = x,
+            Y = newY,
+            Width = width
+        });
+
+        // Sort new nodes by X position
+        newNodes.Sort((a, b) => a.X.CompareTo(b.X));
+
+        // Insert new nodes back into the skyline
+        int insertIndex = overlappingNodes.Count > 0 ? overlappingNodes[0].Index : _skyline.Count;
+        _skyline.InsertRange(insertIndex, newNodes);
+
+        // Merge adjacent nodes with same Y
+        MergeSkylineNodes();
     }
 }

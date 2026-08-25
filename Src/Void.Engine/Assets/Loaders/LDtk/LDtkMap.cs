@@ -99,7 +99,7 @@ public sealed class LDtkMap : IAsset
     /// <summary>
     /// Gets the last access time of the map for eviction tracking.
     /// </summary>
-    public DateTime LastAccessTime { get; private set; }
+    public ushort LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the raw map data bytes.
@@ -117,7 +117,6 @@ public sealed class LDtkMap : IAsset
         Data = data;
         Tag = filename;
         Type = AssetType.Normal;
-        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -127,14 +126,12 @@ public sealed class LDtkMap : IAsset
     {
         if (IsValid)
         {
-            LastAccessTime = DateTime.Now;
             return;
         }
 
         if (_levelCacheById.Count > 0)
         {
             IsValid = true;
-            LastAccessTime = DateTime.Now;
             return;
         }
 
@@ -179,16 +176,12 @@ public sealed class LDtkMap : IAsset
         }
 
         IsValid = true;
-        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
     /// Unloads the map data from memory while keeping the caches for fast reloading.
     /// </summary>
-    public void Unload()
-    {
-        IsValid = false;
-    }
+    public void Unload() => IsValid = false;
 
     /// <summary>
     /// Disposes the map and clears all cached data.
@@ -223,7 +216,7 @@ public sealed class LDtkMap : IAsset
         if (!_entityCacheById.TryGetValue(hash, out var entity))
             throw new KeyNotFoundException($"Unable to find an entity with the id '{id}'.");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
         return entity;
     }
 
@@ -244,7 +237,7 @@ public sealed class LDtkMap : IAsset
         var hash = HashHelper.Cache64(id);
         if (_entityCacheById.TryGetValue(hash, out value))
         {
-            LastAccessTime = DateTime.Now;
+            AssetManager.Instance.Touch(this);
             return true;
         }
 
@@ -269,7 +262,7 @@ public sealed class LDtkMap : IAsset
         if (!_layerCacheById.TryGetValue(HashHelper.Cache32(id), out var layer))
             throw new KeyNotFoundException($"Unable to find a layer with the id '{id}'.");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
         return layer;
     }
 
@@ -289,7 +282,7 @@ public sealed class LDtkMap : IAsset
 
         if (_layerCacheById.TryGetValue(HashHelper.Cache32(id), out value))
         {
-            LastAccessTime = DateTime.Now;
+            AssetManager.Instance.Touch(this);
             return true;
         }
 
@@ -315,7 +308,7 @@ public sealed class LDtkMap : IAsset
         if (!_levelCacheById.TryGetValue(hash, out var level))
             throw new KeyNotFoundException($"Unable to find a level with the id '{id}'.");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
         return level;
     }
 
@@ -336,7 +329,7 @@ public sealed class LDtkMap : IAsset
         var hash = HashHelper.Cache32(id);
         if (_levelCacheById.TryGetValue(hash, out level))
         {
-            LastAccessTime = DateTime.Now;
+            AssetManager.Instance.Touch(this);
             return true;
         }
 
@@ -359,7 +352,7 @@ public sealed class LDtkMap : IAsset
         if (!_levelCacheByName.TryGetValue(hash, out var level))
             throw new KeyNotFoundException($"Unable to find a level with the name '{name}'.");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
         return level;
     }
 
@@ -380,7 +373,7 @@ public sealed class LDtkMap : IAsset
         var hash = HashHelper.Cache32(name);
         if (_levelCacheByName.TryGetValue(hash, out level))
         {
-            LastAccessTime = DateTime.Now;
+            AssetManager.Instance.Touch(this);
             return true;
         }
 
@@ -402,7 +395,7 @@ public sealed class LDtkMap : IAsset
         if (!_tilesetCacheById.TryGetValue(id, out var tileset))
             throw new KeyNotFoundException($"Unable to find a tileset with the id '{id}'.");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
         return tileset;
     }
 
@@ -416,7 +409,7 @@ public sealed class LDtkMap : IAsset
     {
         if (_tilesetCacheById.TryGetValue(id, out value))
         {
-            LastAccessTime = DateTime.Now;
+            AssetManager.Instance.Touch(this);
             return true;
         }
 
@@ -439,7 +432,7 @@ public sealed class LDtkMap : IAsset
         if (!_tilesetCacheByName.TryGetValue(hash, out var tileset))
             throw new KeyNotFoundException($"Unable to find a tileset with the name '{name}'.");
 
-        LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(this);
         return tileset;
     }
 
@@ -460,7 +453,7 @@ public sealed class LDtkMap : IAsset
         var hash = HashHelper.Cache32(name);
         if (_tilesetCacheByName.TryGetValue(hash, out value))
         {
-            LastAccessTime = DateTime.Now;
+            AssetManager.Instance.Touch(this);
             return true;
         }
 

@@ -91,7 +91,7 @@ public sealed class Shader : IAsset, IShader
     /// <summary>
     /// Gets the last access time of the shader asset for eviction tracking.
     /// </summary>
-    public DateTime LastAccessTime { get; private set; }
+    public ushort LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the underlying shader program.
@@ -114,7 +114,6 @@ public sealed class Shader : IAsset, IShader
         Id = id;
         Data = data;
         Tag = tag;
-        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -133,7 +132,6 @@ public sealed class Shader : IAsset, IShader
     {
         if (IsValid)
         {
-            LastAccessTime = DateTime.Now;
             return;
         }
 
@@ -141,7 +139,6 @@ public sealed class Shader : IAsset, IShader
             (_vertexSource, _fragmentSource) = ParseShader(Encoding.UTF8.GetString(Data));
 
         _program = new ShaderProgram(_vertexSource, _fragmentSource);
-        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -266,7 +263,8 @@ public sealed class Shader : IAsset, IShader
         if (asset == null || !asset.IsValid || asset._program == null)
             return null;
 
-        asset.LastAccessTime = DateTime.Now;
+        // asset.LastAccessTime = DateTime.Now;
+        AssetManager.Instance.Touch(asset);
 
         return asset._program.SFShader;
     }

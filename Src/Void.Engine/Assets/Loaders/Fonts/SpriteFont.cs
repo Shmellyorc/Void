@@ -133,7 +133,6 @@ public sealed class SpriteFont : Font, IAsset
         _charset = charset ?? CharsetFull;
         LineSpacing = lineSpacing;
         Spacing = spacing;
-        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -143,7 +142,6 @@ public sealed class SpriteFont : Font, IAsset
     {
         if (IsValid)
         {
-            LastAccessTime = DateTime.Now;
             return;
         }
 
@@ -157,7 +155,6 @@ public sealed class SpriteFont : Font, IAsset
             _characterCount = _glyphs.Length;
         }
 
-        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 

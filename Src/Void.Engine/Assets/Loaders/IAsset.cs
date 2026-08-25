@@ -51,7 +51,7 @@ public enum AssetType
 ///   <item><description>Tag for identification and logging</description></item>
 ///   <item><description>Raw data storage for reloading</description></item>
 ///   <item><description>Load/Unload lifecycle management</description></item>
-///   <item><description>Last access time for LRU eviction</description></item>
+///   <item><description>Access tick for LRU eviction</description></item>
 ///   <item><description>Asset type classification</description></item>
 /// </list>
 /// </para>
@@ -60,7 +60,7 @@ public enum AssetType
 /// <list type="number">
 ///   <item><description>Asset is created with raw data and tag</description></item>
 ///   <item><description><see cref="Load"/> is called to create the underlying resource</description></item>
-///   <item><description>Asset is used and last access time is updated</description></item>
+///   <item><description>Asset is used and access tick is updated</description></item>
 ///   <item><description>Asset may be <see cref="Unload"/>ed to free resources</description></item>
 ///   <item><description>Asset can be reloaded if accessed again</description></item>
 ///   <item><description>Asset is <see cref="IDisposable.Dispose"/>d when no longer needed</description></item>
@@ -77,7 +77,7 @@ public enum AssetType
 ///     public byte[] Data { get; }
 ///     public bool IsValid { get; private set; }
 ///     public AssetType Type => AssetType.Normal;
-///     public DateTime LastAccessTime { get; private set; }
+///     public ushort LastAccessTick { get; set; }
 /// 
 ///     public CustomAsset(uint id, byte[] data, string tag)
 ///     {
@@ -90,7 +90,6 @@ public enum AssetType
 ///     {
 ///         // Create underlying resource from Data
 ///         IsValid = true;
-///         LastAccessTime = DateTime.Now;
 ///     }
 /// 
 ///     public void Unload()
@@ -140,9 +139,23 @@ public interface IAsset : IDisposable
     AssetType Type { get; }
 
     /// <summary>
-    /// Gets the last time this asset was accessed, used for LRU eviction.
+    /// Gets the access tick for LRU eviction.
     /// </summary>
-    DateTime LastAccessTime { get; }
+    /// <remarks>
+    /// <para>
+    /// This value is set internally by the <see cref="AssetManager"/> when the
+    /// asset is accessed. It represents the global access counter value at the
+    /// time of last access. Assets with the lowest tick values are evicted first.
+    /// </para>
+    /// <para>
+    /// The value is a <see cref="ushort"/> for memory efficiency and is limited
+    /// to 65,535. The <see cref="AssetManager"/> handles wrap-around correctly.
+    /// </para>
+    /// <para>
+    /// This property is internal to the engine and cannot be set by game code.
+    /// </para>
+    /// </remarks>
+    ushort LastAccessTick { get; set; }
 
     /// <summary>
     /// Loads the asset data into memory.

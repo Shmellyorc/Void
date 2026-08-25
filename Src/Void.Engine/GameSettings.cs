@@ -34,7 +34,7 @@ public sealed class GameSettings
     private static readonly Lazy<GameSettings> _instance = new(() => new GameSettings());
     private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet,
         _isVSyncSet, _useApplicationDataSet, _setLogMinLevel,
-        _setWindowScaleMode;
+        _setWindowScaleMode, _setDefaultSortMode;
 
     /// <summary>
     /// Gets the singleton settings instance.
@@ -515,18 +515,132 @@ public sealed class GameSettings
     /// </summary>
     public IAtlasPacker AtlasPacker { get; private set; }
 
+
+
+    /// <summary>
+    /// Sets the maximum number of atlas defragmentation moves to process per frame.
+    /// </summary>
+    /// <param name="value">
+    /// The maximum number of moves per frame. Valid range is 1 to 100.
+    /// The default value is 10.
+    /// </param>
+    /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="value"/> is zero or exceeds 100.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    /// This value controls how many texture moves are processed each frame during
+    /// atlas defragmentation. Higher values complete defragmentation faster but
+    /// may cause frame rate hitches. Lower values spread the work across more
+    /// frames but take longer to complete.
+    /// </para>
+    /// <para>
+    /// <b>Valid Range:</b> 1 to 100
+    /// </para>
+    /// <para>
+    /// <b>Default Value:</b> 10
+    /// </para>
+    /// <para>
+    /// <b>Typical Usage:</b> 10 to 20 moves per frame provides a good balance
+    /// between defragmentation speed and performance. Values above 50 are
+    /// generally unnecessary and may impact frame rate. Values above 100 are
+    /// excessive and will be rejected.
+    /// </para>
+    /// <para>
+    /// <b>Example:</b>
+    /// <code>
+    /// // Conservative - minimal frame impact (default)
+    /// settings.SetAtlasDefragMovesPerFrame(10);
+    /// 
+    /// // Aggressive - faster defrag, slight frame impact
+    /// settings.SetAtlasDefragMovesPerFrame(30);
+    /// 
+    /// // Maximum allowed - use only if you know what you're doing
+    /// settings.SetAtlasDefragMovesPerFrame(100);
+    /// </code>
+    /// </para>
+    /// </remarks>
+    public GameSettings SetAtlasDefragMovesPerFrame(uint value)
+    {
+        const uint MaxDefragMovesPerFrame = 100;
+
+        if (value == 0)
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                "Value must be greater than zero. Default is 10.");
+
+        if (value > MaxDefragMovesPerFrame)
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                $"Value cannot exceed {MaxDefragMovesPerFrame}. Recommended range is 1-50.");
+
+        AtlasDefragMovesPerFrame = (int)value;
+        return this;
+    }
+
+    /// <summary>
+    /// Gets or sets the maximum number of atlas defragmentation moves to process per frame.
+    /// Higher values complete defragmentation faster but may cause frame hitches.
+    /// </summary>
+    public int AtlasDefragMovesPerFrame { get; private set; }
+
     #endregion
 
     #region Asset Management
-
     /// <summary>
-    /// Sets asset eviction timeout in minutes. Default is 30.
+    /// Sets the interval between asset eviction checks.
     /// </summary>
-    public GameSettings SetAssetEviction(uint minutes)
+    /// <param name="value">
+    /// Number of asset accesses between eviction checks.
+    /// Valid range is 10 to 10,000.
+    /// </param>
+    public GameSettings SetAssetEvictionCheckInterval(ushort value)
     {
-        AssetEvictionMinutes = (int)minutes;
+        const ushort MinCheckInterval = 10;
+        const ushort MaxCheckInterval = 10_000;
+
+        if (value < MinCheckInterval)
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                $"Check interval must be at least {MinCheckInterval}.");
+
+        if (value > MaxCheckInterval)
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                $"Check interval cannot exceed {MaxCheckInterval}. Checking too infrequently may cause memory spikes.");
+
+        AssetEvictionCheckInterval = value;
         return this;
     }
+    /// <summary>
+    /// Number of asset accesses between eviction checks.
+    /// </summary>
+    public ushort AssetEvictionCheckInterval { get; private set; }
+
+    /// <summary>
+    /// Sets the asset staleness threshold.
+    /// </summary>
+    /// <param name="value">
+    /// Number of asset accesses before an asset is considered stale.
+    /// Valid range is 100 to 50,000.
+    /// </param>
+    public GameSettings SetAssetStalenessThreshold(ushort value)
+    {
+        const ushort MinStalenessThreshold = 100;
+        const ushort MaxStalenessThreshold = 50_000;
+
+        if (value < MinStalenessThreshold)
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                $"Threshold must be at least {MinStalenessThreshold} to avoid over-aggressive eviction.");
+
+        if (value > MaxStalenessThreshold)
+            throw new ArgumentOutOfRangeException(nameof(value), value,
+                $"Threshold cannot exceed {MaxStalenessThreshold}. Values above this are excessive and may cause memory bloat.");
+
+        AssetStalenessThreshold = value;
+        return this;
+    }
+    /// <summary>
+    /// Number of asset accesses before an asset is considered stale.
+    /// </summary>
+    public ushort AssetStalenessThreshold { get; private set; }
 
     /// <summary>
     /// Gets the asset eviction timeout in minutes.
@@ -590,6 +704,7 @@ public sealed class GameSettings
     /// </summary>
     public GameSettings SetDefaultSortMode(SortMode value)
     {
+        _setDefaultSortMode = true;
         DefaultSortMode = value;
         return this;
     }
@@ -864,7 +979,7 @@ public sealed class GameSettings
         ClearColor = ClearColor.IsEmpty ? new Color(100, 149, 237) : ClearColor;
         SpriteBatchCapacity = SpriteBatchCapacity <= 0 ? 1024 : SpriteBatchCapacity;
         PrimitiveBatchCapacity = PrimitiveBatchCapacity <= 0 ? 4096 : PrimitiveBatchCapacity;
-        DefaultSortMode = DefaultSortMode == SortMode.Immediate ? SortMode.BackToFront : DefaultSortMode;
+        DefaultSortMode = !_setDefaultSortMode ? SortMode.BackToFront : DefaultSortMode;
         DefaultBlendMode ??= BlendMode.Alpha;
         IsFixedTimeStep = !_isFixedTimeStepSet || IsFixedTimeStep;
         TargetElapsedTime = TargetElapsedTime <= 0 ? 1f / 60f : TargetElapsedTime;
@@ -887,6 +1002,9 @@ public sealed class GameSettings
         AppConfigFolder = AppConfigFolder.IsEmpty() ? "Config" : AppConfigFolder;
         AppTempFolder = AppTempFolder.IsEmpty() ? "Temp" : AppTempFolder;
         AudioLimit = AudioLimit <= 0 ? 128 : AudioLimit;
+        AtlasDefragMovesPerFrame = AtlasDefragMovesPerFrame <= 0 ? 10 : AtlasDefragMovesPerFrame;
+        AssetEvictionCheckInterval = AssetEvictionCheckInterval == 0 ? (ushort)1000 : AssetEvictionCheckInterval;
+        AssetStalenessThreshold = AssetStalenessThreshold == 0 ? (ushort)5000 : AssetStalenessThreshold;
 
         Initialized = true;
 

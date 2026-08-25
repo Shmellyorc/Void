@@ -142,7 +142,7 @@ public sealed class Sound : IAsset
     /// <summary>
     /// Gets the last access time of the asset for eviction tracking.
     /// </summary>
-    public DateTime LastAccessTime { get; private set; }
+    public ushort LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the underlying SFML sound buffer containing the decoded audio data.
@@ -163,7 +163,6 @@ public sealed class Sound : IAsset
         Tag = tag;
         Priority = priority;
         Type = AssetType.Normal;
-        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -202,14 +201,12 @@ public sealed class Sound : IAsset
         {
             if (IsValid)
             {
-                LastAccessTime = DateTime.Now;
                 return;
             }
 
             Buffer = new SFSoundBuffer(Data);
 
             IsValid = true;
-            LastAccessTime = DateTime.Now;
         }
     }
 
@@ -275,7 +272,7 @@ public sealed class Sound : IAsset
                 Load();
             }
 
-            LastAccessTime = DateTime.Now;
+           AssetManager.Instance.Touch(this);
 
             var instance = SoundInstancePool.Instance.GetInstance();
 

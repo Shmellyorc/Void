@@ -143,7 +143,16 @@ public sealed class SpriteBatcher : BaseBatcher
     /// <summary>
     /// Called when batching begins.
     /// </summary>
-    protected override void OnBegin() => _currentTexture = null;
+    protected override void OnBegin()
+    {
+        _currentTexture = null;
+
+        AtlasManager.Instance.ProcessPendingDefragMoves(
+            GameSettings.Instance.AtlasDefragMovesPerFrame);
+
+        base.OnBegin();
+    }
+
 
     /// <summary>
     /// Called when batching ends.
@@ -221,6 +230,44 @@ public sealed class SpriteBatcher : BaseBatcher
     }
 
     #region Draw Methods
+
+    // Add this method to SpriteBatcher
+    /// <summary>
+    /// Draws an atlas page for debugging purposes. Bypasses the atlas system.
+    /// </summary>
+    /// <param name="pageId">The atlas page index.</param>
+    /// <param name="dstRect">The destination rectangle on screen.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    public void DrawAtlasDebugPage(int pageId, Rect2 dstRect, float depth = 0.999f)
+    {
+        var pageTexture = AtlasManager.Instance.GetPageTexture(pageId);
+        if (pageTexture == null)
+            return;
+
+        EngineDrawSFMLBypassAtlas(pageTexture, dstRect, new Rect2(Vect2.Zero, pageTexture.Size), Color.White, depth);
+    }
+    private void EngineDrawSFMLBypassAtlas(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float depth = 0.999f)
+    {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+        if (!IsVisible(dstRect)) return;
+        if (_cmdCount >= _cmds.Length) ResizeBuffers();
+
+        _cmds[_cmdCount] = new DrawCommand
+        {
+            Texture = texture,
+            Depth = depth,
+            DstRect = dstRect,
+            SrcRect = srcRect,
+            Color = color,
+            Rotation = 0f,
+            Scale = Vect2.One,
+            Origin = Vect2.Zero,
+            Effects = TextureEffects.None
+        };
+
+        _cmdCount++;
+    }
 
     /// <summary>
     /// Draws a sprite with the specified texture, destination, source rectangle, and color.

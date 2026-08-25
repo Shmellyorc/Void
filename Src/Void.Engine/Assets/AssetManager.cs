@@ -78,6 +78,8 @@ public sealed class AssetManager
 {
     #region fields
     private static uint s_id;
+    private static ushort s_accessCounter = 0;
+    private static ushort s_evictionCheckCounter = 0;
     private static readonly Lazy<AssetManager> _instance =
         new(() => new AssetManager());
     private static readonly Lock IdLock = new();
@@ -482,7 +484,8 @@ public sealed class AssetManager
             Logger.Instance.DebugWithCategory("AssetManager", "Cache hit: {0} (hash: {1})", normalizedPath, hash);
 
             existingAsset.Load();
-            EvictOneExpiredAsset();
+            // EvictOneExpiredAsset();
+            Touch(existingAsset);
             return (T)existingAsset;
         }
 
@@ -542,31 +545,41 @@ public sealed class AssetManager
 
         _assets.TryAdd(hash, newAsset);
         newAsset.Load();
+        Touch(newAsset);
 
         Logger.Instance.DebugWithCategory("AssetManager", "Loaded asset: {0} ({1} bytes from {2})",
             normalizedPath, assetData.Length, foundInMount);
 
-        EvictOneExpiredAsset();
+        // EvictOneExpiredAsset();
 
         return newAsset;
     }
 
     private void EvictOneExpiredAsset()
     {
-        var evictionMinutes = GameSettings.Instance.AssetEvictionMinutes;
-        if (evictionMinutes <= 0) return;
+        ushort threshold = GameSettings.Instance.AssetStalenessThreshold;
+        if (threshold == 0) return;
 
         foreach (var (k, v) in _assets)
         {
-            if ((DateTime.Now - v.LastAccessTime) > TimeSpan.FromMinutes(evictionMinutes))
+            ushort age = CalculateAge(s_accessCounter, v.LastAccessTick);
+
+            if (age > threshold)
             {
-                Logger.Instance.DebugWithCategory("AssetManager", "Evicted asset: {0} (idle for {1} minutes)",
-                    v.Tag, evictionMinutes);
+                Logger.Instance.DebugWithCategory("AssetManager", "Evicted asset: {0} ({1} since llast used)", v.Tag, age);
 
                 v.Unload();
                 break;
             }
         }
+    }
+
+    private static ushort CalculateAge(ushort currentTick, ushort lastAccessTick)
+    {
+        if (currentTick >= lastAccessTick)
+            return (ushort)(currentTick - lastAccessTick);
+        else
+            return (ushort)(ushort.MaxValue - lastAccessTick + currentTick + 1);
     }
 
     private string NormalizedPath(string path)
@@ -613,6 +626,21 @@ public sealed class AssetManager
     #endregion
 
     #region Internal Methods
+    internal void Touch(IAsset asset)
+    {
+        s_accessCounter++;
+        asset.LastAccessTick = s_accessCounter;
+
+        s_evictionCheckCounter++;
+
+        // Check eviction periodically
+        if (s_evictionCheckCounter >= GameSettings.Instance.AssetEvictionCheckInterval)
+        {
+            s_evictionCheckCounter = 0;
+            EvictOneExpiredAsset();
+        }
+    }
+
     internal static uint GetNextId()
     {
         lock (IdLock)
@@ -633,6 +661,9 @@ public sealed class AssetManager
         foreach (var mount in _mounts.OfType<IDisposable>())
             mount.Dispose();
         _mounts.Clear();
+
+        s_accessCounter = 0;
+        s_evictionCheckCounter = 0;
     }
     #endregion
 }
