@@ -245,6 +245,23 @@ public class Game : IDisposable
     }
 
     /// <summary>
+    /// Requests the game to exit gracefully.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This method closes the game window, which causes the main loop in
+    /// <see cref="Run"/> to exit. Cleanup is handled automatically by
+    /// <see cref="Dispose"/>.
+    /// </para>
+    /// </remarks>
+    public void Quit()
+    {
+        if (_isDisposed) return;
+
+        Window.Close();
+    }
+
+    /// <summary>
     /// Override to add your update logic. Called once per frame.
     /// </summary>
     /// <param name="frameTime">Timing info for this frame.</param>

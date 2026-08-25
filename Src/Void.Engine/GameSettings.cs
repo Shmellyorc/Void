@@ -587,123 +587,100 @@ public sealed class GameSettings
 
     #region Asset Management
     /// <summary>
-    /// Sets the interval between asset eviction checks.
+    /// Sets how often the asset manager checks for expired assets.
     /// </summary>
-    /// <param name="value">
-    /// Number of asset accesses between eviction checks.
-    /// Valid range is 1,000 to 100,000.
+    /// <param name="minutes">
+    /// Number of minutes between eviction checks.
+    /// Valid range is 1 to 60 minutes.
     /// </param>
     /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="value"/> is below 1,000 or exceeds 100,000.
+    /// Thrown when <paramref name="minutes"/> is below 1 or exceeds 60.
     /// </exception>
     /// <remarks>
     /// <para>
-    /// This value controls how often the asset manager checks for stale assets.
-    /// An asset access is any call to load, retrieve, or use an asset.
+    /// This value controls how frequently the asset manager checks for stale
+    /// assets to evict.
     /// </para>
     /// <para>
-    /// <b>Valid Range:</b> 1,000 to 100,000
+    /// <b>Valid Range:</b> 1 to 60 minutes
     /// </para>
     /// <para>
-    /// <b>Default Value:</b> 10,000
-    /// </para>
-    /// <para>
-    /// Lower values check more frequently (catches stale assets sooner but adds
-    /// overhead). Higher values check less frequently (less overhead but stale
-    /// assets may linger longer).
+    /// <b>Default Value:</b> 1 minute
     /// </para>
     /// </remarks>
-    public GameSettings SetAssetEvictionCheckInterval(uint value)
+    public GameSettings SetAssetCheckIntervalMinutes(uint minutes)
     {
-        const uint MinCheckInterval = 1_000;
-        const uint MaxCheckInterval = 100_000;
+        const uint MinCheckInterval = 1;
+        const uint MaxCheckInterval = 60;
 
-        if (value < MinCheckInterval)
-            throw new ArgumentOutOfRangeException(nameof(value), value,
-                $"Check interval must be at least {MinCheckInterval}.");
+        if (minutes < MinCheckInterval)
+            throw new ArgumentOutOfRangeException(nameof(minutes), minutes,
+                $"Check interval must be at least {MinCheckInterval} minute.");
 
-        if (value > MaxCheckInterval)
-            throw new ArgumentOutOfRangeException(nameof(value), value,
-                $"Check interval cannot exceed {MaxCheckInterval}. Checking too infrequently may cause memory spikes.");
+        if (minutes > MaxCheckInterval)
+            throw new ArgumentOutOfRangeException(nameof(minutes), minutes,
+                $"Check interval cannot exceed {MaxCheckInterval} minutes.");
 
-        AssetEvictionCheckInterval = value;
+        AssetCheckIntervalMinutes = (int)minutes;
         return this;
     }
-    /// <summary>
-    /// Gets the number of asset accesses between eviction checks.
-    /// Default is 10,000.
-    /// </summary>
-    public uint AssetEvictionCheckInterval { get; private set; }
 
     /// <summary>
-    /// Sets the asset staleness threshold.
+    /// Gets how often the asset manager checks for expired assets.
+    /// Default is 1 minute.
     /// </summary>
-    /// <param name="value">
-    /// Number of asset accesses before an asset is considered stale.
-    /// Valid range is 100,000 to 5,000,000.
+    public int AssetCheckIntervalMinutes { get; private set; }
+
+    /// <summary>
+    /// Sets asset eviction timeout in minutes.
+    /// </summary>
+    /// <param name="minutes">
+    /// Number of minutes an asset can remain idle before being evicted.
+    /// Valid range is 15 to 240 minutes.
     /// </param>
     /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
     /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="value"/> is below 100,000 or exceeds 5,000,000.
+    /// Thrown when <paramref name="minutes"/> is below 15 or exceeds 240.
     /// </exception>
     /// <remarks>
     /// <para>
-    /// This value controls how many asset accesses must occur before an asset is
-    /// considered stale and eligible for eviction. An asset access is any call to
-    /// load, retrieve, or use an asset.
+    /// This value controls how long an asset can remain unused before the asset
+    /// manager unloads it to free memory.
     /// </para>
     /// <para>
-    /// <b>Valid Range:</b> 100,000 to 5,000,000
+    /// <b>Valid Range:</b> 15 to 240 minutes
     /// </para>
     /// <para>
-    /// <b>Default Value:</b> 500,000
+    /// <b>Default Value:</b> 30 minutes
     /// </para>
     /// <para>
     /// Lower values evict more aggressively (frees memory faster but may cause
     /// frequent reloading). Higher values keep assets in memory longer (better
     /// performance but higher memory usage).
     /// </para>
-    /// <para>
-    /// <b>Example:</b>
-    /// <code>
-    /// // Aggressive eviction (~42 seconds at 240 accesses/sec)
-    /// settings.SetAssetStalenessThreshold(100000);
-    /// 
-    /// // Balanced eviction (~35 minutes at 240 accesses/sec) - default
-    /// settings.SetAssetStalenessThreshold(500000);
-    /// 
-    /// // Conservative eviction (~5.8 hours at 240 accesses/sec)
-    /// settings.SetAssetStalenessThreshold(5000000);
-    /// </code>
-    /// </para>
     /// </remarks>
-    public GameSettings SetAssetStalenessThreshold(uint value)
+    public GameSettings SetAssetEviction(uint minutes)
     {
-        const uint MinStalenessThreshold = 100_000;
-        const uint MaxStalenessThreshold = 5_000_000;
+        const uint MinEvictionMinutes = 15;
+        const uint MaxEvictionMinutes = 240;
 
-        if (value < MinStalenessThreshold)
-            throw new ArgumentOutOfRangeException(nameof(value), value,
-                $"Threshold must be at least {MinStalenessThreshold} to avoid over-aggressive eviction.");
+        if (minutes < MinEvictionMinutes)
+            throw new ArgumentOutOfRangeException(nameof(minutes), minutes,
+                $"Eviction minutes must be at least {MinEvictionMinutes} to avoid aggressive eviction.");
 
-        if (value > MaxStalenessThreshold)
-            throw new ArgumentOutOfRangeException(nameof(value), value,
-                $"Threshold cannot exceed {MaxStalenessThreshold}. Values above this are excessive and may cause memory bloat.");
+        if (minutes > MaxEvictionMinutes)
+            throw new ArgumentOutOfRangeException(nameof(minutes), minutes,
+                $"Eviction minutes cannot exceed {MaxEvictionMinutes}. Values above this are excessive and may cause memory bloat.");
 
-        AssetStalenessThreshold = value;
+        AssetEvictionMinutes = (int)minutes;
         return this;
     }
-    /// <summary>
-    /// Gets the number of asset accesses before an asset is considered stale.
-    /// Default is 500,000.
-    /// </summary>
-    public uint AssetStalenessThreshold { get; private set; }
 
-    // /// <summary>
-    // /// Gets the asset eviction timeout in minutes.
-    // /// </summary>
-    // public int AssetEvictionMinutes { get; private set; }
+    /// <summary>
+    /// Gets the asset eviction timeout in minutes.
+    /// </summary>
+    public int AssetEvictionMinutes { get; private set; }
 
     #endregion
 
@@ -1060,8 +1037,8 @@ public sealed class GameSettings
         AppTempFolder = AppTempFolder.IsEmpty() ? "Temp" : AppTempFolder;
         AudioLimit = AudioLimit <= 0 ? 128 : AudioLimit;
         AtlasDefragMovesPerFrame = AtlasDefragMovesPerFrame <= 0 ? 10 : AtlasDefragMovesPerFrame;
-        AssetEvictionCheckInterval = AssetEvictionCheckInterval == 0 ? 10_000u : AssetEvictionCheckInterval;
-        AssetStalenessThreshold = AssetStalenessThreshold == 0 ? 500_000u : AssetStalenessThreshold;
+        AssetEvictionMinutes = AssetEvictionMinutes <= 0 ? 30 : AssetEvictionMinutes;
+        AssetCheckIntervalMinutes = AssetCheckIntervalMinutes <= 0 ? 1 : AssetCheckIntervalMinutes;
 
         Initialized = true;
 

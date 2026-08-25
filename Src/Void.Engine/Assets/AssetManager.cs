@@ -19,7 +19,7 @@ namespace Void.Engine.Assets;
 /// The <see cref="AssetManager"/> provides a unified system for loading,
 /// caching, and managing assets of various types. It supports:
 /// <list type="bullet">
-///   <item><description>Automatic asset caching with tick-based LRU eviction</description></item>
+///   <item><description>Automatic asset caching with time-based LRU eviction</description></item>
 ///   <item><description>Multiple mount points for flexible asset sources</description></item>
 ///   <item><description>Pack loading for encrypted/compressed asset archives</description></item>
 ///   <item><description>Custom asset type registration</description></item>
@@ -59,14 +59,12 @@ namespace Void.Engine.Assets;
 /// </para>
 /// <para>
 /// <b>Asset Eviction:</b>
-/// Assets are automatically unloaded after a configurable number of asset
-/// accesses (<see cref="GameSettings.AssetStalenessThreshold"/>). The eviction
-/// system uses a global access counter to track when assets were last used.
-/// When an asset's age (current counter - last access tick) exceeds the
-/// staleness threshold, it is unloaded to free memory. The eviction check
-/// runs every <see cref="GameSettings.AssetEvictionCheckInterval"/> accesses.
-/// This access-based approach ensures assets are only evicted when truly idle,
-/// not based on wall-clock time.
+/// Assets are automatically unloaded after a configurable idle time
+/// (<see cref="GameSettings.AssetEvictionMinutes"/>). This helps manage memory
+/// usage by removing assets that haven't been accessed recently. When an asset
+/// is evicted, its GPU resources are freed but the raw data remains cached for
+/// fast reloading. The asset will be automatically reloaded the next time it
+/// is accessed.
 /// </para>
 /// <para>
 /// <b>Custom Asset Types:</b>
@@ -83,8 +81,7 @@ public sealed class AssetManager
 {
     #region fields
     private static uint s_id;
-    private static uint s_accessCounter = 0u;
-    private static uint s_evictionCheckCounter = 0u;
+    private DateTime _lastEvictionCheck = DateTime.MinValue;
     private static readonly Lazy<AssetManager> _instance =
         new(() => new AssetManager());
     private static readonly Lock IdLock = new();
@@ -489,8 +486,7 @@ public sealed class AssetManager
             Logger.Instance.DebugWithCategory("AssetManager", "Cache hit: {0} (hash: {1})", normalizedPath, hash);
 
             existingAsset.Load();
-            // EvictOneExpiredAsset();
-            Touch(existingAsset);
+            EvictOneExpiredAsset();
             return (T)existingAsset;
         }
 
@@ -550,41 +546,41 @@ public sealed class AssetManager
 
         _assets.TryAdd(hash, newAsset);
         newAsset.Load();
-        Touch(newAsset);
 
         Logger.Instance.DebugWithCategory("AssetManager", "Loaded asset: {0} ({1} bytes from {2})",
             normalizedPath, assetData.Length, foundInMount);
 
-        // EvictOneExpiredAsset();
+        EvictOneExpiredAsset();
 
         return newAsset;
     }
 
     private void EvictOneExpiredAsset()
     {
-        uint threshold = GameSettings.Instance.AssetStalenessThreshold;
-        if (threshold == 0) return;
+        var evictionMinutes = GameSettings.Instance.AssetEvictionMinutes;
+        if (evictionMinutes <= 0) return;
+
+        if ((DateTime.Now - _lastEvictionCheck).TotalMinutes < GameSettings.Instance.AssetCheckIntervalMinutes)
+            return;
+
+        _lastEvictionCheck = DateTime.Now;
+
+        var now = DateTime.Now;
+        var threshold = TimeSpan.FromMinutes(evictionMinutes);
 
         foreach (var (k, v) in _assets)
         {
-            uint age = CalculateAge(s_accessCounter, v.LastAccessTick);
+            if (!v.IsValid) continue;
 
-            if (age > threshold)
+            if ((now - v.LastAccessTime) > threshold)
             {
-                Logger.Instance.DebugWithCategory("AssetManager", "Evicted asset: {0} ({1} since llast used)", v.Tag, age);
+                Logger.Instance.DebugWithCategory("AssetManager", "Evicted asset: {0} (idle for {1} minutes)",
+                    v.Tag, evictionMinutes);
 
                 v.Unload();
                 break;
             }
         }
-    }
-
-    private static uint CalculateAge(uint currentTick, uint lastAccessTick)
-    {
-        if (currentTick >= lastAccessTick)
-            return currentTick - lastAccessTick;
-
-        return uint.MaxValue - lastAccessTick + currentTick + 1;
     }
 
     private string NormalizedPath(string path)
@@ -631,21 +627,6 @@ public sealed class AssetManager
     #endregion
 
     #region Internal Methods
-    internal void Touch(IAsset asset)
-    {
-        s_accessCounter++;
-        asset.LastAccessTick = s_accessCounter;
-
-        s_evictionCheckCounter++;
-
-        // Check eviction periodically
-        if (s_evictionCheckCounter >= GameSettings.Instance.AssetEvictionCheckInterval)
-        {
-            s_evictionCheckCounter = 0;
-            EvictOneExpiredAsset();
-        }
-    }
-
     internal static uint GetNextId()
     {
         lock (IdLock)
@@ -666,9 +647,6 @@ public sealed class AssetManager
         foreach (var mount in _mounts.OfType<IDisposable>())
             mount.Dispose();
         _mounts.Clear();
-
-        s_accessCounter = 0;
-        s_evictionCheckCounter = 0;
     }
     #endregion
 }

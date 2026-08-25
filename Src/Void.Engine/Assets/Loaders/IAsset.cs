@@ -139,23 +139,9 @@ public interface IAsset : IDisposable
     AssetType Type { get; }
 
     /// <summary>
-    /// Gets the access tick for LRU eviction.
+    /// Gets the last time this asset was accessed, used for LRU eviction.
     /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This value is set internally by the <see cref="AssetManager"/> when the
-    /// asset is accessed. It represents the global access counter value at the
-    /// time of last access. Assets with the lowest tick values are evicted first.
-    /// </para>
-    /// <para>
-    /// The value is a <see cref="ushort"/> for memory efficiency and is limited
-    /// to 65,535. The <see cref="AssetManager"/> handles wrap-around correctly.
-    /// </para>
-    /// <para>
-    /// This property is internal to the engine and cannot be set by game code.
-    /// </para>
-    /// </remarks>
-    uint LastAccessTick { get; set; }
+    DateTime LastAccessTime { get; }
 
     /// <summary>
     /// Loads the asset data into memory.

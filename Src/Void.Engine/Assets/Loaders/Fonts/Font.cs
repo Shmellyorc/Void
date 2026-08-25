@@ -103,7 +103,7 @@ public abstract class Font : IAsset
     /// <summary>
     /// Gets the last access time of the font for eviction tracking.
     /// </summary>
-    public uint LastAccessTick { get; set; }
+    public DateTime LastAccessTime { get; set; }
 
     /// <summary>
     /// Gets the asset type of the font.
@@ -138,12 +138,13 @@ public abstract class Font : IAsset
         Data = data;
         Tag = tag;
         Type = type;
+        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
     /// Loads the font data into memory.
     /// </summary>
-    public virtual void Load() { }
+    public virtual void Load() => LastAccessTime = DateTime.Now;
 
     /// <summary>
     /// Unloads the font data from memory.
@@ -234,16 +235,16 @@ public abstract class Font : IAsset
     /// <summary>
     /// Implicitly converts a font to an SFML texture.
     /// </summary>
-    public static implicit operator SFTexture(Font font)
+    public static implicit operator SFTexture(Font v)
     {
-        AssetManager.Instance.Touch(font);
+        v.LastAccessTime = DateTime.Now;
 
-        if (font.Type == AssetType.Normal)
+        if (v.Type == AssetType.Normal)
         {
-            if (font._texture == null || !font.IsValid || font._texture.IsInvalid)
-                font.Load();
+            if (v._texture == null || !v.IsValid || v._texture.IsInvalid)
+                v.Load();
         }
 
-        return font._texture;
+        return v._texture;
     }
 }

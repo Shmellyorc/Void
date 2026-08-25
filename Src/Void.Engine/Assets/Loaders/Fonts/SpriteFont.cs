@@ -142,6 +142,7 @@ public sealed class SpriteFont : Font, IAsset
     {
         if (IsValid)
         {
+            LastAccessTime = DateTime.Now;
             return;
         }
 
@@ -156,6 +157,8 @@ public sealed class SpriteFont : Font, IAsset
         }
 
         IsValid = true;
+
+        base.Load();
     }
 
     /// <summary>

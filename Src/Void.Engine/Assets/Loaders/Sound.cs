@@ -93,14 +93,12 @@ public enum SoundPriority
 /// </para>
 /// <para>
 /// <b>Asset Caching and Eviction:</b>
-/// Sound assets are cached by the AssetManager and automatically evicted when
-/// they haven't been accessed for a configurable number of asset accesses
-/// (<see cref="GameSettings.AssetStalenessThreshold"/>). The eviction system
-/// uses a global access counter to track when assets were last used. When
-/// <see cref="CreateInstance"/> is called, the sound's access tick is updated.
-/// When evicted, <see cref="Unload()"/> is called to release the audio buffer.
-/// The asset will be reloaded automatically if <see cref="CreateInstance"/>
-/// is called while unloaded.
+/// Sound assets are cached by the AssetManager and automatically evicted after
+/// a configurable idle time (<see cref="GameSettings.AssetEvictionMinutes"/>).
+/// When <see cref="CreateInstance"/> is called, the sound's last access time
+/// is updated. When evicted, <see cref="Unload()"/> is called to release the
+/// audio buffer. The asset will be reloaded automatically if
+/// <see cref="CreateInstance"/> is called while unloaded.
 /// </para>
 /// <para>
 /// <b>Thread Safety:</b>
@@ -145,7 +143,7 @@ public sealed class Sound : IAsset
     /// <summary>
     /// Gets the last access time of the asset for eviction tracking.
     /// </summary>
-    public uint LastAccessTick { get; set; }
+    public DateTime LastAccessTime { get; private set; }
 
     /// <summary>
     /// Gets the underlying SFML sound buffer containing the decoded audio data.
@@ -166,6 +164,7 @@ public sealed class Sound : IAsset
         Tag = tag;
         Priority = priority;
         Type = AssetType.Normal;
+        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -209,6 +208,7 @@ public sealed class Sound : IAsset
 
             Buffer = new SFSoundBuffer(Data);
 
+            LastAccessTime = DateTime.Now;
             IsValid = true;
         }
     }
@@ -275,7 +275,7 @@ public sealed class Sound : IAsset
                 Load();
             }
 
-            AssetManager.Instance.Touch(this);
+            LastAccessTime = DateTime.Now;
 
             var instance = SoundInstancePool.Instance.GetInstance();
 

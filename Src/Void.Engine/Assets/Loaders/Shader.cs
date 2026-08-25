@@ -91,7 +91,7 @@ public sealed class Shader : IAsset, IShader
     /// <summary>
     /// Gets the last access time of the shader asset for eviction tracking.
     /// </summary>
-    public uint LastAccessTick { get; set; }
+    public DateTime LastAccessTime { get; set; }
 
     /// <summary>
     /// Gets the underlying shader program.
@@ -114,6 +114,7 @@ public sealed class Shader : IAsset, IShader
         Id = id;
         Data = data;
         Tag = tag;
+        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -132,6 +133,7 @@ public sealed class Shader : IAsset, IShader
     {
         if (IsValid)
         {
+            LastAccessTime = DateTime.Now;
             return;
         }
 
@@ -139,6 +141,8 @@ public sealed class Shader : IAsset, IShader
             (_vertexSource, _fragmentSource) = ParseShader(Encoding.UTF8.GetString(Data));
 
         _program = new ShaderProgram(_vertexSource, _fragmentSource);
+
+        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -256,17 +260,16 @@ public sealed class Shader : IAsset, IShader
     /// <summary>
     /// Implicitly converts a shader asset to an SFML shader.
     /// </summary>
-    /// <param name="asset">The shader asset.</param>
+    /// <param name="v">The shader asset.</param>
     /// <returns>The underlying SFML shader, or null if the asset is invalid.</returns>
-    public static implicit operator SFShader(Shader asset)
+    public static implicit operator SFShader(Shader v)
     {
-        if (asset == null || !asset.IsValid || asset._program == null)
+        if (v == null || !v.IsValid || v._program == null)
             return null;
+        
+        v.LastAccessTime = DateTime.Now;
 
-        // asset.LastAccessTime = DateTime.Now;
-        AssetManager.Instance.Touch(asset);
-
-        return asset._program.SFShader;
+        return v._program.SFShader;
     }
 
     #endregion

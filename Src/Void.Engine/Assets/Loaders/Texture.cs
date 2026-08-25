@@ -119,7 +119,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     /// <summary>
     /// Gets the last access time of the texture for eviction tracking.
     /// </summary>
-    public uint LastAccessTick { get; set; }
+    public DateTime LastAccessTime { get; private set; }
 
     /// <summary>
     /// Gets the asset type of the texture.
@@ -135,6 +135,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         _smooth = smooth;
 
         Type = AssetType.Normal;
+        LastAccessTime = DateTime.Now;
     }
 
     /// <summary>
@@ -157,6 +158,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         Height = (int)size.Y;
 
         Type = AssetType.Instanced;
+        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -176,6 +178,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         Height = (int)Size.Y;
 
         Type = AssetType.Atlas;
+        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -189,6 +192,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         Height = (int)Size.Y;
 
         Type = AssetType.Instanced;
+        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -214,6 +218,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         Height = (int)Size.Y;
         image.Dispose();
 
+        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -237,6 +242,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         Width = (int)_texture.Size.X;
         Height = (int)_texture.Size.Y;
 
+        LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
@@ -326,7 +332,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     /// </summary>
     public static implicit operator SFTexture(Texture v)
     {
-        AssetManager.Instance.Touch(v);
+        v.LastAccessTime = DateTime.Now;
 
         if (v.Type == AssetType.Normal)
         {

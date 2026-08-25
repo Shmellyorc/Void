@@ -700,8 +700,6 @@ public sealed class SpriteBatcher : BaseBatcher
         if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
         if (string.IsNullOrEmpty(text) || font == null) return;
 
-        AssetManager.Instance.Touch(font);
-
         if(!font.IsValid)
             font.Load();
 
@@ -732,8 +730,6 @@ public sealed class SpriteBatcher : BaseBatcher
         if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
         if (string.IsNullOrEmpty(text) || font == null) return;
         if (!IsVisible(bounds)) return;
-
-        AssetManager.Instance.Touch(font);
 
         if(!font.IsValid)
             font.Load();
