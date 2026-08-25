@@ -696,7 +696,14 @@ public sealed class SpriteBatcher : BaseBatcher
 
     private void DrawTextPosition(Font font, string text, Vect2 position, Color color, float depth, Vect2 scale, TextAlignment alignment)
     {
-        if (string.IsNullOrEmpty(text) || font == null || !font.IsValid) return;
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+        if (string.IsNullOrEmpty(text) || font == null) return;
+
+        AssetManager.Instance.Touch(font);
+
+        if(!font.IsValid)
+            font.Load();
 
         var textSize = font.Measure(text) * scale;
         var textRect = new Rect2(position, textSize);
@@ -721,8 +728,15 @@ public sealed class SpriteBatcher : BaseBatcher
 
     private void DrawTextBounds(Font font, string text, Rect2 bounds, Color color, float depth, Vect2 scale, TextAlignment alignment, TextWrapMode wrapMode)
     {
-        if (string.IsNullOrEmpty(text) || font == null || !font.IsValid) return;
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+        if (string.IsNullOrEmpty(text) || font == null) return;
         if (!IsVisible(bounds)) return;
+
+        AssetManager.Instance.Touch(font);
+
+        if(!font.IsValid)
+            font.Load();
 
         string[] lines = text.Split('\n');
         float lineHeight = (font.LineHeight + font.LineSpacing) * scale.Y;
