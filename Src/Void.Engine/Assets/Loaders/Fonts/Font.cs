@@ -103,7 +103,7 @@ public abstract class Font : IAsset
     /// <summary>
     /// Gets the last access time of the font for eviction tracking.
     /// </summary>
-    public ushort LastAccessTick { get; set; }
+    public uint LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the asset type of the font.

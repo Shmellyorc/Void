@@ -91,7 +91,7 @@ public sealed class Shader : IAsset, IShader
     /// <summary>
     /// Gets the last access time of the shader asset for eviction tracking.
     /// </summary>
-    public ushort LastAccessTick { get; set; }
+    public uint LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the underlying shader program.

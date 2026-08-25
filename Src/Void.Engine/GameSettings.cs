@@ -591,12 +591,33 @@ public sealed class GameSettings
     /// </summary>
     /// <param name="value">
     /// Number of asset accesses between eviction checks.
-    /// Valid range is 10 to 10,000.
+    /// Valid range is 1,000 to 100,000.
     /// </param>
-    public GameSettings SetAssetEvictionCheckInterval(ushort value)
+    /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="value"/> is below 1,000 or exceeds 100,000.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    /// This value controls how often the asset manager checks for stale assets.
+    /// An asset access is any call to load, retrieve, or use an asset.
+    /// </para>
+    /// <para>
+    /// <b>Valid Range:</b> 1,000 to 100,000
+    /// </para>
+    /// <para>
+    /// <b>Default Value:</b> 10,000
+    /// </para>
+    /// <para>
+    /// Lower values check more frequently (catches stale assets sooner but adds
+    /// overhead). Higher values check less frequently (less overhead but stale
+    /// assets may linger longer).
+    /// </para>
+    /// </remarks>
+    public GameSettings SetAssetEvictionCheckInterval(uint value)
     {
-        const ushort MinCheckInterval = 10;
-        const ushort MaxCheckInterval = 10_000;
+        const uint MinCheckInterval = 1_000;
+        const uint MaxCheckInterval = 100_000;
 
         if (value < MinCheckInterval)
             throw new ArgumentOutOfRangeException(nameof(value), value,
@@ -610,21 +631,57 @@ public sealed class GameSettings
         return this;
     }
     /// <summary>
-    /// Number of asset accesses between eviction checks.
+    /// Gets the number of asset accesses between eviction checks.
+    /// Default is 10,000.
     /// </summary>
-    public ushort AssetEvictionCheckInterval { get; private set; }
+    public uint AssetEvictionCheckInterval { get; private set; }
 
     /// <summary>
     /// Sets the asset staleness threshold.
     /// </summary>
     /// <param name="value">
     /// Number of asset accesses before an asset is considered stale.
-    /// Valid range is 100 to 50,000.
+    /// Valid range is 100,000 to 5,000,000.
     /// </param>
-    public GameSettings SetAssetStalenessThreshold(ushort value)
+    /// <returns>The current <see cref="GameSettings"/> instance for method chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="value"/> is below 100,000 or exceeds 5,000,000.
+    /// </exception>
+    /// <remarks>
+    /// <para>
+    /// This value controls how many asset accesses must occur before an asset is
+    /// considered stale and eligible for eviction. An asset access is any call to
+    /// load, retrieve, or use an asset.
+    /// </para>
+    /// <para>
+    /// <b>Valid Range:</b> 100,000 to 5,000,000
+    /// </para>
+    /// <para>
+    /// <b>Default Value:</b> 500,000
+    /// </para>
+    /// <para>
+    /// Lower values evict more aggressively (frees memory faster but may cause
+    /// frequent reloading). Higher values keep assets in memory longer (better
+    /// performance but higher memory usage).
+    /// </para>
+    /// <para>
+    /// <b>Example:</b>
+    /// <code>
+    /// // Aggressive eviction (~42 seconds at 240 accesses/sec)
+    /// settings.SetAssetStalenessThreshold(100000);
+    /// 
+    /// // Balanced eviction (~35 minutes at 240 accesses/sec) - default
+    /// settings.SetAssetStalenessThreshold(500000);
+    /// 
+    /// // Conservative eviction (~5.8 hours at 240 accesses/sec)
+    /// settings.SetAssetStalenessThreshold(5000000);
+    /// </code>
+    /// </para>
+    /// </remarks>
+    public GameSettings SetAssetStalenessThreshold(uint value)
     {
-        const ushort MinStalenessThreshold = 100;
-        const ushort MaxStalenessThreshold = 50_000;
+        const uint MinStalenessThreshold = 100_000;
+        const uint MaxStalenessThreshold = 5_000_000;
 
         if (value < MinStalenessThreshold)
             throw new ArgumentOutOfRangeException(nameof(value), value,
@@ -638,14 +695,15 @@ public sealed class GameSettings
         return this;
     }
     /// <summary>
-    /// Number of asset accesses before an asset is considered stale.
+    /// Gets the number of asset accesses before an asset is considered stale.
+    /// Default is 500,000.
     /// </summary>
-    public ushort AssetStalenessThreshold { get; private set; }
+    public uint AssetStalenessThreshold { get; private set; }
 
-    /// <summary>
-    /// Gets the asset eviction timeout in minutes.
-    /// </summary>
-    public int AssetEvictionMinutes { get; private set; }
+    // /// <summary>
+    // /// Gets the asset eviction timeout in minutes.
+    // /// </summary>
+    // public int AssetEvictionMinutes { get; private set; }
 
     #endregion
 
@@ -972,7 +1030,6 @@ public sealed class GameSettings
         AtlasPageSize = AtlasPageSize <= 0 ? 2048 : AtlasPageSize;
         AtlasPageCount = AtlasPageCount <= 0 ? 4 : AtlasPageCount;
         AtlasPacker ??= new SkylinePacker(AtlasPageSize, AtlasPageSize);
-        AssetEvictionMinutes = AssetEvictionMinutes == 0 ? 30 : AssetEvictionMinutes;
         AppTitle = AppTitle.IsEmpty() ? "Game" : AppTitle;
         Window = Window.IsZero ? new Vect2(1280, 720) : Window;
         Viewport = Viewport.IsZero ? new Vect2(320, 180) : Viewport;
@@ -1003,8 +1060,8 @@ public sealed class GameSettings
         AppTempFolder = AppTempFolder.IsEmpty() ? "Temp" : AppTempFolder;
         AudioLimit = AudioLimit <= 0 ? 128 : AudioLimit;
         AtlasDefragMovesPerFrame = AtlasDefragMovesPerFrame <= 0 ? 10 : AtlasDefragMovesPerFrame;
-        AssetEvictionCheckInterval = AssetEvictionCheckInterval == 0 ? (ushort)1000 : AssetEvictionCheckInterval;
-        AssetStalenessThreshold = AssetStalenessThreshold == 0 ? (ushort)5000 : AssetStalenessThreshold;
+        AssetEvictionCheckInterval = AssetEvictionCheckInterval == 0 ? 10_000u : AssetEvictionCheckInterval;
+        AssetStalenessThreshold = AssetStalenessThreshold == 0 ? 500_000u : AssetStalenessThreshold;
 
         Initialized = true;
 

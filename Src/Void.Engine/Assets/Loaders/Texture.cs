@@ -119,7 +119,7 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     /// <summary>
     /// Gets the last access time of the texture for eviction tracking.
     /// </summary>
-    public ushort LastAccessTick { get; set; }
+    public uint LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the asset type of the texture.

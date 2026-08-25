@@ -94,7 +94,7 @@ public sealed class Spritesheet : IAsset
     /// <summary>
     /// Gets the last access time of the spritesheet for eviction tracking.
     /// </summary>
-    public ushort LastAccessTick { get; set; }
+    public uint LastAccessTick { get; set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Spritesheet"/> class.

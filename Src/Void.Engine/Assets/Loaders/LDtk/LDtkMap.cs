@@ -99,7 +99,7 @@ public sealed class LDtkMap : IAsset
     /// <summary>
     /// Gets the last access time of the map for eviction tracking.
     /// </summary>
-    public ushort LastAccessTick { get; set; }
+    public uint LastAccessTick { get; set; }
 
     /// <summary>
     /// Gets the raw map data bytes.

@@ -155,7 +155,7 @@ public interface IAsset : IDisposable
     /// This property is internal to the engine and cannot be set by game code.
     /// </para>
     /// </remarks>
-    ushort LastAccessTick { get; set; }
+    uint LastAccessTick { get; set; }
 
     /// <summary>
     /// Loads the asset data into memory.
