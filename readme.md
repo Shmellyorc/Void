@@ -96,13 +96,15 @@ The data section contains your actual assets. Each file is compressed individual
 **API Usage**
 
 Load a pack in your game:
-
+```
 AssetManager.Instance.LoadPack("GameAssets.pack", "GameAssets.key");
 AssetManager.Instance.AddMountToStart(pack);
+```
 
 Then load assets normally:
-
+```
 var texture = AssetManager.Instance.Load<Texture>("player.png");
+```
 
 Your code doesn't change whether assets are loose or packed. The engine handles everything.
 
