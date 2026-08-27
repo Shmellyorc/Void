@@ -36,7 +36,10 @@ GameSettings.Instance.SetAtlasPacker(typeof(MyAtlasPacker));
 
 AssetManager.Instance.AddMountToStart(new CloudMount());
 
-AssetManager.Instance.RegisterAssetType<MyAsset>(new[] { ".myext" }, (id, data, tag) => new MyAsset(id, data, tag));
+AssetManager.Instance.RegisterAssetType<MyAsset>(
+    new[] { ".myext" },
+    (id, data, tag) => new MyAsset(id, data, tag)
+);
 
 Logger.Instance.AddSink(new DatabaseSink());
 ```
