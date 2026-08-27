@@ -1,9 +1,10 @@
-# Void Engine
-
-A lightweight, extensible 2D game framework for .NET.
+<p align="center">
+  <img src="Src/Void.Engine/Resources/Data/ImageSmallScaled.png" alt="Void Engine Logo" width="400">
+  <br>
+  <strong>A lightweight, extensible 2D game framework for .NET.</strong>
+</p>
 
 ## Philosophy
-
 **Extend, don't modify.**
 
 Most game engines try to do everything. They have physics, networking, UI, animation, and everything else you can think of. The problem is your game is unique. Your physics needs are different. Your UI is different. Yet these engines force you to use their way of doing things. You fight the engine instead of making your game.
@@ -13,7 +14,6 @@ At the other extreme, frameworks like MonoGame give you almost nothing. You end 
 Void sits in the middle. It gives you the essentials and gets out of your way.
 
 ## Extensibility
-
 Void was built to be extended, not just used.
 
 Every major system is built around interfaces and base classes that you can replace, customize, or ignore entirely. The engine doesn't lock you into its solutions. You can swap out any part without fighting the framework.
@@ -43,7 +43,6 @@ Logger.Instance.AddSink(new DatabaseSink());
 No engine code modification. No forking the repo. No fighting the framework. Just clean, simple extension points that work the way you need them to.
 
 ## Asset Packer
-
 Void includes a CLI tool and API for packing assets into encrypted, tamper-proof archives. Your assets stay yours.
 
 **Why pack your assets?**
@@ -126,7 +125,6 @@ The key is stored separately from the pack. You decide how to distribute it:
 - Distribute with the game
 
 ## Features
-
 | System | What It Does |
 |--------|--------------|
 | Rendering | Batched sprite/primitive rendering, texture atlasing, shaders |
@@ -140,12 +138,10 @@ The key is stored separately from the pack. You decide how to distribute it:
 | Math | Vectors, rectangles, colors, easing, random |
 
 ## Demos
-
 - **FlappyBirb** — A Flappy Bird clone
 - **Scavengers** — A rogue-lite zombie survival clone
 
 ## Supported Platforms
-
 | Platform | Status |
 |----------|--------|
 | Windows | Full support |
@@ -153,12 +149,10 @@ The key is stored separately from the pack. You decide how to distribute it:
 | Linux | Full support |
 
 ## Requirements
-
 - .NET 10
 - SFML.Net 3.0
 
 ## License
-
 MIT. Use it for anything. No royalties. No fees.
 
 **Void Engine — Made by developers who care about your work.**
