@@ -31,7 +31,7 @@ Every major system is built around interfaces and base classes that you can repl
 - **ContentTypeWriterReader<T>**: Any save data type you can imagine
 
 **How it works:**
-
+```
 GameSettings.Instance.SetAtlasPacker(typeof(MyAtlasPacker));
 
 AssetManager.Instance.AddMountToStart(new CloudMount());
@@ -39,6 +39,7 @@ AssetManager.Instance.AddMountToStart(new CloudMount());
 AssetManager.Instance.RegisterAssetType<MyAsset>(new[] { ".myext" }, (id, data, tag) => new MyAsset(id, data, tag));
 
 Logger.Instance.AddSink(new DatabaseSink());
+```
 
 No engine code modification. No forking the repo. No fighting the framework. Just clean, simple extension points that work the way you need them to.
 
