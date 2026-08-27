@@ -20,20 +20,23 @@ Every major system is built around interfaces and base classes that you can repl
 
 **What you can extend:**
 
-- **IAsset** — Define new asset types (custom models, compressed data, encrypted files)
-- **IMount** — Add custom asset sources (network drives, cloud storage, proprietary archives)
-- **IAtlasPacker** — Plug in your own texture packing algorithm
-- **ILogSink** — Send logs anywhere (databases, remote servers, custom formats)
-- **IBatcher** — Custom rendering logic
-- **IRenderTarget** — Custom render surfaces
-- **ContentTypeWriterReader<T>** — Any save data type you can imagine
+- **IAsset**: Define new asset types (custom models, compressed data, encrypted files)
+- **IMount**: Add custom asset sources (network drives, cloud storage, proprietary archives)
+- **IAtlasPacker**: Plug in your own texture packing algorithm
+- **ILogSink**: Send logs anywhere (databases, remote servers, custom formats)
+- **IBatcher**: Custom rendering logic
+- **IRenderTarget**: Custom render surfaces
+- **ContentTypeWriterReader<T>**: Any save data type you can imagine
 
 **How it works:**
 
 ```
-GameSettings.Instance.SetAtlasPacker(new MyPacker());
+GameSettings.Instance.SetAtlasPacker(typeof(MyAtlasPacker));
+
 AssetManager.Instance.AddMountToStart(new CloudMount());
+
 AssetManager.Instance.RegisterAssetType<MyAsset>(new[] { ".myext" }, (id, data, tag) => new MyAsset(id, data, tag));
+
 Logger.Instance.AddSink(new DatabaseSink());
 ```
 
