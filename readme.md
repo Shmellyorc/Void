@@ -13,7 +13,8 @@ At the other extreme, frameworks like MonoGame give you almost nothing. You end 
 
 Void sits in the middle. It gives you the essentials and gets out of your way.
 
-Full Void Spec sheet and technical details: [Void Engine Spec Sheet](VoidSpecSheet.pdf)
+Void Wiki: [here](https://github.com/Shmellyorc/Void/wiki).  
+Full Void Spec sheet and technical details: [here](VoidSpecSheet.pdf).  
 
 ## Extensibility
 Void was built to be extended, not just used.
