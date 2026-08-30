@@ -190,7 +190,6 @@ public abstract class Font : IAsset
         float maxLineWidth = 0;
         float currentLineWidth = 0;
         int lineCount = 1;
-        bool hasCharOnLine = false;
 
         foreach (char c in text)
         {
@@ -198,14 +197,10 @@ public abstract class Font : IAsset
             {
                 lineCount++;
 
-                if (hasCharOnLine)
-                    currentLineWidth -= Spacing;
-
                 if (currentLineWidth > maxLineWidth)
                     maxLineWidth = currentLineWidth;
 
                 currentLineWidth = 0;
-                hasCharOnLine = false;
                 continue;
             }
 
@@ -214,11 +209,7 @@ public abstract class Font : IAsset
 
             var glyph = GetGlyph(c);
             currentLineWidth += glyph.Advance;
-            hasCharOnLine = true;
         }
-
-        if (hasCharOnLine)
-            currentLineWidth -= Spacing;
 
         if (currentLineWidth > maxLineWidth)
             maxLineWidth = currentLineWidth;

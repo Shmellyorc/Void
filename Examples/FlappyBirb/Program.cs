@@ -27,7 +27,6 @@ var settings = GameSettings.Instance
     .SetAppCompany("Shmellyorc")
     .SetAppName("FlappyBirb")
     .SetAppTitle("Flappy Birb")
-    .SetHalfTexelOffset(false)          // Keeps pixel art crisp
     .SetWindow(144 * 4, 256 * 4)       // Window is 4x the viewport size
     .SetViewport(144, 256)             // Game renders at 144x256 resolution
     .Build();

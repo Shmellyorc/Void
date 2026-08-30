@@ -9,7 +9,7 @@ public class BuildCommand
     [Option('o', "output", Required = true, HelpText = "Output directory for .pack and .key files")]
     public string OutputPath { get; set; }
 
-    [Option('n', "name", Default = "GameAssets",  HelpText = "Base name for output files")]
+    [Option('n', "name", Default = "GameAssets", HelpText = "Base name for output files")]
     public string Name { get; set; }
 
     [Option('i', "include", Separator = ',', HelpText = "Include patterns (e.g., **/*.png) - can specify multiple")]
@@ -44,4 +44,7 @@ public class BuildCommand
 
     [Option("no-color", Default = false, HelpText = "Disable colored output")]
     public bool NoColor { get; set; }
+
+    [Option("chunk-size", Default = 1024, HelpText = "Chunk size in KB for chunked encryption (0 = solid encryption)")]
+    public int ChunkSizeKB { get; set; }
 }

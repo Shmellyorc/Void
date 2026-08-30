@@ -66,7 +66,8 @@ public static class Program
                 AdaptiveCompression = opts.AdaptiveCompression,
                 MaxFilesPerPack = (ushort)opts.MaxFilesPerPack,
                 CompressionLevel = opts.CompressionLevel,
-                CaseSensitive = opts.CaseSensitive
+                CaseSensitive = opts.CaseSensitive,
+                ChunkSizeKB = (ushort)opts.ChunkSizeKB
             };
 
             // Progress tracking
@@ -175,10 +176,121 @@ public static class Program
     {
         try
         {
-            // ... similar pattern for extract
-            // Use ProgressRenderer + ResultRenderer
+            if (!File.Exists(opts.PackPath))
+            {
+                AnsiConsole.MarkupLine($"[red]Error:[/] Pack file not found: {opts.PackPath}");
+                return 1;
+            }
 
-            return 0;
+            Directory.CreateDirectory(opts.OutputPath);
+
+            byte[] packData = File.ReadAllBytes(opts.PackPath);
+            byte[] key = null;
+
+            if (!string.IsNullOrEmpty(opts.KeyPath))
+            {
+                if (!File.Exists(opts.KeyPath))
+                {
+                    AnsiConsole.MarkupLine($"[red]Error:[/] Key file not found: {opts.KeyPath}");
+                    return 1;
+                }
+                key = File.ReadAllBytes(opts.KeyPath);
+            }
+            else
+            {
+                string autoKeyPath = Path.ChangeExtension(opts.PackPath, ".key");
+                if (File.Exists(autoKeyPath))
+                    key = File.ReadAllBytes(autoKeyPath);
+            }
+
+            var progress = new ProgressData
+            {
+                TotalFiles = 0,
+                CurrentFile = string.Empty,
+                CompletedFiles = 0,
+                StartTime = DateTime.Now
+            };
+
+            var errors = new List<Exception>();
+            var extractedFiles = new List<string>();
+
+            await AnsiConsole.Status()
+                .Spinner(Spinner.Known.Dots)
+                .StartAsync("Extracting files...", async ctx =>
+                {
+                    await Task.Run(() =>
+                    {
+                        using var reader = new SolidPackReader(packData, key);
+                        var files = reader.ListFiles().ToList();
+                        progress.TotalFiles = files.Count;
+
+                        foreach (var path in files)
+                        {
+                            if (token.IsCancellationRequested)
+                                break;
+
+                            try
+                            {
+                                progress.CurrentFile = path;
+
+                                var data = reader.ReadFile(path);
+                                progress.CurrentFileSize = data.Length;
+
+                                string fullPath = Path.Combine(opts.OutputPath, path.Replace('/', Path.DirectorySeparatorChar));
+                                string directory = Path.GetDirectoryName(fullPath);
+
+                                if (!string.IsNullOrEmpty(directory))
+                                    Directory.CreateDirectory(directory);
+
+                                File.WriteAllBytes(fullPath, data);
+
+                                progress.CompletedFiles++;
+                                progress.TotalBytesProcessed += data.Length;
+
+                                extractedFiles.Add(path);
+
+                                ctx.Status = $"Extracting: {path}";
+                            }
+                            catch (Exception ex)
+                            {
+                                errors.Add(ex);
+                                if (opts.Verbose)
+                                    AnsiConsole.MarkupLine($"[yellow]Warning:[/] Failed to extract {path}: {ex.Message}");
+                            }
+                        }
+                    }, token);
+                });
+
+            if (token.IsCancellationRequested)
+            {
+                AnsiConsole.MarkupLine("[yellow]Operation cancelled.[/]");
+                return 1;
+            }
+
+            var elapsed = DateTime.Now - progress.StartTime;
+
+            var grid = new Grid();
+            grid.AddColumn();
+            grid.AddColumn();
+
+            grid.AddRow(new Text("✅ Extraction complete!", new Style(Color.Green, decoration: Decoration.Bold)));
+            grid.AddRow("  📁 Files extracted", $"{progress.CompletedFiles}");
+            grid.AddRow("  💾 Total size", FormatSize(progress.TotalBytesProcessed));
+            grid.AddRow("  ⏱ Time", FormatTime(elapsed));
+
+            if (errors.Count > 0)
+            {
+                grid.AddRow("  ⚠️ Failed", $"[red]{errors.Count}[/] files");
+            }
+
+            grid.AddRow("");
+            grid.AddRow("  📂 Output", opts.OutputPath);
+
+            AnsiConsole.Clear();
+            AnsiConsole.Write(grid);
+            AnsiConsole.MarkupLine($"\n[grey]Press any key to exit...[/]");
+
+            return errors.Count > 0 ? 1 : 0;
         }
         catch (Exception ex)
         {
@@ -397,7 +509,8 @@ public static class Program
                     AdaptiveCompression = true,
                     MaxFilesPerPack = 65535,
                     CompressionLevel = 6,
-                    CaseSensitive = false
+                    CaseSensitive = false,
+                    ChunkSizeKB = 1024
                 };
 
                 return _packService.Update(
@@ -460,5 +573,14 @@ public static class Program
             len /= 1024;
         }
         return $"{len:0.##} {sizes[order]}";
+    }
+
+    private static string FormatTime(TimeSpan time)
+    {
+        if (time.TotalHours >= 1)
+            return $"{time:hh\\:mm\\:ss}";
+        if (time.TotalMinutes >= 1)
+            return $"{time:mm\\:ss}";
+        return $"{time:ss\\s}";
     }
 }

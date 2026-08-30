@@ -27,8 +27,8 @@ internal static class PackConstants
     public const int AlgorithmOffset = 29;
     public const int AlgorithmSize = 1;                         // CompressionAlgorithm byte
 
-    public const int ReservedOffset = 30;
-    public const int ReservedSize = 2;                          // Padding to 32 bytes
+    public const int ChunkSizeOffset = 30;
+    public const int ChunkSizeSize = 2;                         // ushort - chunk size in KB (0 = solid/no chunks)
 
     // Total bootstrap header size (fixed, never changes)
     public const int BootstrapHeaderSize = 32;                  // 4+2+1+4+4+2+12+1+2=32
@@ -77,14 +77,25 @@ internal static class PackConstants
     // Fixed size before variable path
     public const int FileEntryFixedSize = 19;                   // 2+4+4+4+1+4 = 19
 
+    // Chunk Table (in encrypted header, after file table, only if chunked)
+    public const int ChunkCountOffset = 0;
+    public const int ChunkCountSize = 4;                        // uint - number of chunks
+
+    public const int ChunkEntryOffsetSize = 4;                  // uint - offset in data section
+    public const int ChunkEntrySizeSize = 4;                    // uint - encrypted size of chunk
+    public const int ChunkEntryFixedSize = 8;                   // 4+4 = 8 bytes per chunk entry
+
     // Magic bytes
     public static readonly byte[] MagicBytes = Encoding.UTF8.GetBytes("SPAC");
 
     public const ushort CurrentVersion = 2;
 
-    // Flag bits
+    // Bootstrap flag bits
     public const byte FlagHeaderEncrypted = 0x01;
     public const byte FlagHeaderCompressed = 0x02;
+    public const byte FlagChunked = 0x04;                       // NEW: chunked encryption mode
+
+    // File entry flag bits
     public const byte FlagFileEncrypted = 0x01;
     public const byte FlagFileCompressed = 0x02;
 }

@@ -13,6 +13,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+
 using Void.Packer.Utils;
 
 namespace Void.Packer;
@@ -34,6 +35,7 @@ namespace Void.Packer;
 ///   <item><description>Get file information (size, compression, CRC32)</description></item>
 ///   <item><description>Verify pack integrity</description></item>
 ///   <item><description>Case-sensitive or case-insensitive path matching</description></item>
+///   <item><description>Chunked decryption for large packs</description></item>
 /// </list>
 /// </para>
 /// <para>
@@ -72,6 +74,8 @@ public sealed class SolidPackReader : IDisposable
     private readonly byte[] _packData;
     private readonly byte[] _key;
     private readonly bool _encrypted;
+    private readonly bool _chunked;
+    private readonly ushort _chunkSizeKB;
     private readonly ushort _fileCount;
     private readonly bool _headerCompressed;
     private readonly uint _headerEncryptedSize;
@@ -83,6 +87,7 @@ public sealed class SolidPackReader : IDisposable
     private readonly bool _caseSensitive;
     private readonly byte[] _decryptedHeader;
     private readonly CompressionAlgorithm _compressionAlgorithm;
+    private readonly List<ChunkEntry> _chunkTable;
     private bool _isDisposed;
 
     /// <summary>
@@ -103,7 +108,7 @@ public sealed class SolidPackReader : IDisposable
         if (packData.Length < PackConstants.BootstrapHeaderSize)
             throw new InvalidOperationException("Pack data is too small to contain a valid header");
 
-        ParseBootstrap(out _encrypted, out _headerCompressed, out _headerEncryptedSize, out _fileCount, out _nonce, out _compressionAlgorithm);
+        ParseBootstrap(out _encrypted, out _headerCompressed, out _headerEncryptedSize, out _fileCount, out _nonce, out _compressionAlgorithm, out _chunked, out _chunkSizeKB);
 
         if (_fileCount == 0)
             throw new InvalidDataException("Pack contains no files");
@@ -112,7 +117,7 @@ public sealed class SolidPackReader : IDisposable
 
         _decryptedHeader = DecryptHeader();
 
-        ParseFileTable(_decryptedHeader, out _fileIndex);
+        ParseFileTable(_decryptedHeader, out _fileIndex, out _chunkTable);
 
         if (_encrypted && _key == null)
             throw new InvalidOperationException("Pack is encrypted but no key provided.");
@@ -268,7 +273,7 @@ public sealed class SolidPackReader : IDisposable
     }
 
     private void ParseBootstrap(out bool encrypted, out bool headerCompressed, out uint headerEncryptedSize, out ushort fileCount,
-        out byte[] nonce, out CompressionAlgorithm algorithm)
+        out byte[] nonce, out CompressionAlgorithm algorithm, out bool chunked, out ushort chunkSizeKB)
     {
         int offset = 0;
 
@@ -286,6 +291,7 @@ public sealed class SolidPackReader : IDisposable
         byte flags = _packData[offset];
         encrypted = (flags & PackConstants.FlagHeaderEncrypted) != 0;
         headerCompressed = (flags & PackConstants.FlagHeaderCompressed) != 0;
+        chunked = (flags & PackConstants.FlagChunked) != 0;
         offset += PackConstants.FlagSize;
 
         headerEncryptedSize = BitConverter.ToUInt32(_packData, offset);
@@ -302,6 +308,9 @@ public sealed class SolidPackReader : IDisposable
 
         algorithm = (CompressionAlgorithm)_packData[offset];
         offset += PackConstants.AlgorithmSize;
+
+        chunkSizeKB = BitConverter.ToUInt16(_packData, offset);
+        offset += PackConstants.ChunkSizeSize;
 
         long expectedSize = PackConstants.BootstrapHeaderSize + headerEncryptedSize;
         if (_packData.Length < expectedSize)
@@ -374,9 +383,10 @@ public sealed class SolidPackReader : IDisposable
         return ms.ToArray();
     }
 
-    private void ParseFileTable(byte[] headerData, out Dictionary<string, FileEntry> index)
+    private void ParseFileTable(byte[] headerData, out Dictionary<string, FileEntry> index, out List<ChunkEntry> chunkTable)
     {
         index = new Dictionary<string, FileEntry>(_caseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase);
+        chunkTable = new List<ChunkEntry>();
 
         int offset = 0;
 
@@ -403,6 +413,7 @@ public sealed class SolidPackReader : IDisposable
 
         offset = PackConstants.HeaderBlockFixedSize;
 
+        // Parse file table
         for (int i = 0; i < fileCount; i++)
         {
             ushort pathLength = BitConverter.ToUInt16(headerData, offset);
@@ -440,9 +451,46 @@ public sealed class SolidPackReader : IDisposable
 
             index[path] = entry;
         }
+
+        // Parse chunk table if chunked
+        if (_chunked && offset + 4 <= headerData.Length)
+        {
+            uint chunkCount = BitConverter.ToUInt32(headerData, offset);
+            offset += 4;
+
+            for (int i = 0; i < chunkCount; i++)
+            {
+                if (offset + 8 > headerData.Length)
+                    throw new InvalidDataException("Chunk table truncated");
+
+                uint chunkOffset = BitConverter.ToUInt32(headerData, offset);
+                offset += 4;
+
+                uint chunkSize = BitConverter.ToUInt32(headerData, offset);
+                offset += 4;
+
+                chunkTable.Add(new ChunkEntry
+                {
+                    Offset = chunkOffset,
+                    Size = chunkSize
+                });
+            }
+        }
     }
 
     private byte[] ReadFileData(FileEntry entry)
+    {
+        if (_chunked && _chunkTable.Count > 0)
+        {
+            return ReadFileDataChunked(entry);
+        }
+        else
+        {
+            return ReadFileDataSolid(entry);
+        }
+    }
+
+    private byte[] ReadFileDataSolid(FileEntry entry)
     {
         int dataSectionLength = _packData.Length - (int)_dataEncryptedOffset;
         byte[] dataSection = new byte[dataSectionLength];
@@ -479,5 +527,85 @@ public sealed class SolidPackReader : IDisposable
         }
 
         return storedData;
+    }
+
+    private byte[] ReadFileDataChunked(FileEntry entry)
+    {
+        int chunkSizeBytes = _chunkSizeKB * 1024;
+        int startChunk = (int)(entry.OffsetInData / chunkSizeBytes);
+        int endChunk = (int)((entry.OffsetInData + entry.StoredSize - 1) / chunkSizeBytes);
+
+        using var ms = new MemoryStream();
+
+        for (int chunkIndex = startChunk; chunkIndex <= endChunk; chunkIndex++)
+        {
+            if (chunkIndex >= _chunkTable.Count)
+                throw new InvalidDataException($"Chunk index {chunkIndex} out of range (max {_chunkTable.Count - 1})");
+
+            var chunk = _chunkTable[chunkIndex];
+
+            byte[] encryptedChunk = new byte[chunk.Size];
+            Buffer.BlockCopy(_packData, (int)(_dataEncryptedOffset + chunk.Offset), encryptedChunk, 0, (int)chunk.Size);
+
+            byte[] decryptedChunk;
+            if (_encrypted)
+            {
+                byte[] chunkNonce = new byte[_nonce.Length];
+                Buffer.BlockCopy(_nonce, 0, chunkNonce, 0, _nonce.Length);
+                byte[] indexBytes = BitConverter.GetBytes(chunkIndex);
+                chunkNonce[8] ^= indexBytes[0];
+                chunkNonce[9] ^= indexBytes[1];
+                chunkNonce[10] ^= indexBytes[2];
+                chunkNonce[11] ^= indexBytes[3];
+
+                uint headerHash = Crc32.Compute(_encryptedHeaderData);
+                using var aadMs = new MemoryStream();
+                using var writer = new BinaryWriter(aadMs);
+                writer.Write(headerHash);
+                writer.Write(chunkIndex);
+                byte[] chunkAad = aadMs.ToArray();
+
+                decryptedChunk = AesGcmEncryptor.Decrypt(encryptedChunk, _key, chunkNonce, chunkAad);
+            }
+            else
+            {
+                decryptedChunk = encryptedChunk;
+            }
+
+            int chunkStartInData = chunkIndex * chunkSizeBytes;
+            int copyStart = Math.Max((int)entry.OffsetInData, chunkStartInData) - chunkStartInData;
+            int copyEnd = Math.Min((int)(entry.OffsetInData + entry.StoredSize), chunkStartInData + decryptedChunk.Length) - chunkStartInData;
+            int copyLength = copyEnd - copyStart;
+
+            if (copyLength > 0)
+            {
+                ms.Write(decryptedChunk, copyStart, copyLength);
+            }
+        }
+
+        byte[] storedData = ms.ToArray();
+
+        if (entry.IsCompressed)
+        {
+            return AdaptiveCompressor.Decompress(
+                storedData,
+                (int)entry.UncompressedSize,
+                _compressionAlgorithm
+            );
+        }
+
+        return storedData;
+    }
+
+    private byte[] BuildChunkAad(int chunkIndex)
+    {
+        using var ms = new MemoryStream();
+        using var writer = new BinaryWriter(ms);
+
+        uint headerHash = Crc32.Compute(_encryptedHeaderData);
+        writer.Write(headerHash);
+        writer.Write(chunkIndex);
+
+        return ms.ToArray();
     }
 }

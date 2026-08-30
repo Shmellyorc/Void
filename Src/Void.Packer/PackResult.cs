@@ -206,3 +206,19 @@ public class FileInfo
     /// </summary>
     public uint CRC32 { get; set; }
 }
+
+/// <summary>
+/// Represents a chunk entry in the SolidPack archive.
+/// </summary>
+public class ChunkEntry
+{
+    /// <summary>
+    /// Gets or sets the offset of the chunk in the data section.
+    /// </summary>
+    public uint Offset { get; set; }
+
+    /// <summary>
+    /// Gets or sets the encrypted size of the chunk.
+    /// </summary>
+    public uint Size { get; set; }
+}

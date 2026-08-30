@@ -107,12 +107,12 @@ public static class TextHelper
 
                 string brokenWord = BreakLongWord(font, word, maxWidth);
                 result.Append(brokenWord);
-                
+
                 currentWidth = GetLastLineWidth(font, brokenWord);
                 continue;
             }
 
-            if (currentWidth + wordWidth > maxWidth && currentWidth > 0f)
+            if (currentWidth + spaceWidth + wordWidth > maxWidth && currentWidth > 0f)
             {
                 result.Append('\n');
                 currentWidth = 0f;
@@ -226,7 +226,7 @@ public static class TextHelper
 
         string ellipsis = "...";
         float ellipsisWidth = font.Measure(ellipsis).X;
-        
+
         if (ellipsisWidth > maxWidth)
             return string.Empty;
 
@@ -268,7 +268,7 @@ public static class TextHelper
 
         string ellipsis = "...";
         float ellipsisWidth = font.Measure(ellipsis).X;
-        
+
         if (ellipsisWidth > maxWidth)
             return string.Empty;
 
@@ -320,7 +320,7 @@ public static class TextHelper
                 int lineEnd = i;
                 while (lineEnd > lineStart && char.IsWhiteSpace(text[lineEnd - 1]))
                     lineEnd--;
-                
+
                 result.Append(text, lineStart, lineEnd - lineStart);
                 result.Append('\n');
 
@@ -336,7 +336,7 @@ public static class TextHelper
             int lineEnd = text.Length;
             while (lineEnd > lineStart && char.IsWhiteSpace(text[lineEnd - 1]))
                 lineEnd--;
-            
+
             result.Append(text, lineStart, lineEnd - lineStart);
         }
 
@@ -360,7 +360,7 @@ public static class TextHelper
             return cachedHeight;
 
         string wrapped = WrapText(font, text, maxWidth);
-        
+
         var lines = wrapped.Split('\n');
         float totalHeight = 0f;
         float lineSpacing = font.LineSpacing;
@@ -384,7 +384,7 @@ public static class TextHelper
     {
         if (string.IsNullOrEmpty(text))
             return 0;
-        
+
         return text.CountChar('\n') + 1;
     }
 
@@ -540,7 +540,7 @@ public static class TextHelper
     {
         if (cache.Count >= MaxCacheSize)
             cache.Clear();
-        
+
         cache[key] = value;
     }
 }

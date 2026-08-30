@@ -90,6 +90,15 @@ public sealed class PackOptions
     /// </summary>
     /// <value>The compression level between 1 (fastest) and 9 (best compression). Default is 6.</value>
     public int CompressionLevel { get; set; } = 6;
+
+    /// <summary>
+    /// Gets or sets the chunk size in kilobytes for chunked encryption.
+    /// When set to 0, solid encryption is used (entire data section encrypted as one blob).
+    /// When set > 0, the data section is split into chunks of this size and each chunk is encrypted separately.
+    /// This allows reading individual files without decrypting the entire pack.
+    /// </summary>
+    /// <value>The chunk size in KB. Default is 1024 (1MB). Set to 0 for solid encryption.</value>
+    public ushort ChunkSizeKB { get; set; } = 1024;
 }
 
 /// <summary>
