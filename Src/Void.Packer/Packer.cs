@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using Void.Packer.Utils;
 
 namespace Void.Packer;
@@ -134,7 +135,7 @@ public static class Packer
         foreach (var path in reader.ListFiles())
         {
             var data = reader.ReadFile(path);
-            
+
             result.Files.Add(new PackFile
             {
                 VirtualPath = path,
@@ -256,4 +257,27 @@ public static class Packer
 
         return groups;
     }
+
+
+
+    /// <summary>
+    /// Attempts to load a pack file without throwing exceptions.
+    /// </summary>
+    /// <param name="packPath">The path to the pack file.</param>
+    /// <param name="key">The optional encryption key. If null, the key is auto-detected from a .key file next to the pack.</param>
+    /// <param name="reader">When this method returns, contains the loaded pack reader, or null if loading failed.</param>
+    /// <param name="error">When this method returns, contains the error code if loading failed, or PackError.None on success.</param>
+    /// <returns><see langword="true"/> if the pack was loaded successfully; otherwise, <see langword="false"/>.</returns>
+    public static bool TryLoadPack(string packPath, byte[] key, out SolidPackReader reader, out PackError error)
+        => SolidPackReader.TryCreate(packPath, key, out reader, out error);
+
+    /// <summary>
+    /// Attempts to load a pack file without throwing exceptions.
+    /// </summary>
+    /// <param name="packPath">The path to the pack file.</param>
+    /// <param name="reader">When this method returns, contains the loaded pack reader, or null if loading failed.</param>
+    /// <param name="error">When this method returns, contains the error code if loading failed, or PackError.None on success.</param>
+    /// <returns><see langword="true"/> if the pack was loaded successfully; otherwise, <see langword="false"/>.</returns>
+    public static bool TryLoadPack(string packPath, out SolidPackReader reader, out PackError error)
+        => SolidPackReader.TryCreate(packPath, null, out reader, out error);
 }

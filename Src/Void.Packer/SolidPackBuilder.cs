@@ -124,14 +124,18 @@ public sealed class SolidPackBuilder
     public void AddFile(PackFile file)
     {
         if (file == null)
-            throw new ArgumentNullException(nameof(file));
+            throw new PackException(PackError.FileReadFailed, "File cannot be null");
+
         if (string.IsNullOrEmpty(file.VirtualPath))
-            throw new ArgumentException("Virtualpath cannot be empty");
+            throw new PackException(PackError.EmptyVirtualPath, "Virtualpath cannot be empty");
+
+        if (file.Data == null)
+            throw new PackException(PackError.FileReadFailed, $"File data is null for '{file.VirtualPath}'");
 
         var normalizedPath = PathNormalizer.Normalize(file.VirtualPath);
 
         if (_entries.Any(x => x.VirtualPath == normalizedPath))
-            throw new InvalidOperationException($"Duplicate file path: {normalizedPath}");
+            throw new PackException(PackError.DuplicatePath, $"Duplicate file path: {normalizedPath}");
 
         _files.Add(file);
     }
@@ -154,12 +158,11 @@ public sealed class SolidPackBuilder
     public PackContainer Build()
     {
         if (_files.Count == 0)
-            throw new InvalidOperationException("No files to pack");
+            throw new PackException(PackError.NoFilesToPack, "No files to pack");
 
         if (_files.Count > _options.MaxFilesPerPack)
-            throw new InvalidOperationException(
-                $"File count ({_files.Count}) exceeds max per pack ({_options.MaxFilesPerPack})"
-            );
+            throw new PackException(PackError.TooManyFiles,
+                $"File count ({_files.Count}) exceeds max per pack ({_options.MaxFilesPerPack})");
 
         foreach (var file in _files)
             ProcessFile(file);
@@ -390,7 +393,6 @@ public sealed class SolidPackBuilder
         writer.Write((byte)_options.Compression);
         writer.Write(new byte[PackConstants.HeaderReservedSize]);
 
-        // File table
         foreach (var entry in _entries)
         {
             byte[] pathBytes = Encoding.UTF8.GetBytes(entry.VirtualPath);
@@ -407,7 +409,6 @@ public sealed class SolidPackBuilder
             writer.Write(pathBytes);
         }
 
-        // Chunk table (only if chunked)
         if (chunked && chunkTable.Count > 0)
         {
             writer.Write((uint)chunkTable.Count);
@@ -444,7 +445,6 @@ public sealed class SolidPackBuilder
         return ms.ToArray();
     }
 
-    // Fix BuildFinalPack - remove unused chunkTable parameter
     private PackContainer BuildFinalPack(
         byte[] encryptedHeader,
         byte[] encryptedData,

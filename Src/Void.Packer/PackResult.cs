@@ -222,3 +222,85 @@ public class ChunkEntry
     /// </summary>
     public uint Size { get; set; }
 }
+
+
+/// <summary>
+/// Represents errors that can occur during pack operations.
+/// </summary>
+public enum PackError
+{
+    /// <summary>No error.</summary>
+    None,
+
+    /// <summary>The pack file was not found at the specified path.</summary>
+    PackNotFound,
+
+    /// <summary>The file is not a valid SolidPack archive (invalid magic bytes).</summary>
+    InvalidMagicBytes,
+
+    /// <summary>The pack version is newer than supported.</summary>
+    UnsupportedVersion,
+
+    /// <summary>The pack file is too small to contain a valid header.</summary>
+    PackTooSmall,
+
+    /// <summary>The pack is encrypted but no key was provided or found.</summary>
+    MissingKey,
+
+    /// <summary>The provided key is invalid (decryption failed).</summary>
+    InvalidKey,
+
+    /// <summary>The header is corrupted or could not be decrypted.</summary>
+    HeaderCorrupted,
+
+    /// <summary>The file table in the header is corrupted.</summary>
+    FileTableCorrupted,
+
+    /// <summary>The chunk table in the header is corrupted.</summary>
+    ChunkTableCorrupted,
+
+    /// <summary>The requested file was not found in the pack.</summary>
+    FileNotFound,
+
+    /// <summary>A chunk failed to decrypt (tampered or wrong key).</summary>
+    ChunkCorrupted,
+
+    /// <summary>The requested chunk index is out of range.</summary>
+    ChunkOutOfRange,
+
+    /// <summary>The pack data is truncated (file ends before expected data).</summary>
+    DataTruncated,
+
+    /// <summary>A file's CRC32 checksum does not match.</summary>
+    ChecksumMismatch,
+
+    /// <summary>File decompression failed.</summary>
+    DecompressionFailed,
+
+    /// <summary>The compression algorithm is not supported.</summary>
+    CompressionNotSupported,
+
+    /// <summary>The chunk size is invalid (flag set but chunk size is zero).</summary>
+    InvalidChunkSize,
+
+    /// <summary>No files were provided to pack.</summary>
+    NoFilesToPack,
+
+    /// <summary>The file count exceeds the maximum allowed per pack.</summary>
+    TooManyFiles,
+
+    /// <summary>A duplicate virtual path was found.</summary>
+    DuplicatePath,
+
+    /// <summary>A file has an empty virtual path.</summary>
+    EmptyVirtualPath,
+
+    /// <summary>A source file could not be read.</summary>
+    FileReadFailed,
+
+    /// <summary>The pack is already mounted.</summary>
+    PackAlreadyMounted,
+
+    /// <summary>The pack reader has been disposed.</summary>
+    PackIsDisposed
+}

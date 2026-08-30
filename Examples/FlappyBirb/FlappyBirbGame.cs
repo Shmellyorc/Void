@@ -65,7 +65,7 @@ public sealed class FlappyBirbGame(GameSettings settings) : Game(settings)
 
         // Load all assets from the spritesheet
         Globals.Texture = AssetManager.Instance.Load<Texture>("Spritesheet.png");
-        Globals.Font = AssetManager.Instance.LoadSpriteFont("Fonts/FontOutline.png", -2);
+        Globals.Font = AssetManager.Instance.LoadSpriteFont("Fonts/Font.png", -1);
         Globals.Sheet = AssetManager.Instance.Load<Spritesheet>("Spritesheet.sheet");
 
         // Get source rectangles for background and ground sprites

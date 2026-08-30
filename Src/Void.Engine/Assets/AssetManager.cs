@@ -212,7 +212,6 @@ public sealed class AssetManager
 
         Logger.Instance.InfoWithCategory("AssetManager", "Loading pack: {0} (key: {1})", packPath, keyPath ?? "none");
 
-        byte[] packData = File.ReadAllBytes(fullPackPath);
         byte[] key = null;
         if (!string.IsNullOrEmpty(keyPath))
         {
@@ -233,29 +232,7 @@ public sealed class AssetManager
 
         Logger.Instance.InfoWithCategory("AssetManager", "Pack loaded: {0}", mountName ?? Path.GetFileNameWithoutExtension(packPath));
 
-        return LoadPackData(packData, key, mountName ?? Path.GetFileNameWithoutExtension(packPath));
-    }
-
-    /// <summary>
-    /// Loads a pack from raw data bytes.
-    /// </summary>
-    /// <param name="packData">The raw pack data.</param>
-    /// <param name="key">The optional encryption key.</param>
-    /// <param name="mountName">The name of the mount (optional).</param>
-    /// <returns>The loaded pack mount.</returns>
-    public PackMount LoadPackData(byte[] packData, byte[] key = null, string mountName = null)
-    {
-        if (packData == null || packData.Length == 0)
-            throw new ArgumentException("Pack data cannot be null or empty", nameof(packData));
-
-        Logger.Instance.DebugWithCategory("AssetManager",
-            "Loading pack data: {0} bytes, name: {1}", packData.Length, mountName ?? "Pack Mount");
-
-        var mount = new PackMount(packData, key, mountName ?? "Pack Mount");
-
-        AddMountToEnd(mount);
-
-        return mount;
+        return new PackMount(fullPackPath, key, mountName ?? Path.GetFileNameWithoutExtension(packPath));
     }
 
     /// <summary>
@@ -273,7 +250,7 @@ public sealed class AssetManager
         if (!Directory.Exists(fullDirPath))
             throw new DirectoryNotFoundException($"Directory not found: {fullDirPath}");
 
-        var mounted = new List<PackMount>();
+        var packs = new List<PackMount>();
 
         var packFiles = Directory.GetFiles(fullDirPath, "*.pack", SearchOption.TopDirectoryOnly);
 
@@ -290,7 +267,7 @@ public sealed class AssetManager
                     Path.GetFileNameWithoutExtension(packFile)
                 );
 
-                mounted.Add(mount);
+                packs.Add(mount);
             }
             catch (Exception ex)
             {
@@ -298,7 +275,7 @@ public sealed class AssetManager
             }
         }
 
-        return mounted;
+        return packs;
     }
 
     /// <summary>

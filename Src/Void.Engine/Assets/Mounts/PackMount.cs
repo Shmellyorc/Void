@@ -10,6 +10,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+
 using Void.Packer;
 using Void.Packer.Utils;
 
@@ -80,18 +81,21 @@ public sealed class PackMount : IMount, IDisposable
     private bool _isDisposed;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PackMount"/> class.
+    /// Initializes a new instance of the <see cref="PackMount"/> class from a file path.
+    /// The pack file is opened lazily on first read.
     /// </summary>
-    /// <param name="packData">The raw pack data bytes.</param>
+    /// <param name="packPath">The path to the pack file.</param>
     /// <param name="key">The optional encryption key for the pack.</param>
     /// <param name="mountName">The name of the mount for identification.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="packData"/> is null or empty.</exception>
-    public PackMount(byte[] packData, byte[] key = null, string mountName = null)
+    public PackMount(string packPath, byte[] key = null, string mountName = null)
     {
-        if (packData.IsEmpty())
-            throw new ArgumentException("Pack data cannot be null or empty.", nameof(packData));
+        if (string.IsNullOrEmpty(packPath))
+            throw new ArgumentException("Pack path cannot be null or empty.", nameof(packPath));
 
-        _reader = new SolidPackReader(packData, key);
+        if (!File.Exists(packPath))
+            throw new FileNotFoundException($"Pack file not found: {packPath}");
+
+        _reader = new SolidPackReader(packPath, key);
         _mountName = mountName ?? $"Pack mount ({_reader.FileCount}) files";
         _pathCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 

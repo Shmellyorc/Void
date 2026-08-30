@@ -109,8 +109,6 @@ public sealed class MacOsPackMount : IMount, IDisposable
         if (!File.Exists(packPath))
             throw new FileNotFoundException($"Pack file not found: {packPath}");
 
-        byte[] packData = File.ReadAllBytes(packPath);
-
         if (key == null)
         {
             string keyPath = Path.ChangeExtension(packPath, ".key");
@@ -120,7 +118,7 @@ public sealed class MacOsPackMount : IMount, IDisposable
             }
         }
 
-        _packMount = new PackMount(packData, key, Path.GetFileNameWithoutExtension(packFileName));
+        _packMount = new PackMount(packPath, key, Path.GetFileNameWithoutExtension(packFileName));
     }
 
     /// <summary>
