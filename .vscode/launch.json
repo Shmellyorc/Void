@@ -13,17 +13,6 @@
             "stopAtEntry": false
         },
         {
-            "name": "MiniPac",
-            "type": "coreclr",
-            "request": "launch",
-            "preLaunchTask": "build-minipack",
-            "program": "${workspaceFolder}/Examples/MiniPac/bin/Debug/net10.0/MiniPac.dll",
-            "args": [],
-            "cwd": "${workspaceFolder}/Examples/MiniPac",
-            "console": "internalConsole",
-            "stopAtEntry": false
-        },
-        {
             "name": "Scavengers",
             "type": "coreclr",
             "request": "launch",
