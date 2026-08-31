@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Src/Void.Engine/Resources/Data/ImageSmallScaled.png" alt="Void Engine Logo" width="400">
+  <img src="Images/ImageSmallScaled.png" alt="Void Engine Logo" width="400">
   <br>
   <strong>A lightweight, extensible 2D game framework for .NET.</strong>
 </p>

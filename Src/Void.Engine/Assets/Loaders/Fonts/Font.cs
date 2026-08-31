@@ -118,12 +118,12 @@ public abstract class Font : IAsset
     /// <summary>
     /// Gets or sets the line spacing (additional space between lines).
     /// </summary>
-    public float LineSpacing { get; protected set; }
+    public float LineSpacing { get; protected internal set; }
 
     /// <summary>
     /// Gets or sets the character spacing (additional space between characters).
     /// </summary>
-    public float Spacing { get; protected set; }
+    public float Spacing { get; protected internal set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="Font"/> class.

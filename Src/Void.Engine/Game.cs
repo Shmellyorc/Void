@@ -28,6 +28,8 @@ namespace Void.Engine;
 /// </remarks>
 public class Game : IDisposable
 {
+    private const string DefaultFontTag = "Void.Engine.Internal.DefaultFont";
+
     private readonly GameSettings _settings;
     private readonly Window _window;
     private readonly FrameTime _timing;
@@ -107,6 +109,41 @@ public class Game : IDisposable
     }
 
     /// <summary>
+    /// Gets the default engine font.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This font is loaded from embedded resources and cached in the AssetManager
+    /// under the internal tag "Void.Engine.Internal.DefaultFont". It is always
+    /// available and will not be evicted from the cache because each access
+    /// updates its last access time.
+    /// </para>
+    /// <para>
+    /// Use this font for UI elements, debug text, and any text rendering where
+    /// a custom font is not required.
+    /// </para>
+    /// <para>
+    /// Example usage:
+    /// <code>
+    /// var font = Game.Instance.Font;
+    /// batcher.DrawText(font, "Hello World!", position, Color.White);
+    /// </code>
+    /// </para>
+    /// </remarks>
+    public SpriteFont Font
+    {
+        get
+        {
+            if (AssetManager.Instance.TryGetAsset<SpriteFont>(DefaultFontTag, out var font))
+                return font;
+
+            // Should never happen, but just in case
+            LoadDefaultFont();
+            return AssetManager.Instance.TryGetAsset<SpriteFont>(DefaultFontTag, out var f) ? f : null;
+        }
+    }
+
+    /// <summary>
     /// Creates a new game instance.
     /// </summary>
     /// <param name="settings">Configured settings from <see cref="GameSettings.Build"/>.</param>
@@ -149,12 +186,15 @@ public class Game : IDisposable
         Logger.Instance.Info("Version: {0}  Hash: {1}", Version, VersionHash);
         Logger.Instance.Info();
 
+        LoadDefaultFont();
+
         _window = new Window(
             (int)_settings.Window.X,
             (int)_settings.Window.Y,
             _settings.AppTitle,
             _settings.Fullscreen ? WindowMode.Fullscreen : WindowMode.Windowed,
-            _settings.VSync
+            _settings.VSync,
+            EmbeddedResources.Exists("Data/Icon.png") ? EmbeddedResources.ReadAllBytes("Data/Icon.png") : null
         )
         {
             OnMouseWheelScrolled = delta => _scrollWheel += delta
@@ -282,6 +322,30 @@ public class Game : IDisposable
     /// Override for cleanup logic when the game exits.
     /// </summary>
     protected virtual void OnExit() { }
+
+
+
+    private void LoadDefaultFont()
+    {
+        try
+        {
+            if (!EmbeddedResources.Exists("Data/Font.png"))
+            {
+                Logger.Instance.WarningWithCategory("Game", "Default font not found in embedded resources.");
+            }
+
+            var fontData = EmbeddedResources.ReadAllBytes("Data/Font.png");
+            AssetManager.Instance.LoadFromData<SpriteFont>(fontData, DefaultFontTag);
+
+            Logger.Instance.InfoWithCategory("Game", "Default font loaded successfully");
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.ErrorWithCategory("Game", "Failed to load default font: {0}", ex.Message);
+        }
+    }
+
+
 
     /// <summary>
     /// Cleans up all resources. Called automatically when disposed.

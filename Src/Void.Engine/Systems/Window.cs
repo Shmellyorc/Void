@@ -159,6 +159,8 @@ public sealed class Window : IDisposable
     private readonly int _superSample;
     private readonly WindowScaleMode _scaleMode;
 
+    private byte[] _iconData;
+
     /// <summary>
     /// Gets the current window size in pixels.
     /// </summary>
@@ -227,7 +229,8 @@ public sealed class Window : IDisposable
     /// <param name="title">The initial window title.</param>
     /// <param name="mode">The initial window mode.</param>
     /// <param name="vsync">Whether VSync should be enabled initially.</param>
-    public Window(int width, int height, string title, WindowMode mode = WindowMode.Windowed, bool vsync = true)
+    /// <param name="iconData">Optional byte array containing the window icon data (PNG format). If null, the default SFML icon is used.</param>
+    public Window(int width, int height, string title, WindowMode mode = WindowMode.Windowed, bool vsync = true, byte[] iconData = null)
     {
         Logger.Instance.InfoWithCategory("Window", "Creating window: {0}x{1} '{2}' Mode={3} VSync={4}",
             width, height, title, mode, vsync);
@@ -258,6 +261,7 @@ public sealed class Window : IDisposable
         _window.SetView(windowView);
 
         RecreateRenderTarget();
+        SetIcon(iconData);
 
         _window.Closed += (s, o) =>
         {
@@ -530,6 +534,7 @@ public sealed class Window : IDisposable
         _window.MouseWheelScrolled += OnMouseWheelHandler;
 
         RecreateRenderTarget();
+        ApplyIcon();
 
         Logger.Instance.InfoWithCategory("Window", "Window recreated");
     }
@@ -680,6 +685,57 @@ public sealed class Window : IDisposable
         var mode = new SFVideoMode(new((uint)width, (uint)height));
         return mode.IsValid();
     }
+
+
+
+
+    /// <summary>
+    /// Sets the window icon from a file path.
+    /// </summary>
+    public void SetIcon(string iconPath)
+    {
+        if (string.IsNullOrEmpty(iconPath))
+            return;
+
+        if (!File.Exists(iconPath))
+        {
+            Logger.Instance.WarningWithCategory("Window", "Icon file not found: {0}", iconPath);
+            return;
+        }
+
+        var iconData = File.ReadAllBytes(iconPath);
+        SetIcon(iconData);
+    }
+
+    /// <summary>
+    /// Sets the window icon from a byte array.
+    /// The icon data is stored and reapplied if the window is recreated.
+    /// </summary>
+    public void SetIcon(byte[] iconData)
+    {
+        if (iconData == null || iconData.Length == 0)
+            return;
+
+        _iconData = iconData;
+        ApplyIcon();
+    }
+
+    /// <summary>
+    /// Applies the icon to the current window.
+    /// </summary>
+    private void ApplyIcon()
+    {
+        if (_iconData == null || _iconData.Length == 0)
+            return;
+        if (_window == null || _window.IsInvalid)
+            return;
+
+        using var stream = new MemoryStream(_iconData);
+        using var image = new SFImage(stream);
+        _window.SetIcon(new(image.Size.X, image.Size.Y), image.Pixels);
+    }
+
+
 
     /// <summary>
     /// Implicitly converts a Window to an SFML render window.

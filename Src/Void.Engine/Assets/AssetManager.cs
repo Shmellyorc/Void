@@ -604,6 +604,49 @@ public sealed class AssetManager
     #endregion
 
     #region Internal Methods
+    internal bool TryGetAsset<T>(string tag, out T asset) where T : IAsset
+    {
+        var hash = HashHelper.Cache64(tag);
+        if (_assets.TryGetValue(hash, out var a))
+        {
+            asset = (T)a;
+            return true;
+        }
+        asset = default;
+        return false;
+    }
+
+    internal T LoadFromData<T>(byte[] data, string tag) where T : IAsset
+    {
+        if (data == null || data.Length == 0)
+            throw new ArgumentNullException(nameof(data));
+        if (string.IsNullOrEmpty(tag))
+            throw new ArgumentNullException(nameof(tag));
+
+        var hash = HashHelper.Cache64(tag);
+
+        if (_assets.TryGetValue(hash, out var existing))
+            return (T)existing;
+        if (!SupportedLoaders.TryGetValue(typeof(T), out var loader))
+            throw new InvalidOperationException($"No loader found for asset type '{typeof(T).Name}'");
+
+        var asset = (T)loader(GetNextId(), data, tag);
+
+        if (asset is SpriteFont font)
+        {
+            font.LineSpacing = 2;
+            font.Spacing = 1;
+        }
+
+        asset.Load();
+
+        _assets.TryAdd(hash, asset);
+
+        Logger.Instance.DebugWithCategory("AssetManager", "Loaded asset from data: {0} ({1} bytes)", tag, data.Length);
+
+        return asset;
+    }
+
     internal static uint GetNextId()
     {
         lock (IdLock)
