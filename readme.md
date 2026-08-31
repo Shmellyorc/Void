@@ -32,7 +32,7 @@ Every major system is built around interfaces and base classes that you can repl
 - **ContentTypeWriterReader<T>**: Any save data type you can imagine
 
 **How it works:**
-```
+```csharp
 GameSettings.Instance.SetAtlasPacker(typeof(MyAtlasPacker));
 
 AssetManager.Instance.AddMountToStart(new CloudMount());
@@ -57,37 +57,51 @@ When you release a game, your assets are your intellectual property. Within days
 **CLI Tool**
 
 Build a pack:
-```
+```bash
 void-packer build -c Content/ -o Packs/
 ```
 
-Update a pack (fast incremental updates, seconds not minutes):
-```
-void-packer update --pack GameAssets.pack --add Content/newfile.png
+Build with custom chunk size (default 1MB):
+```bash
+void-packer build -c Content/ -o Packs/ --chunk-size 512
 ```
 
-Extract a pack:
+Build with chunking disabled (solid encryption):
+```bash
+void-packer build -c Content/ -o Packs/ --chunk-size 0
 ```
+
+Extract a pack with progress tracking:
+```bash
 void-packer extract --pack GameAssets.pack --output Extracted/
 ```
 
 Verify pack integrity:
-```
+```bash
 void-packer verify --pack GameAssets.pack
 ```
 
 List files in a pack:
-```
+```bash
 void-packer list --pack GameAssets.pack --detailed
 ```
+
+Update a pack (fast incremental updates, seconds not minutes):
+```bash
+void-packer update --pack GameAssets.pack --add Content/newfile.png --remove oldfile.txt
+```
+
 **Security Features**
 
-- AES-GCM 256-bit encryption (same standard used by governments and militaries)
+- AES-GCM 256-bit encryption, the same standard used by governments and militaries
 - Separate encryption for header and data sections
-- PBKDF2 key derivation with salt
 - Per-file CRC32 integrity verification
-- Adaptive compression (never makes files larger)
-- Fast incremental updates (streaming, not loading into memory)
+- Adaptive compression that never makes files larger
+- Fast incremental updates using streaming, not loading into memory
+- Chunked encryption for large packs with per-chunk authentication
+- Stream-based reading from disk with no full pack loaded into memory
+- Lazy open and idle close for efficient resource management
+- Thread-safe for concurrent asset loading
 
 **How it works**
 
@@ -95,19 +109,52 @@ The pack format uses a bootstrap header that is never encrypted. It contains jus
 
 The header contains the file table with virtual paths, offsets, sizes, and CRC32 checksums. This is encrypted separately from the data.
 
-The data section contains your actual assets. Each file is compressed individually and encrypted. Without the key, the pack is just random bytes.
+The data section contains your actual assets. For large packs, the data is split into chunks with a configurable size, defaulting to 1MB. Each chunk is encrypted separately with its own authentication tag. This means reading a single file only decrypts the chunk containing that file, not the entire pack. Tampering with any chunk or the header causes authentication failure.
+
+Without the key, the pack is just random bytes.
 
 **API Usage**
 
 Load a pack in your game:
-```
-AssetManager.Instance.LoadPack("GameAssets.pack", "GameAssets.key");
+```csharp
+var pack = AssetManager.Instance.LoadPack("GameAssets.pack");
 AssetManager.Instance.AddMountToStart(pack);
 ```
 
-Then load assets normally:
+The key is auto-detected from `GameAssets.key` next to the pack file.
+
+Load multiple packs with priority control:
+```csharp
+var graphicsPack = AssetManager.Instance.LoadPack("Graphics.pack");
+var audioPack = AssetManager.Instance.LoadPack("Audio.pack");
+var levelsPack = AssetManager.Instance.LoadPack("Levels.pack");
+
+AssetManager.Instance.AddMountToStart(graphicsPack);
+AssetManager.Instance.AddMountToStart(audioPack);
+AssetManager.Instance.AddMountToStart(levelsPack);
 ```
-var texture = AssetManager.Instance.Load<Texture>("player.png");
+
+Load all indexed packs in a directory:
+```csharp
+var packs = AssetManager.Instance.LoadAllPacks("Packs/");
+foreach (var pack in packs)
+{
+    AssetManager.Instance.AddMountToEnd(pack);
+}
+```
+
+Graceful error handling with TryLoadPack:
+```csharp
+if (!Packer.TryLoadPack("Mod.pack", out var reader, out var error))
+{
+    Console.WriteLine($"Failed to load mod: {error}");
+    return;
+}
+using (reader)
+{
+    var pack = new PackMount(reader);
+    AssetManager.Instance.AddMountToStart(pack);
+}
 ```
 
 Your code doesn't change whether assets are loose or packed. The engine handles everything.
@@ -124,9 +171,9 @@ The key is stored separately from the pack. You decide how to distribute it:
 ## Features
 | System | What It Does |
 |--------|--------------|
-| Rendering | Batched sprite/primitive rendering, texture atlasing, shaders |
+| Rendering | Batched sprite and primitive rendering, texture atlasing, shaders, post-processing |
 | Assets | Mount-based virtual file system, encrypted pack loading, LRU eviction |
-| Input | Keyboard, mouse, gamepad (SDL mapping), action system |
+| Input | Keyboard, mouse, gamepad with SDL mapping, action system |
 | Audio | Sound pooling, priority-based voice stealing, category volumes |
 | Saving | AES-GCM encrypted saves with manifest verification |
 | Pathfinding | A*, Dijkstra, BFS, flow fields |
@@ -136,18 +183,18 @@ The key is stored separately from the pack. You decide how to distribute it:
 
 ## Getting Started
 Create a new console project:
-```
+```bash
 dotnet new console -n MyGame
 cd MyGame
 ```
 
 Add Void.Engine:
-```
+```bash
 dotnet add package Void.Engine
 ```
 
 Create a new class called MyGame.cs:
-```
+```csharp
 using Void.Engine;
 
 public class MyGame : Game
@@ -177,7 +224,7 @@ public class MyGame : Game
 ```
 
 Replace Program.cs with:
-```
+```csharp
 using Void.Engine;
 
 var settings = GameSettings.Instance
@@ -191,7 +238,7 @@ game.Run();
 ```
 
 Run your game:
-```
+```bash
 dotnet run
 ```
 
@@ -213,4 +260,4 @@ dotnet run
 ## License
 MIT. Use it for anything. No royalties. No fees.
 
-**Void Engine — Made by developers who care about your work.**
+**Void Engine: Made by developers who care about your work.**
