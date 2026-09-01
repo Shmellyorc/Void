@@ -6,12 +6,23 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     
-    <!-- NuGet Package Metadata -->
+    <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Packer</PackageId>
     <Version>1.0.0</Version>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
     <Description>Asset packing library with encryption and compression for Void Engine.</Description>
+    <Copyright>Copyright (c) 2026 Void Engine</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
+    <PackageTags>void;packer;asset-packing;encryption;aes-gcm;compression;game-framework;dotnet</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\Images\Icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

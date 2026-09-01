@@ -4,6 +4,9 @@
   <strong>A lightweight, extensible 2D game framework for .NET.</strong>
 </p>
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
+
 ## Philosophy
 **Extend, don't modify.**
 
@@ -15,6 +18,25 @@ Void sits in the middle. It gives you the essentials and gets out of your way.
 
 Void Wiki: [here](https://github.com/Shmellyorc/Void/wiki).  
 Full Void Spec sheet and technical details: [here](VoidSpecSheet.pdf).  
+
+## Quick Install
+
+### Engine
+```bash
+dotnet add package Void.Engine
+```
+
+### CLI Tool
+```bash
+dotnet tool install --global Void.Packer.CLI
+```
+
+### NuGet Packages
+| Package | Version | Downloads |
+|---------|---------|-----------|
+| [Void.Engine](https://www.nuget.org/packages/Void.Engine) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine) |
+| [Void.Packer](https://www.nuget.org/packages/Void.Packer) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer)](https://www.nuget.org/packages/Void.Packer) |
+| [Void.Packer.CLI](https://www.nuget.org/packages/Void.Packer.CLI) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer.CLI)](https://www.nuget.org/packages/Void.Packer.CLI) |
 
 ## Extensibility
 Void was built to be extended, not just used.

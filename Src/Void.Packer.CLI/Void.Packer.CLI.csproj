@@ -26,14 +26,17 @@
     <Version>1.0.0</Version>
     <Description>Asset packer for Void Engine games. Packs content files into .pack format with optional encryption and compression.</Description>
     
-    <!-- NuGet Package Metadata for the tool -->
+    <PackageIcon>Icon.png</PackageIcon>
+    <PackageId>Void.Packer.CLI</PackageId>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
-    <Copyright>Copyright (c) 2025 Void Engine</Copyright>
+    <Copyright>Copyright (c) 2026 Void Engine</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <!-- <PackageProjectUrl>https://github.com/your-repo/Void</PackageProjectUrl> -->
-    <!-- <RepositoryUrl>https://github.com/your-repo/Void</RepositoryUrl> -->
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
+    <PackageTags>void;packer;cli;asset-packing;encryption;game-framework;dotnet</PackageTags>
   </PropertyGroup>
 
 
@@ -45,6 +48,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Void.Packer\Void.Packer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\Images\Icon.png" Pack="true" PackagePath="\" />
   </ItemGroup>
 
 </Project>
