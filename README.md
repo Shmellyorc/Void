@@ -7,17 +7,12 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 
-## Philosophy
-**Extend, don't modify.**
-
-Most game engines try to do everything. They have physics, networking, UI, animation, and everything else you can think of. The problem is your game is unique. Your physics needs are different. Your UI is different. Yet these engines force you to use their way of doing things. You fight the engine instead of making your game.
-
-At the other extreme, frameworks like MonoGame give you almost nothing. You end up rebuilding things every game needs: saving, audio management, pathfinding. These are solved problems. Why rebuild them?
-
-Void sits in the middle. It gives you the essentials and gets out of your way.
-
-Void Wiki: [here](https://github.com/Shmellyorc/Void/wiki).  
-Full Void Spec sheet and technical details: [here](VoidSpecSheet.pdf).  
+### NuGet Packages
+| Package | Version | Downloads |
+|---------|---------|-----------|
+| [Void.Engine](https://www.nuget.org/packages/Void.Engine) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine) |
+| [Void.Packer](https://www.nuget.org/packages/Void.Packer) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer)](https://www.nuget.org/packages/Void.Packer) |
+| [Void.Packer.CLI](https://www.nuget.org/packages/Void.Packer.CLI) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer.CLI)](https://www.nuget.org/packages/Void.Packer.CLI) |
 
 ## Quick Install
 
@@ -30,13 +25,30 @@ dotnet add package Void.Engine
 ```bash
 dotnet tool install --global Void.Packer.CLI
 ```
+## Features
+| System | What It Does |
+|--------|--------------|
+| Rendering | Batched sprite and primitive rendering, texture atlasing, shaders, post-processing |
+| Assets | Mount-based virtual file system, encrypted pack loading, LRU eviction |
+| Input | Keyboard, mouse, gamepad with SDL mapping, action system |
+| Audio | Sound pooling, priority-based voice stealing, category volumes |
+| Saving | AES-GCM encrypted saves with manifest verification |
+| Pathfinding | A*, Dijkstra, BFS, flow fields |
+| Coroutines | Tweens, sequencing, delays, 33 easing functions |
+| Logging | Async logging with console and file sinks |
+| Math | Vectors, rectangles, colors, easing, random |
 
-### NuGet Packages
-| Package | Version | Downloads |
-|---------|---------|-----------|
-| [Void.Engine](https://www.nuget.org/packages/Void.Engine) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine) |
-| [Void.Packer](https://www.nuget.org/packages/Void.Packer) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer)](https://www.nuget.org/packages/Void.Packer) |
-| [Void.Packer.CLI](https://www.nuget.org/packages/Void.Packer.CLI) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer.CLI)](https://www.nuget.org/packages/Void.Packer.CLI) |
+## Philosophy
+**Extend, don't modify.**
+
+Most game engines try to do everything. They have physics, networking, UI, animation, and everything else you can think of. The problem is your game is unique. Your physics needs are different. Your UI is different. Yet these engines force you to use their way of doing things. You fight the engine instead of making your game.
+
+At the other extreme, frameworks like MonoGame give you almost nothing. You end up rebuilding things every game needs: saving, audio management, pathfinding. These are solved problems. Why rebuild them?
+
+Void sits in the middle. It gives you the essentials and gets out of your way.
+
+Void Wiki: [here](https://github.com/Shmellyorc/Void/wiki).  
+Full Void Spec sheet and technical details: [here](VoidSpecSheet.pdf).  
 
 ## Extensibility
 Void was built to be extended, not just used.
@@ -189,19 +201,6 @@ The key is stored separately from the pack. You decide how to distribute it:
 - Download from a CDN
 - Store on a secure server
 - Distribute with the game
-
-## Features
-| System | What It Does |
-|--------|--------------|
-| Rendering | Batched sprite and primitive rendering, texture atlasing, shaders, post-processing |
-| Assets | Mount-based virtual file system, encrypted pack loading, LRU eviction |
-| Input | Keyboard, mouse, gamepad with SDL mapping, action system |
-| Audio | Sound pooling, priority-based voice stealing, category volumes |
-| Saving | AES-GCM encrypted saves with manifest verification |
-| Pathfinding | A*, Dijkstra, BFS, flow fields |
-| Coroutines | Tweens, sequencing, delays, 33 easing functions |
-| Logging | Async logging with console and file sinks |
-| Math | Vectors, rectangles, colors, easing, random |
 
 ## Getting Started
 Create a new console project:
