@@ -24,8 +24,7 @@
   <PropertyGroup>
     <PackageReleaseNotes>
     [1.1.0] 2026.09.01
-
-    * CollisionHelper class with full collision detection and resolution:
+      * CollisionHelper class with full collision detection and resolution:
       * Primitives: IsWithinRadius, IsCircleOverlap, ClosestPointRect, ClosestPointCircle, LineLine
       * Shape to Shape: RectRect, CircleCircle, RectCircle
       * Point to Shape: PointRect, PointCircle
@@ -39,9 +38,7 @@
       * Pushback: PushRectRect, PushCircleRect, PushCircleCircle
       * Move and Slide: MoveAndSlideRect, MoveAndSlideCircle
       * Bounds Conversion: GetCircleBounds (for broadphase optimization)
-
-    * Rect2 now delegates all collision logic to CollisionHelper
-      (single source of truth for all collision detection)
+      * Rect2 now delegates all collision logic to CollisionHelper
     </PackageReleaseNotes>
   </PropertyGroup>
 
