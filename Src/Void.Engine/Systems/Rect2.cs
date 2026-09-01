@@ -9,6 +9,8 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
+using Void.Engine.Helpers;
+
 namespace Void.Engine.Systems;
 
 /// <summary>
@@ -21,6 +23,10 @@ namespace Void.Engine.Systems;
 /// detection, union operations, and various transformations. It is used
 /// extensively for collision detection, viewport calculations, UI layout,
 /// and spatial partitioning.
+/// </para>
+/// <para>
+/// Collision detection methods delegate to <see cref="CollisionHelper"/> to ensure
+/// all collision logic lives in one place.
 /// </para>
 /// <para>
 /// All operations assume a coordinate system where positive X extends to the
@@ -177,8 +183,7 @@ public struct Rect2 : IEquatable<Rect2>
     /// <param name="point">The point to test.</param>
     /// <returns><see langword="true"/> if the point is inside the rectangle; otherwise, <see langword="false"/>.</returns>
     public static bool Contains(in Rect2 rect, in Vect2 point)
-        => point.X >= rect.Left && point.X <= rect.Right &&
-           point.Y >= rect.Top && point.Y <= rect.Bottom;
+        => CollisionHelper.PointRect(point, rect);
 
     /// <summary>
     /// Determines whether this rectangle fully contains the specified rectangle.
@@ -194,8 +199,7 @@ public struct Rect2 : IEquatable<Rect2>
     /// <param name="b">The inner rectangle to test.</param>
     /// <returns><see langword="true"/> if rectangle a fully contains rectangle b; otherwise, <see langword="false"/>.</returns>
     public static bool Contains(in Rect2 a, in Rect2 b)
-        => b.Left >= a.Left && b.Right <= a.Right &&
-           b.Top >= a.Top && b.Bottom <= a.Bottom;
+        => CollisionHelper.RectContainsRect(a, b);
     #endregion
 
     #region Intersects
@@ -213,8 +217,7 @@ public struct Rect2 : IEquatable<Rect2>
     /// <param name="b">The second rectangle.</param>
     /// <returns><see langword="true"/> if the rectangles intersect; otherwise, <see langword="false"/>.</returns>
     public static bool Intersects(in Rect2 a, in Rect2 b)
-        => a.Left < b.Right && a.Right > b.Left &&
-           a.Top < b.Bottom && a.Bottom > b.Top;
+        => CollisionHelper.RectRect(a, b);
 
     /// <summary>
     /// Determines whether this rectangle intersects with a circle defined by its center and radius.
@@ -232,10 +235,7 @@ public struct Rect2 : IEquatable<Rect2>
     /// <param name="radius">The radius of the circle.</param>
     /// <returns><see langword="true"/> if the rectangle and circle intersect; otherwise, <see langword="false"/>.</returns>
     public static bool Intersects(in Rect2 rect, in Vect2 center, float radius)
-    {
-        Vect2 closest = center.Clamp(rect.TopLeft, rect.BottomRight);
-        return Vect2.DistanceSquared(center, closest) <= radius * radius;
-    }
+        => CollisionHelper.RectCircle(rect, center, radius);
     #endregion
 
     #region Intersection

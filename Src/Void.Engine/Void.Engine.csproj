@@ -8,7 +8,7 @@
 
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Engine</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
     <Description>Lightweight 2D game framework for .NET with batched rendering, asset protection (AES-GCM), pathfinding (A* + flow fields), coroutines, LDtk level editor support, encrypted saving, mod support, and post-processing shaders.</Description>
@@ -19,6 +19,30 @@
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageTags>game-engine;2d;game-framework;dotnet;sfml;rendering;pathfinding;coroutines;ldtk;asset-management;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageReleaseNotes>
+    [1.1.0] 2026.09.01
+
+    * CollisionHelper class with full collision detection and resolution:
+      * Primitives: IsWithinRadius, IsCircleOverlap, ClosestPointRect, ClosestPointCircle, LineLine
+      * Shape to Shape: RectRect, CircleCircle, RectCircle
+      * Point to Shape: PointRect, PointCircle
+      * Line to Shape: LineLine, LineRect, LineCircle
+      * Distance Between Shapes: DistanceRectRect, DistanceCircleCircle, DistanceRectCircle
+      * Raycasting: RaycastRect, RaycastCircle, RaycastAny
+      * Swept Collision (prevents tunneling): SweptRectRect, SweptCircleRect, SweptCircleCircle
+      * Collision Normals: GetCollisionNormal (Rect, Circle, Circle-Circle)
+      * Reflection: Reflect velocity off surfaces
+      * Containment: RectContainsRect, RectContainsCircle, CircleContainsCircle, CircleContainsRect
+      * Pushback: PushRectRect, PushCircleRect, PushCircleCircle
+      * Move and Slide: MoveAndSlideRect, MoveAndSlideCircle
+      * Bounds Conversion: GetCircleBounds (for broadphase optimization)
+
+    * Rect2 now delegates all collision logic to CollisionHelper
+      (single source of truth for all collision detection)
+    </PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
