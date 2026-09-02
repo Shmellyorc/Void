@@ -5,6 +5,8 @@
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine)
+[![NuGet](https://img.shields.io/nuget/v/Void.Templates)](https://www.nuget.org/packages/Void.Templates)
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 
 ### NuGet Packages
@@ -13,6 +15,7 @@
 | [Void.Engine](https://www.nuget.org/packages/Void.Engine) | 1.1.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine) |
 | [Void.Packer](https://www.nuget.org/packages/Void.Packer) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer)](https://www.nuget.org/packages/Void.Packer) |
 | [Void.Packer.CLI](https://www.nuget.org/packages/Void.Packer.CLI) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer.CLI)](https://www.nuget.org/packages/Void.Packer.CLI) |
+| [Void.Templates](https://www.nuget.org/packages/Void.Templates) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Templates)](https://www.nuget.org/packages/Void.Templates) |
 
 ## Quick Install
 
@@ -25,6 +28,12 @@ dotnet add package Void.Engine
 ```bash
 dotnet tool install --global Void.Packer.CLI
 ```
+
+### Project Template
+```bash
+dotnet new install Void.Templates
+```
+
 ## Features
 | System | What It Does |
 |--------|--------------|
@@ -203,18 +212,66 @@ The key is stored separately from the pack. You decide how to distribute it:
 - Distribute with the game
 
 ## Getting Started
-Create a new console project:
+
+### Using the Project Template (Recommended)
+
+Install the template:
+```bash
+dotnet new install Void.Templates
+```
+
+Create a new game:
+```bash
+dotnet new voidgame -n MyGame
+cd MyGame
+dotnet run
+```
+
+Or use the current folder:
+```bash
+mkdir MyGame
+cd MyGame
+dotnet new voidgame
+```
+
+### Customizing Your Game
+
+When creating a new game, you can specify additional options:
+
+```bash
+dotnet new voidgame -n MyGame --appCompany MyStudio --appTitle "My Game"
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-n, --name` | The project name | Current folder name |
+| `--appCompany` | The company name (used for AppData folders) | `MyCompany` |
+| `--appTitle` | The display title of the game window | `My Game` |
+| `--TargetFrameworkOverride` | Overrides the target framework | `net10.0` |
+
+### What You Get
+
+The template generates a complete, runnable game project with:
+
+- `Program.cs` — Entry point with game settings
+- `MyGameGame.cs` — Main game class with `OnEnter`, `OnUpdate`, `OnDraw`, `OnExit`
+- `Content/` — Folder for your assets
+- Pre-configured `.csproj` with `Void.Engine` reference
+
+---
+
+### Manual Setup (Without Template)
+
+If you prefer to set up manually:
+
 ```bash
 dotnet new console -n MyGame
 cd MyGame
-```
-
-Add Void.Engine:
-```bash
 dotnet add package Void.Engine
 ```
 
-Create a new class called MyGame.cs:
+Create `MyGame.cs`:
+
 ```csharp
 using Void.Engine;
 
@@ -222,29 +279,15 @@ public class MyGame : Game
 {
     public MyGame(GameSettings settings) : base(settings) { }
 
-    protected override void OnEnter()
-    {
-        // Called when the game starts
-    }
-
-    protected override void OnUpdate(FrameTime frameTime)
-    {
-        // Called every frame
-    }
-
-    protected override void OnDraw(FrameTime frameTime)
-    {
-        // Called every frame after OnUpdate
-    }
-
-    protected override void OnExit()
-    {
-        // Called when the game exits
-    }
+    protected override void OnEnter() { }
+    protected override void OnUpdate(FrameTime frameTime) { }
+    protected override void OnDraw(FrameTime frameTime) { }
+    protected override void OnExit() { }
 }
 ```
 
-Replace Program.cs with:
+Replace `Program.cs`:
+
 ```csharp
 using Void.Engine;
 
