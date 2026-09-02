@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>Void.Templates</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Project templates for Void Engine games.</Description>
+    <Authors>Shmellyorc</Authors>
+    <Company>Void Engine</Company>
+    <Copyright>Copyright (c) 2026 Void Engine</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageType>Template</PackageType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <PackageTags>void;engine;template;game;dotnet;csharp;2d</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="templates\**\*" Exclude="templates\**\bin\**;templates\**\obj\**" />
+    <Compile Remove="templates\**\*" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

@@ -6,5 +6,6 @@
     <Project Path="Src/Void.Engine/Void.Engine.csproj" />
     <Project Path="Src/Void.Packer.CLI/Void.Packer.CLI.csproj" />
     <Project Path="Src/Void.Packer/Void.Packer.csproj" />
+    <Project Path="Src/Void.Templates/Void.Templates.csproj" />
   </Folder>
 </Solution>

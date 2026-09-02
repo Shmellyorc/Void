@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Shmellyorc",
+  "classifications": [ "Game", "Void", "Engine", "2D" ],
+  "name": "Void Engine Game",
+  "identity": "Void.Engine.Templates.Game",
+  "shortName": "voidgame",
+  "sourceName": "MyGame",
+  "preferNameDirectory": true,
+  "defaultName": "MyGame",
+  "symbols": {
+    "TargetFrameworkOverride": {
+      "type": "parameter",
+      "description": "Overrides the target framework",
+      "replaces": "net10.0",
+      "datatype": "string",
+      "defaultValue": "net10.0"
+    },
+    "appCompany": {
+      "type": "parameter",
+      "description": "The company name for the game's AppData folder",
+      "replaces": "MyCompany",
+      "datatype": "string",
+      "defaultValue": "MyCompany"
+    },
+    "appTitle": {
+      "type": "parameter",
+      "description": "The display title of the game window",
+      "replaces": "My Game",
+      "datatype": "string",
+      "defaultValue": "My Game"
+    },
+    "className": {
+      "type": "derived",
+      "valueSource": "name",
+      "valueTransform": "appendGame",
+      "replaces": "MyGameGame",
+      "fileRename": "MyGameGame"
+    }
+  },
+  "forms": {
+    "appendGame": {
+      "identifier": "replace",
+      "pattern": "^(.*)$",
+      "replacement": "$1Game"
+    }
+  },
+  "primaryOutputs": [
+    { "path": "MyGame.csproj" }
+  ],
+  "tags": {
+    "language": "C#",
+    "type": "project"
+  }
+}
