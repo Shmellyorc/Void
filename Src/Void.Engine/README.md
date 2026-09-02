@@ -44,24 +44,82 @@ At the other extreme, frameworks like MonoGame give you almost nothing. You end 
 dotnet add package Void.Engine
 ```
 
+### Project Template
+
+```bash
+dotnet new install Void.Templates
+```
+
 ---
 
 ## Quick Start
 
-### 1. Create a new console project
+### 1. Install the template
+
+```bash
+dotnet new install Void.Templates
+```
+
+### 2. Create a new game
+
+```bash
+dotnet new voidgame -n MyGame
+cd MyGame
+```
+
+Or use the current folder:
+
+```bash
+mkdir MyGame
+cd MyGame
+dotnet new voidgame
+```
+
+### 3. Run your game
+
+```bash
+dotnet run
+```
+
+A window will appear. That's it.
+
+### Customizing Your Game
+
+When creating a new game, you can specify:
+
+```bash
+dotnet new voidgame -n MyGame --appCompany MyStudio --appTitle "My Game"
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-n, --name` | The project name | Current folder name |
+| `--appCompany` | The company name (used for AppData folders) | `MyCompany` |
+| `--appTitle` | The display title of the game window | `My Game` |
+| `--TargetFrameworkOverride` | Overrides the target framework | `net10.0` |
+
+### What You Get
+
+The template generates a complete, runnable game project with:
+
+- `Program.cs` — Entry point with game settings
+- `MyGameGame.cs` — Main game class with `OnEnter`, `OnUpdate`, `OnDraw`, `OnExit`
+- `Content/` — Folder for your assets
+- Pre-configured `.csproj` with `Void.Engine` reference
+
+---
+
+## Manual Setup (Optional)
+
+If you prefer to set up manually instead of using the template:
 
 ```bash
 dotnet new console -n MyGame
 cd MyGame
-```
-
-### 2. Add Void.Engine
-
-```bash
 dotnet add package Void.Engine
 ```
 
-### 3. Create your game class
+Then create `MyGame.cs`:
 
 ```csharp
 using Void.Engine;
@@ -70,29 +128,14 @@ public class MyGame : Game
 {
     public MyGame(GameSettings settings) : base(settings) { }
 
-    protected override void OnEnter()
-    {
-        // Called when the game starts
-    }
-
-    protected override void OnUpdate(FrameTime frameTime)
-    {
-        // Called every frame
-    }
-
-    protected override void OnDraw(FrameTime frameTime)
-    {
-        // Called every frame after OnUpdate
-    }
-
-    protected override void OnExit()
-    {
-        // Called when the game exits
-    }
+    protected override void OnEnter() { }
+    protected override void OnUpdate(FrameTime frameTime) { }
+    protected override void OnDraw(FrameTime frameTime) { }
+    protected override void OnExit() { }
 }
 ```
 
-### 4. Run your game
+And `Program.cs`:
 
 ```csharp
 using Void.Engine;
