@@ -14,10 +14,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PackageTags>void;engine;template;game;dotnet;csharp;2d</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
 
     <IncludeContentInPack>true</IncludeContentInPack>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <ContentTargetFolders>content</ContentTargetFolders>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
 
     <NoWarn>$(NoWarn);NU5128</NoWarn>
   </PropertyGroup>
