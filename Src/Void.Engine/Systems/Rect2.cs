@@ -361,6 +361,84 @@ public struct Rect2 : IEquatable<Rect2>
                rect._size + new Vect2(horizontal * 2f, vertical * 2f));
     #endregion
 
+
+    #region Lerp
+    /// <summary>
+    /// Linearly interpolates between this rectangle and a target rectangle.
+    /// </summary>
+    /// <param name="target">The target rectangle to interpolate towards.</param>
+    /// <param name="t">The interpolation factor between 0 and 1.</param>
+    /// <returns>A new rectangle with interpolated position and size.</returns>
+    /// <remarks>
+    /// The position and size are interpolated independently using vector linear interpolation.
+    /// At t = 0, returns a rectangle matching this instance. At t = 1, returns a rectangle matching the target.
+    /// </remarks>
+    public readonly Rect2 Lerp(Rect2 target, float t) => Lerp(this, target, t);
+
+    /// <summary>
+    /// Linearly interpolates between two rectangles.
+    /// </summary>
+    /// <param name="a">The starting rectangle.</param>
+    /// <param name="b">The ending rectangle.</param>
+    /// <param name="t">The interpolation factor between 0 and 1.</param>
+    /// <returns>A new rectangle with interpolated position and size.</returns>
+    /// <remarks>
+    /// The position and size are interpolated independently using vector linear interpolation.
+    /// At t = 0, returns rectangle a. At t = 1, returns rectangle b.
+    /// </remarks>
+    public static Rect2 Lerp(Rect2 a, Rect2 b, float t)
+    {
+        return new Rect2(
+            Vect2.Lerp(a._position, b._position, t),
+            Vect2.Lerp(a._size, b._size, t)
+        );
+    }
+    #endregion
+
+    #region SmoothStep
+    /// <summary>
+    /// Performs a smooth Hermite interpolation between this rectangle and a target rectangle.
+    /// </summary>
+    /// <param name="target">The target rectangle to interpolate towards.</param>
+    /// <param name="t">The interpolation factor between 0 and 1.</param>
+    /// <returns>A new rectangle with smoothly interpolated position and size.</returns>
+    /// <remarks>
+    /// <para>
+    /// The position and size are interpolated independently using smooth step interpolation,
+    /// which creates an ease-in/ease-out effect at the start and end of the interpolation.
+    /// </para>
+    /// <para>
+    /// At t = 0, returns a rectangle matching this instance. At t = 1, returns a rectangle matching the target.
+    /// </para>
+    /// </remarks>
+    public readonly Rect2 SmoothStep(Rect2 target, float t) => SmoothStep(this, target, t);
+
+    /// <summary>
+    /// Performs a smooth Hermite interpolation between two rectangles.
+    /// </summary>
+    /// <param name="a">The starting rectangle.</param>
+    /// <param name="b">The ending rectangle.</param>
+    /// <param name="t">The interpolation factor between 0 and 1.</param>
+    /// <returns>A new rectangle with smoothly interpolated position and size.</returns>
+    /// <remarks>
+    /// <para>
+    /// The position and size are interpolated independently using smooth step interpolation,
+    /// which creates an ease-in/ease-out effect at the start and end of the interpolation.
+    /// </para>
+    /// <para>
+    /// At t = 0, returns rectangle a. At t = 1, returns rectangle b.
+    /// </para>
+    /// </remarks>
+    public static Rect2 SmoothStep(Rect2 a, Rect2 b, float t)
+    {
+        return new Rect2(
+            Vect2.SmoothStep(a._position, b._position, t),
+            Vect2.SmoothStep(a._size, b._size, t)
+        );
+    }
+    #endregion
+
+
     #region Offset
     /// <summary>
     /// Offsets the rectangle by the specified vector.
@@ -448,6 +526,33 @@ public struct Rect2 : IEquatable<Rect2>
     /// <returns>The area (width × height) of the rectangle.</returns>
     public static float Area(in Rect2 rect) => rect._size.X * rect._size.Y;
     #endregion
+
+
+    #region Damp
+    /// <summary>
+    /// Smoothly damps this rectangle towards a target rectangle using exponential decay.
+    /// </summary>
+    /// <param name="target">The target rectangle to damp towards.</param>
+    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
+    /// <param name="dt">The delta time in seconds.</param>
+    /// <returns>The damped rectangle.</returns>
+    public readonly Rect2 Damp(Rect2 target, float smoothing, float dt)
+        => Damp(this, target, smoothing, dt);
+
+    /// <summary>
+    /// Smoothly damps a rectangle towards a target rectangle using exponential decay.
+    /// </summary>
+    /// <param name="a">The start rectangle.</param>
+    /// <param name="b">The target rectangle.</param>
+    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
+    /// <param name="dt">The delta time in seconds.</param>
+    /// <returns>The damped rectangle.</returns>
+    public static Rect2 Damp(Rect2 a, Rect2 b, float smoothing, float dt) => new(
+        Vect2.Damp(a.Position, b.Position, smoothing, dt),
+        Vect2.Damp(a.Size, b.Size, smoothing, dt)
+    );
+    #endregion
+
 
     #region Operators
     /// <summary>

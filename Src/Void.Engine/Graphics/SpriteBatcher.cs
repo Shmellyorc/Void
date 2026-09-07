@@ -135,6 +135,7 @@ public sealed class SpriteBatcher : BaseBatcher
         _comparer = new DrawCommandComparer(_sortMode);
     }
 
+    #region Protected
     /// <summary>
     /// Gets the default capacity for the sprite batch.
     /// </summary>
@@ -228,10 +229,11 @@ public sealed class SpriteBatcher : BaseBatcher
         _vertexBuffer = new VertexBuffer(newVertexSize);
         _capacity = newSize;
     }
+    #endregion
 
-    #region Draw Methods
 
-    // Add this method to SpriteBatcher
+
+    #region DrawAtlasDebugPage
     /// <summary>
     /// Draws an atlas page for debugging purposes. Bypasses the atlas system.
     /// </summary>
@@ -246,29 +248,11 @@ public sealed class SpriteBatcher : BaseBatcher
 
         EngineDrawSFMLBypassAtlas(pageTexture, dstRect, new Rect2(Vect2.Zero, pageTexture.Size), Color.White, depth);
     }
-    private void EngineDrawSFMLBypassAtlas(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float depth = 0.999f)
-    {
-        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
-        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
-        if (!IsVisible(dstRect)) return;
-        if (_cmdCount >= _cmds.Length) ResizeBuffers();
+    #endregion
 
-        _cmds[_cmdCount] = new DrawCommand
-        {
-            Texture = texture,
-            Depth = depth,
-            DstRect = dstRect,
-            SrcRect = srcRect,
-            Color = color,
-            Rotation = 0f,
-            Scale = Vect2.One,
-            Origin = Vect2.Zero,
-            Effects = TextureEffects.None
-        };
 
-        _cmdCount++;
-    }
 
+    #region Draw Methods
     /// <summary>
     /// Draws a sprite with the specified texture, destination, source rectangle, and color.
     /// </summary>
@@ -391,7 +375,8 @@ public sealed class SpriteBatcher : BaseBatcher
     /// Draws a sprite bypassing the atlas system with rotation and scale.
     /// </summary>
     public void DrawBypassAtlas(Texture texture, Vect2 position, Color color, float rotation, Vect2 scale, float depth = 0f)
-        => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale, Vect2.Zero, TextureEffects.None, depth);
+        => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale,
+            Vect2.Zero, TextureEffects.None, depth);
 
     #endregion
 
@@ -410,6 +395,18 @@ public sealed class SpriteBatcher : BaseBatcher
         => DrawTextPosition(font, text, position, color, 0f, scale, TextAlignment.TopLeft);
 
     /// <summary>
+    /// Draws text at the specified position with alignment.
+    /// </summary>
+    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment)
+        => DrawTextPosition(font, text, position, color, 0f, Vect2.One, alignment);
+
+    /// <summary>
+    /// Draws text at the specified position with scale and alignment.
+    /// </summary>
+    public void DrawText(Font font, string text, Vect2 position, Color color, Vect2 scale, TextAlignment alignment)
+        => DrawTextPosition(font, text, position, color, 0f, scale, alignment);
+
+    /// <summary>
     /// Draws text at the specified position with depth.
     /// </summary>
     public void DrawText(Font font, string text, Vect2 position, Color color, float depth)
@@ -422,21 +419,15 @@ public sealed class SpriteBatcher : BaseBatcher
         => DrawTextPosition(font, text, position, color, depth, scale, TextAlignment.TopLeft);
 
     /// <summary>
-    /// Draws text at the specified position with alignment.
+    /// Draws text at the specified position with alignment and depth.
     /// </summary>
-    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment)
-        => DrawTextPosition(font, text, position, color, 0f, Vect2.One, alignment);
+    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, float depth)
+        => DrawTextPosition(font, text, position, color, depth, Vect2.One, alignment);
 
     /// <summary>
-    /// Draws text at the specified position with alignment and scale.
+    /// Draws text at the specified position with scale, alignment, and depth.
     /// </summary>
-    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale)
-        => DrawTextPosition(font, text, position, color, 0f, scale, alignment);
-
-    /// <summary>
-    /// Draws text at the specified position with alignment, scale, and depth.
-    /// </summary>
-    public void DrawText(Font font, string text, Vect2 position, Color color, TextAlignment alignment, Vect2 scale, float depth)
+    public void DrawText(Font font, string text, Vect2 position, Color color, Vect2 scale, TextAlignment alignment, float depth)
         => DrawTextPosition(font, text, position, color, depth, scale, alignment);
 
     /// <summary>
@@ -452,20 +443,50 @@ public sealed class SpriteBatcher : BaseBatcher
         => DrawTextBounds(font, text, bounds, color, 0f, scale, TextAlignment.TopLeft, TextWrapMode.None);
 
     /// <summary>
+    /// Draws text within the specified bounds with alignment.
+    /// </summary>
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, TextAlignment alignment)
+        => DrawTextBounds(font, text, bounds, color, 0f, Vect2.One, alignment, TextWrapMode.None);
+
+    /// <summary>
+    /// Draws text within the specified bounds with wrap mode.
+    /// </summary>
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, TextWrapMode wrapMode)
+        => DrawTextBounds(font, text, bounds, color, 0f, Vect2.One, TextAlignment.TopLeft, wrapMode);
+
+    /// <summary>
+    /// Draws text within the specified bounds with scale and alignment.
+    /// </summary>
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, TextAlignment alignment)
+        => DrawTextBounds(font, text, bounds, color, 0f, scale, alignment, TextWrapMode.None);
+
+    /// <summary>
+    /// Draws text within the specified bounds with scale, alignment, and wrap mode.
+    /// </summary>
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, TextAlignment alignment, TextWrapMode wrapMode)
+        => DrawTextBounds(font, text, bounds, color, 0f, scale, alignment, wrapMode);
+
+    /// <summary>
     /// Draws text within the specified bounds with depth.
     /// </summary>
     public void DrawText(Font font, string text, Rect2 bounds, Color color, float depth)
         => DrawTextBounds(font, text, bounds, color, depth, Vect2.One, TextAlignment.TopLeft, TextWrapMode.None);
 
     /// <summary>
-    /// Draws text within the specified bounds with scale, depth, alignment, and wrapping.
+    /// Draws text within the specified bounds with scale and depth.
     /// </summary>
-    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, float depth,
-        TextAlignment alignment = TextAlignment.TopLeft, TextWrapMode wrapMode = TextWrapMode.None)
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, float depth)
+        => DrawTextBounds(font, text, bounds, color, depth, scale, TextAlignment.TopLeft, TextWrapMode.None);
+
+    /// <summary>
+    /// Draws text within the specified bounds with scale, alignment, wrap mode, and depth.
+    /// </summary>
+    public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, TextAlignment alignment, TextWrapMode wrapMode, float depth)
         => DrawTextBounds(font, text, bounds, color, depth, scale, alignment, wrapMode);
 
     #endregion
 
+    #region Ninepatch
     /// <summary>
     /// Draws a nine-patch sprite (scalable UI element).
     /// </summary>
@@ -475,232 +496,54 @@ public sealed class SpriteBatcher : BaseBatcher
     /// <param name="corners">The corner sizes (left, top, right, bottom).</param>
     /// <param name="color">The color modulation.</param>
     /// <param name="depth">The depth for sorting.</param>
-    /// <remarks>
-    /// <para>
-    /// A nine-patch divides the source texture into 9 regions:
-    /// <list type="bullet">
-    ///   <item><description>4 corners (fixed size)</description></item>
-    ///   <item><description>4 edges (stretch or repeat)</description></item>
-    ///   <item><description>1 center (stretch or repeat)</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// This is commonly used for UI elements like buttons, panels, and windows
-    /// that need to scale to different sizes without distorting the corners.
-    /// </para>
-    /// </remarks>
     public void DrawNinePatch(Texture texture, Rect2 dstRect, Rect2 sourceRect, Rect2 corners, Color color, float depth = 0f)
-    {
-        var dstRects = CalculateNinePatchRects(dstRect, corners);
-        var srcRects = GetNinePatchSourceRects(sourceRect, corners);
+        => EngineDrawNinePatch(texture, dstRect, sourceRect, corners, color, depth);
 
-        for (int i = 0; i < 9; i++)
-        {
-            EngineDrawBypassAtlas(texture, dstRects[i], srcRects[i], color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
-        }
-    }
+    /// <summary>
+    /// Draws a nine-patch sprite using the full texture bounds as source.
+    /// </summary>
+    /// <param name="texture">The texture containing the nine-patch.</param>
+    /// <param name="dstRect">The destination rectangle.</param>
+    /// <param name="corners">The corner sizes (left, top, right, bottom).</param>
+    /// <param name="color">The color modulation.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    public void DrawNinePatch(Texture texture, Rect2 dstRect, Rect2 corners, Color color, float depth = 0f)
+        => EngineDrawNinePatch(texture, dstRect, texture.Bounds, corners, color, depth);
 
-    #region Private Methods
+    /// <summary>
+    /// Draws a nine-patch sprite at a position with a specified size.
+    /// </summary>
+    /// <param name="texture">The texture containing the nine-patch.</param>
+    /// <param name="position">The position of the nine-patch.</param>
+    /// <param name="size">The size of the nine-patch.</param>
+    /// <param name="srcRect">The source rectangle in the texture.</param>
+    /// <param name="corners">The corner sizes (left, top, right, bottom).</param>
+    /// <param name="color">The color modulation.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    public void DrawNinePatch(Texture texture, Vect2 position, Vect2 size, Rect2 srcRect, Rect2 corners, Color color, float depth = 0f)
+        => EngineDrawNinePatch(texture, new Rect2(position, size), srcRect, corners, color, depth);
 
-    private Rect2[] CalculateNinePatchRects(Rect2 dstRect, Rect2 corners)
-    {
-        var result = new Rect2[9];
-        float leftBorder = corners.X, topBorder = corners.Y;
-        float rightBorder = corners.Width, bottomBorder = corners.Height;
-        float dstX = dstRect.X, dstY = dstRect.Y;
-        float dstWidth = dstRect.Width, dstHeight = dstRect.Height;
-        float middleWidth = dstWidth - leftBorder - rightBorder;
-        float middleHeight = dstHeight - topBorder - bottomBorder;
-
-        // Top row
-        result[0] = new Rect2(dstX, dstY, leftBorder, topBorder);
-        result[1] = new Rect2(dstX + leftBorder, dstY, middleWidth, topBorder);
-        result[2] = new Rect2(dstX + leftBorder + middleWidth, dstY, rightBorder, topBorder);
-        // Middle row
-        result[3] = new Rect2(dstX, dstY + topBorder, leftBorder, middleHeight);
-        result[4] = new Rect2(dstX + leftBorder, dstY + topBorder, middleWidth, middleHeight);
-        result[5] = new Rect2(dstX + leftBorder + middleWidth, dstY + topBorder, rightBorder, middleHeight);
-        // Bottom row
-        result[6] = new Rect2(dstX, dstY + topBorder + middleHeight, leftBorder, bottomBorder);
-        result[7] = new Rect2(dstX + leftBorder, dstY + topBorder + middleHeight, middleWidth, bottomBorder);
-        result[8] = new Rect2(dstX + leftBorder + middleWidth, dstY + topBorder + middleHeight, rightBorder, bottomBorder);
-
-        return result;
-    }
-
-    private Rect2[] GetNinePatchSourceRects(Rect2 sourceRect, Rect2 corners)
-    {
-        var result = new Rect2[9];
-        float leftBorder = corners.X, topBorder = corners.Y;
-        float rightBorder = corners.Width, bottomBorder = corners.Height;
-        float srcX = sourceRect.X, srcY = sourceRect.Y;
-        float srcW = sourceRect.Width, srcH = sourceRect.Height;
-        float middleWidth = srcW - leftBorder - rightBorder;
-        float middleHeight = srcH - topBorder - bottomBorder;
-
-        // Top row
-        result[0] = new Rect2(srcX, srcY, leftBorder, topBorder);
-        result[1] = new Rect2(srcX + leftBorder, srcY, middleWidth, topBorder);
-        result[2] = new Rect2(srcX + leftBorder + middleWidth, srcY, rightBorder, topBorder);
-        // Middle row
-        result[3] = new Rect2(srcX, srcY + topBorder, leftBorder, middleHeight);
-        result[4] = new Rect2(srcX + leftBorder, srcY + topBorder, middleWidth, middleHeight);
-        result[5] = new Rect2(srcX + leftBorder + middleWidth, srcY + topBorder, rightBorder, middleHeight);
-        // Bottom row
-        result[6] = new Rect2(srcX, srcY + topBorder + middleHeight, leftBorder, bottomBorder);
-        result[7] = new Rect2(srcX + leftBorder, srcY + topBorder + middleHeight, middleWidth, bottomBorder);
-        result[8] = new Rect2(srcX + leftBorder + middleWidth, srcY + topBorder + middleHeight, rightBorder, bottomBorder);
-
-        return result;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void EngineDraw(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
-        Vect2 origin, TextureEffects effects, float depth, bool canPack)
-    {
-        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
-        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
-        if (!IsVisible(dstRect)) return;
-        if (_cmdCount >= _cmds.Length) ResizeBuffers();
-
-        var scaledDstRect = new Rect2(dstRect.X, dstRect.Y, dstRect.Width * scale.X, dstRect.Height * scale.Y);
-
-        if (canPack && AtlasManager.Instance.TryPack(texture, srcRect, out var packedRect, out var pageId))
-        {
-            _cmds[_cmdCount] = new DrawCommand
-            {
-                Texture = AtlasManager.Instance.GetPageTexture(pageId),
-                Depth = depth,
-                DstRect = scaledDstRect,
-                SrcRect = packedRect,
-                Color = color,
-                Rotation = rotation,
-                Scale = scale,
-                Origin = origin,
-                Effects = effects
-            };
-        }
-        else
-        {
-            _cmds[_cmdCount] = new DrawCommand
-            {
-                Texture = texture,
-                Depth = depth,
-                DstRect = scaledDstRect,
-                SrcRect = srcRect,
-                Color = color,
-                Rotation = rotation,
-                Scale = scale,
-                Origin = origin,
-                Effects = effects
-            };
-        }
-
-        _cmdCount++;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void EngineDrawBypassAtlas(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
-        Vect2 origin, TextureEffects effects, float depth)
-    {
-        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
-        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
-        if (!IsVisible(dstRect)) return;
-        if (_cmdCount >= _cmds.Length) ResizeBuffers();
-
-        _cmds[_cmdCount] = new DrawCommand
-        {
-            Texture = texture,
-            Depth = depth,
-            DstRect = new Rect2(dstRect.X, dstRect.Y, dstRect.Width * scale.X, dstRect.Height * scale.Y),
-            SrcRect = srcRect,
-            Color = color,
-            Rotation = rotation,
-            Scale = scale,
-            Origin = origin,
-            Effects = effects
-        };
-
-        _cmdCount++;
-    }
-
-    private unsafe void WriteQuadUnsafe(SFVertex* ptr, in DrawCommand cmd)
-    {
-        Vect2* corners = stackalloc Vect2[4];
-        float left = MathF.Round(cmd.DstRect.Left, 3);
-        float top = MathF.Round(cmd.DstRect.Top, 3);
-        float right = MathF.Round(cmd.DstRect.Right, 3);
-        float bottom = MathF.Round(cmd.DstRect.Bottom, 3);
-
-        corners[0] = new Vect2(left, top);
-        corners[1] = new Vect2(right, top);
-        corners[2] = new Vect2(left, bottom);
-        corners[3] = new Vect2(right, bottom);
-
-        if (cmd.Rotation != 0f)
-        {
-            float cos = MathF.Cos(cmd.Rotation);
-            float sin = MathF.Sin(cmd.Rotation);
-
-            float centerX = left + cmd.Origin.X;
-            float centerY = top + cmd.Origin.Y;
-
-            for (int i = 0; i < 4; i++)
-            {
-                float dx = corners[i].X - centerX;
-                float dy = corners[i].Y - centerY;
-
-                corners[i] = new Vect2(
-                    centerX + dx * cos - dy * sin,
-                    centerY + dx * sin + dy * cos
-                );
-            }
-        }
-
-        float srcLeft = cmd.SrcRect.Left;
-        float srcRight = cmd.SrcRect.Right;
-        float srcTop = cmd.SrcRect.Top;
-        float srcBottom = cmd.SrcRect.Bottom;
-
-        if (GameSettings.Instance.UseHalfTexelOffset)
-        {
-            float texWidth = cmd.Texture.Size.X;
-            float texHeight = cmd.Texture.Size.Y;
-            float offsetX = 0.5f / texWidth;
-            float offsetY = 0.5f / texHeight;
-
-            srcLeft -= offsetX;
-            srcRight += offsetX;
-            srcTop -= offsetY;
-            srcBottom += offsetY;
-        }
-
-        if (cmd.Effects.HasFlag(TextureEffects.Horizontal))
-            (srcLeft, srcRight) = (srcRight, srcLeft);
-        if (cmd.Effects.HasFlag(TextureEffects.Vertical))
-            (srcTop, srcBottom) = (srcBottom, srcTop);
-
-        var color = cmd.Color;
-
-        ptr[0] = new SFVertex(corners[0], color, new(srcLeft, srcTop));
-        ptr[1] = new SFVertex(corners[1], color, new(srcRight, srcTop));
-        ptr[2] = new SFVertex(corners[2], color, new(srcLeft, srcBottom));
-        ptr[3] = new SFVertex(corners[1], color, new(srcRight, srcTop));
-        ptr[4] = new SFVertex(corners[3], color, new(srcRight, srcBottom));
-        ptr[5] = new SFVertex(corners[2], color, new(srcLeft, srcBottom));
-    }
-
+    /// <summary>
+    /// Draws a nine-patch sprite at a position with a specified size using the full texture bounds as source.
+    /// </summary>
+    /// <param name="texture">The texture containing the nine-patch.</param>
+    /// <param name="position">The position of the nine-patch.</param>
+    /// <param name="size">The size of the nine-patch.</param>
+    /// <param name="corners">The corner sizes (left, top, right, bottom).</param>
+    /// <param name="color">The color modulation.</param>
+    /// <param name="depth">The depth for sorting.</param>
+    public void DrawNinePatch(Texture texture, Vect2 position, Vect2 size, Rect2 corners, Color color, float depth = 0f)
+        => EngineDrawNinePatch(texture, new Rect2(position, size), texture.Bounds, corners, color, depth);
     #endregion
 
-    #region Text Processing
-
+    #region Private Methods
     private void DrawTextPosition(Font font, string text, Vect2 position, Color color, float depth, Vect2 scale, TextAlignment alignment)
     {
         if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
         if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
         if (string.IsNullOrEmpty(text) || font == null) return;
 
-        if(!font.IsValid)
+        if (!font.IsValid)
             font.Load();
 
         var textSize = font.Measure(text) * scale;
@@ -731,7 +574,7 @@ public sealed class SpriteBatcher : BaseBatcher
         if (string.IsNullOrEmpty(text) || font == null) return;
         if (!IsVisible(bounds)) return;
 
-        if(!font.IsValid)
+        if (!font.IsValid)
             font.Load();
 
         string[] lines = text.Split('\n');
@@ -870,21 +713,6 @@ public sealed class SpriteBatcher : BaseBatcher
     private bool IsVisible(Rect2 dstRect)
         => _currentCamera == null || dstRect.Intersects(_currentCamera.ViewBounds);
 
-    #endregion
-
-    /// <summary>
-    /// Disposes the batcher and releases all resources.
-    /// </summary>
-    protected override void OnDispose()
-    {
-        if (_isDisposed) return;
-
-        if (_cmds != null)
-            Array.Clear(_cmds, 0, _cmds.Length);
-
-        base.OnDispose();
-    }
-
     private sealed class DrawCommandComparer : IComparer<DrawCommand>
     {
         private SortMode _sortMode;
@@ -898,7 +726,7 @@ public sealed class SpriteBatcher : BaseBatcher
             bool bValue = b.Texture != null && !b.Texture.IsInvalid;
 
             if (!aValue && !bValue) return 0;
-            if (!bValue) return -1;
+            if (!aValue) return -1;
             if (!bValue) return 1;
 
             if (_sortMode == SortMode.BackToFront)
@@ -922,4 +750,257 @@ public sealed class SpriteBatcher : BaseBatcher
 
         public void UpdateMode(SortMode sortMode) => _sortMode = sortMode;
     }
+
+    private void EngineDrawSFMLBypassAtlas(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float depth = 0.999f)
+    {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+        if (_cmdCount >= _cmds.Length) ResizeBuffers();
+        if (!IsVisible(dstRect)) return;
+
+        _cmds[_cmdCount] = new DrawCommand
+        {
+            Texture = texture,
+            Depth = depth,
+            DstRect = dstRect,
+            SrcRect = srcRect,
+            Color = color,
+            Rotation = 0f,
+            Scale = Vect2.One,
+            Origin = Vect2.Zero,
+            Effects = TextureEffects.None
+        };
+
+        _cmdCount++;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EngineDrawNinePatch(Texture texture, Rect2 dstRect, Rect2 sourceRect, Rect2 corners, Color color, float depth)
+    {
+        var dstRects = CalculateNinePatchRects(dstRect, corners);
+        var srcRects = GetNinePatchSourceRects(sourceRect, corners);
+
+        for (int i = 0; i < 9; i++)
+        {
+            EngineDrawBypassAtlas(texture, dstRects[i], srcRects[i], color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
+        }
+    }
+
+    private Rect2[] CalculateNinePatchRects(Rect2 dstRect, Rect2 corners)
+    {
+        var result = new Rect2[9];
+        float leftBorder = corners.X, topBorder = corners.Y;
+        float rightBorder = corners.Width, bottomBorder = corners.Height;
+        float dstX = dstRect.X, dstY = dstRect.Y;
+        float dstWidth = dstRect.Width, dstHeight = dstRect.Height;
+        float middleWidth = dstWidth - leftBorder - rightBorder;
+        float middleHeight = dstHeight - topBorder - bottomBorder;
+
+        // Top row
+        result[0] = new Rect2(dstX, dstY, leftBorder, topBorder);
+        result[1] = new Rect2(dstX + leftBorder, dstY, middleWidth, topBorder);
+        result[2] = new Rect2(dstX + leftBorder + middleWidth, dstY, rightBorder, topBorder);
+        // Middle row
+        result[3] = new Rect2(dstX, dstY + topBorder, leftBorder, middleHeight);
+        result[4] = new Rect2(dstX + leftBorder, dstY + topBorder, middleWidth, middleHeight);
+        result[5] = new Rect2(dstX + leftBorder + middleWidth, dstY + topBorder, rightBorder, middleHeight);
+        // Bottom row
+        result[6] = new Rect2(dstX, dstY + topBorder + middleHeight, leftBorder, bottomBorder);
+        result[7] = new Rect2(dstX + leftBorder, dstY + topBorder + middleHeight, middleWidth, bottomBorder);
+        result[8] = new Rect2(dstX + leftBorder + middleWidth, dstY + topBorder + middleHeight, rightBorder, bottomBorder);
+
+        return result;
+    }
+
+    private Rect2[] GetNinePatchSourceRects(Rect2 sourceRect, Rect2 corners)
+    {
+        var result = new Rect2[9];
+        float leftBorder = corners.X, topBorder = corners.Y;
+        float rightBorder = corners.Width, bottomBorder = corners.Height;
+        float srcX = sourceRect.X, srcY = sourceRect.Y;
+        float srcW = sourceRect.Width, srcH = sourceRect.Height;
+        float middleWidth = srcW - leftBorder - rightBorder;
+        float middleHeight = srcH - topBorder - bottomBorder;
+
+        // Top row
+        result[0] = new Rect2(srcX, srcY, leftBorder, topBorder);
+        result[1] = new Rect2(srcX + leftBorder, srcY, middleWidth, topBorder);
+        result[2] = new Rect2(srcX + leftBorder + middleWidth, srcY, rightBorder, topBorder);
+        // Middle row
+        result[3] = new Rect2(srcX, srcY + topBorder, leftBorder, middleHeight);
+        result[4] = new Rect2(srcX + leftBorder, srcY + topBorder, middleWidth, middleHeight);
+        result[5] = new Rect2(srcX + leftBorder + middleWidth, srcY + topBorder, rightBorder, middleHeight);
+        // Bottom row
+        result[6] = new Rect2(srcX, srcY + topBorder + middleHeight, leftBorder, bottomBorder);
+        result[7] = new Rect2(srcX + leftBorder, srcY + topBorder + middleHeight, middleWidth, bottomBorder);
+        result[8] = new Rect2(srcX + leftBorder + middleWidth, srcY + topBorder + middleHeight, rightBorder, bottomBorder);
+
+        return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EngineDraw(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
+        Vect2 origin, TextureEffects effects, float depth, bool canPack)
+    {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+
+        var scaleWidth = dstRect.Width * scale.X;
+        var scaleHeight = dstRect.Height * scale.Y;
+        var actualPos = new Vect2(dstRect.X - origin.X * scale.X, dstRect.Y - origin.Y * scale.Y);
+        var visibleRect = new Rect2(actualPos, new Vect2(scaleWidth, scaleHeight));
+
+        if (!IsVisible(visibleRect)) return;
+        if (_cmdCount >= _cmds.Length) ResizeBuffers();
+
+        if (canPack && AtlasManager.Instance.TryPack(texture, srcRect, out var packedRect, out var pageId))
+        {
+            _cmds[_cmdCount] = new DrawCommand
+            {
+                Texture = AtlasManager.Instance.GetPageTexture(pageId),
+                Depth = depth,
+                DstRect = dstRect,
+                SrcRect = packedRect,
+                Color = color,
+                Rotation = rotation,
+                Scale = scale,
+                Origin = origin,
+                Effects = effects
+            };
+        }
+        else
+        {
+            _cmds[_cmdCount] = new DrawCommand
+            {
+                Texture = texture,
+                Depth = depth,
+                DstRect = dstRect,
+                SrcRect = srcRect,
+                Color = color,
+                Rotation = rotation,
+                Scale = scale,
+                Origin = origin,
+                Effects = effects
+            };
+        }
+
+        _cmdCount++;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EngineDrawBypassAtlas(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
+        Vect2 origin, TextureEffects effects, float depth)
+    {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+
+        var scaleWidth = dstRect.Width * scale.X;
+        var scaleHeight = dstRect.Height * scale.Y;
+        var actualPos = new Vect2(dstRect.X - origin.X * scale.X, dstRect.Y - origin.Y * scale.Y);
+        var visibleRect = new Rect2(actualPos, new Vect2(scaleWidth, scaleHeight));
+
+        if (!IsVisible(visibleRect)) return;
+        if (_cmdCount >= _cmds.Length) ResizeBuffers();
+
+        _cmds[_cmdCount] = new DrawCommand
+        {
+            Texture = texture,
+            Depth = depth,
+            DstRect = dstRect,
+            SrcRect = srcRect,
+            Color = color,
+            Rotation = rotation,
+            Scale = scale,
+            Origin = origin,
+            Effects = effects
+        };
+
+        _cmdCount++;
+    }
+
+    private unsafe void WriteQuadUnsafe(SFVertex* ptr, in DrawCommand cmd)
+    {
+        Vect2* corners = stackalloc Vect2[4];
+        float width = cmd.DstRect.Width * cmd.Scale.X;
+        float height = cmd.DstRect.Height * cmd.Scale.Y;
+
+        float left = MathF.Round(cmd.DstRect.X - cmd.Origin.X * cmd.Scale.X, 3);
+        float top = MathF.Round(cmd.DstRect.Y - cmd.Origin.Y * cmd.Scale.Y, 3);
+        float right = MathF.Round(left + width, 3);
+        float bottom = MathF.Round(top + height, 3);
+
+        corners[0] = new Vect2(left, top);
+        corners[1] = new Vect2(right, top);
+        corners[2] = new Vect2(left, bottom);
+        corners[3] = new Vect2(right, bottom);
+
+        if (cmd.Rotation != 0f)
+        {
+            float cos = MathF.Cos(cmd.Rotation);
+            float sin = MathF.Sin(cmd.Rotation);
+
+            float centerX = cmd.DstRect.X;
+            float centerY = cmd.DstRect.Y;
+
+            for (int i = 0; i < 4; i++)
+            {
+                float dx = corners[i].X - centerX;
+                float dy = corners[i].Y - centerY;
+
+                corners[i] = new Vect2(
+                    centerX + dx * cos - dy * sin,
+                    centerY + dx * sin + dy * cos
+                );
+            }
+        }
+
+        float srcLeft = cmd.SrcRect.Left;
+        float srcRight = cmd.SrcRect.Right;
+        float srcTop = cmd.SrcRect.Top;
+        float srcBottom = cmd.SrcRect.Bottom;
+
+        if (GameSettings.Instance.UseHalfTexelOffset)
+        {
+            float texWidth = cmd.Texture.Size.X;
+            float texHeight = cmd.Texture.Size.Y;
+            float offsetX = 0.5f / texWidth;
+            float offsetY = 0.5f / texHeight;
+
+            srcLeft -= offsetX;
+            srcRight += offsetX;
+            srcTop -= offsetY;
+            srcBottom += offsetY;
+        }
+
+        if (cmd.Effects.HasFlag(TextureEffects.Horizontal))
+            (srcLeft, srcRight) = (srcRight, srcLeft);
+        if (cmd.Effects.HasFlag(TextureEffects.Vertical))
+            (srcTop, srcBottom) = (srcBottom, srcTop);
+
+        var color = cmd.Color;
+
+        ptr[0] = new SFVertex(corners[0], color, new(srcLeft, srcTop));
+        ptr[1] = new SFVertex(corners[1], color, new(srcRight, srcTop));
+        ptr[2] = new SFVertex(corners[2], color, new(srcLeft, srcBottom));
+        ptr[3] = new SFVertex(corners[1], color, new(srcRight, srcTop));
+        ptr[4] = new SFVertex(corners[3], color, new(srcRight, srcBottom));
+        ptr[5] = new SFVertex(corners[2], color, new(srcLeft, srcBottom));
+    }
+
+    #endregion
+
+    #region Dispose
+    /// <summary>
+    /// Disposes the batcher and releases all resources.
+    /// </summary>
+    protected override void OnDispose()
+    {
+        if (_isDisposed) return;
+
+        if (_cmds != null)
+            Array.Clear(_cmds, 0, _cmds.Length);
+
+        base.OnDispose();
+    }
+    #endregion
 }

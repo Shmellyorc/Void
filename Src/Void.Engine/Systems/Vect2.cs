@@ -229,6 +229,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 operator -(float a, in Vect2 b) => b - a;
     #endregion
 
+
+
     #region Transform
     /// <summary>
     /// Transforms the vector from screen space to world space using the specified camera.
@@ -247,6 +249,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Transform(in Vect2 mouse, in Camera camera)
         => camera.ScreenToWorld(mouse);
     #endregion
+
+
 
     #region DistanceSquared
     /// <summary>
@@ -270,6 +274,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Distance
     /// <summary>
     /// Calculates the distance between this vector and another vector.
@@ -292,6 +298,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Length
     /// <summary>
     /// Calculates the length (magnitude) of the vector.
@@ -309,6 +317,8 @@ public struct Vect2 : IEquatable<Vect2>
         return MathF.Sqrt(value.X * value.X + value.Y * value.Y);
     }
     #endregion
+
+
 
     #region LengthSquared
     /// <summary>
@@ -328,6 +338,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Min
     /// <summary>
     /// Returns a vector with the smaller components from this vector and another vector.
@@ -346,6 +358,8 @@ public struct Vect2 : IEquatable<Vect2>
         => new(MathF.Min(a.X, b.X), MathF.Min(a.Y, b.Y));
     #endregion
 
+
+
     #region Max
     /// <summary>
     /// Returns a vector with the larger components from this vector and another vector.
@@ -363,6 +377,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Max(in Vect2 a, in Vect2 b)
         => new(MathF.Max(a.X, b.X), MathF.Max(a.Y, b.Y));
     #endregion
+
+
 
     #region Clamp
     /// <summary>
@@ -383,6 +399,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Clamp(in Vect2 value, in Vect2 min, in Vect2 max)
         => new(Math.Clamp(value.X, min.X, max.X), Math.Clamp(value.Y, min.Y, max.Y));
     #endregion
+
+
 
     #region Ceiling
     /// <summary>
@@ -409,6 +427,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Floor
     /// <summary>
     /// Returns the largest integer values less than or equal to each component.
@@ -434,6 +454,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Round
     /// <summary>
     /// Rounds each component to the nearest integer value.
@@ -456,6 +478,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region SmoothStep
     /// <summary>
     /// Performs a smooth Hermite interpolation between this vector and a target vector.
@@ -476,6 +500,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 SmoothStep(Vect2 a, Vect2 b, float t) => new(
         MathHelper.SmoothStep(a.X, b.X, t), MathHelper.SmoothStep(a.Y, b.Y, t));
     #endregion
+
+
 
     #region Direction
     /// <summary>
@@ -502,6 +528,8 @@ public struct Vect2 : IEquatable<Vect2>
         => Normalize(to - from);
     #endregion
 
+
+
     #region Wrap
     /// <summary>
     /// Wraps the vector components between the specified minimum and maximum values.
@@ -522,6 +550,8 @@ public struct Vect2 : IEquatable<Vect2>
         => new(MathHelper.Wrap(value.X, min.X, max.X), MathHelper.Wrap(value.Y, min.Y, max.Y));
     #endregion
 
+
+
     #region Snap
     /// <summary>
     /// Snaps the vector components to the nearest multiple of the specified grid size.
@@ -540,12 +570,14 @@ public struct Vect2 : IEquatable<Vect2>
         => new(MathHelper.Snap(value.X, gridSize), MathHelper.Snap(value.Y, gridSize));
     #endregion
 
+
+
     #region Center
     /// <summary>
     /// Calculates the center point between this vector and another vector.
     /// </summary>
     /// <param name="other">The other vector.</param>
-    /// <param name="clamped">Whether to clamp the center to the bounds of the two vectors.</param>
+    /// <param name="clamped">Whether to round the result to the nearest integer.</param>
     /// <returns>The center point between the vectors.</returns>
     public readonly Vect2 Center(in Vect2 other, bool clamped = false)
         => Center(this, other, clamped);
@@ -555,11 +587,32 @@ public struct Vect2 : IEquatable<Vect2>
     /// </summary>
     /// <param name="a">The first vector.</param>
     /// <param name="b">The second vector.</param>
-    /// <param name="clamped">Whether to clamp the center to the bounds of the two vectors.</param>
+    /// <param name="clamped">Whether to round the result to the nearest integer.</param>
     /// <returns>The center point between the vectors.</returns>
     public static Vect2 Center(in Vect2 a, in Vect2 b, bool clamped = false)
         => new(MathHelper.Center(a.X, b.X, clamped), MathHelper.Center(a.Y, b.Y, clamped));
+
+    /// <summary>
+    /// Calculates the center offset between this vector and another vector.
+    /// </summary>
+    /// <param name="other">The other vector.</param>
+    /// <param name="clamped">Whether to round the result to the nearest integer.</param>
+    /// <returns>The center offset between the vectors.</returns>
+    public readonly Vect2 CenterOffset(in Vect2 other, bool clamped = false)
+        => CenterOffset(this, other, clamped);
+
+    /// <summary>
+    /// Calculates the center offset between two vectors.
+    /// </summary>
+    /// <param name="a">The first vector.</param>
+    /// <param name="b">The second vector.</param>
+    /// <param name="clamped">Whether to round the result to the nearest integer.</param>
+    /// <returns>The center offset between the vectors.</returns>
+    public static Vect2 CenterOffset(in Vect2 a, in Vect2 b, bool clamped = false)
+        => new(MathHelper.CenterOffset(a.X, b.X, clamped), MathHelper.CenterOffset(a.Y, b.Y, clamped));
     #endregion
+
+
 
     #region Normalize
     /// <summary>
@@ -582,6 +635,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Dot
     /// <summary>
     /// Calculates the dot product between this vector and another vector.
@@ -599,6 +654,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static float Dot(in Vect2 a, in Vect2 b)
         => a.X * b.X + a.Y * b.Y;
     #endregion
+
+
 
     #region Cross (returns scalar Z for 2D)
     /// <summary>
@@ -618,7 +675,9 @@ public struct Vect2 : IEquatable<Vect2>
         => a.X * b.Y - a.Y * b.X;
     #endregion
 
-    #region AngleTo
+
+
+    #region Angle
     /// <summary>
     /// Calculates the angle in radians from this vector to another vector.
     /// </summary>
@@ -634,7 +693,39 @@ public struct Vect2 : IEquatable<Vect2>
     /// <returns>The angle in radians between the vectors.</returns>
     public static float AngleTo(in Vect2 from, in Vect2 to)
         => MathF.Atan2(to.Y - from.Y, to.X - from.X);
+
+    /// <summary>
+    /// Gets the angle of the vector in radians, wrapped to the range [-PI, PI].
+    /// </summary>
+    /// <returns>The angle of the vector in radians.</returns>
+    public readonly float Angle() => Angle(this);
+
+    /// <summary>
+    /// Gets the angle of a vector in radians, wrapped to the range [-PI, PI].
+    /// </summary>
+    /// <param name="value">The vector to get the angle of.</param>
+    /// <returns>The angle of the vector in radians.</returns>
+    public static float Angle(Vect2 value)
+        => MathHelper.WrapAngle(MathF.Atan2(value.Y, value.X));
+
+    /// <summary>
+    /// Rotates this vector towards a target vector by a maximum angle.
+    /// </summary>
+    public readonly Vect2 RotateTowards(Vect2 target, float maxRadians)
+        => RotateTowards(this, target, maxRadians);
+
+    /// <summary>
+    /// Rotates a vector towards a target vector by a maximum angle.
+    /// </summary>
+    public static Vect2 RotateTowards(Vect2 current, Vect2 target, float maxRadians)
+    {
+        float diff = MathHelper.AngleDifference(current.Angle(), target.Angle());
+        float clamped = Math.Clamp(diff, -maxRadians, maxRadians);
+        return current.Rotate(clamped);
+    }
     #endregion
+
+
 
     #region Lerp
     /// <summary>
@@ -656,6 +747,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Lerp(Vect2 a, Vect2 b, float t)
         => new(MathHelper.Lerp(a.X, b.X, t), MathHelper.Lerp(a.Y, b.Y, t));
     #endregion
+
+
 
     #region MoveTo
     /// <summary>
@@ -685,6 +778,8 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
     #region Abs
     /// <summary>
     /// Returns a vector with the absolute values of each component.
@@ -701,6 +796,8 @@ public struct Vect2 : IEquatable<Vect2>
         => new(MathF.Abs(value.X), MathF.Abs(value.Y));
     #endregion
 
+
+
     #region Sign
     /// <summary>
     /// Returns a vector with the sign of each component (-1, 0, or 1).
@@ -716,6 +813,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Sign(in Vect2 value)
         => new(MathF.Sign(value.X), MathF.Sign(value.Y));
     #endregion
+
+
 
     #region Reflect
     /// <summary>
@@ -734,6 +833,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Reflect(in Vect2 value, in Vect2 normal)
         => value - 2f * Dot(value, normal) * normal;
     #endregion
+
+
 
     #region Rotate
     /// <summary>
@@ -757,6 +858,33 @@ public struct Vect2 : IEquatable<Vect2>
     }
     #endregion
 
+
+
+    #region Damp
+    /// <summary>
+    /// Smoothly damps this vector towards a target vector using exponential decay.
+    /// </summary>
+    /// <param name="target">The target vector to damp towards.</param>
+    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
+    /// <param name="dt">The delta time in seconds.</param>
+    /// <returns>The damped vector.</returns>
+    public readonly Vect2 Damp(Vect2 target, float smoothing, float dt)
+        => AlignHelpers.Damp(this, target, smoothing, dt);
+
+    /// <summary>
+    /// Smoothly damps a vector towards a target vector using exponential decay.
+    /// </summary>
+    /// <param name="a">The start vector.</param>
+    /// <param name="b">The target vector.</param>
+    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
+    /// <param name="dt">The delta time in seconds.</param>
+    /// <returns>The damped vector.</returns>
+    public static Vect2 Damp(Vect2 a, Vect2 b, float smoothing, float dt)
+        => AlignHelpers.Damp(a, b, smoothing, dt);
+    #endregion
+
+
+
     #region Perpendicular (90° clockwise)
     /// <summary>
     /// Returns a vector perpendicular to this vector (rotated 90° clockwise).
@@ -772,6 +900,8 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Perpendicular(in Vect2 value)
         => new(value.Y, -value.X);
     #endregion
+
+
 
     #region IEquatable
     /// <summary>

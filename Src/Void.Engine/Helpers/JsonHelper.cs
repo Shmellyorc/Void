@@ -81,14 +81,34 @@ public static class JsonHelper
         var targetType = typeof(T);
         return targetType switch
         {
+            // Strings and primitives
             Type t when t == typeof(string) => child.ValueKind == JsonValueKind.String ? (T)(object)child.GetString()! : defaultValue,
-            Type t when t == typeof(int) => child.TryGetInt32(out var iValue) ? (T)(object)iValue : defaultValue,
-            Type t when t == typeof(uint) => child.TryGetUInt32(out var uiValue) ? (T)(object)uiValue : defaultValue,
-            Type t when t == typeof(float) => child.TryGetSingle(out var fValue) ? (T)(object)fValue : defaultValue,
             Type t when t == typeof(bool) =>
                 child.ValueKind == JsonValueKind.True || child.ValueKind == JsonValueKind.False
                     ? (T)(object)child.GetBoolean()
                     : defaultValue,
+
+            Type t when t == typeof(int) => child.TryGetInt32(out var iValue) ? (T)(object)iValue : defaultValue,
+            Type t when t == typeof(uint) => child.TryGetUInt32(out var uiValue) ? (T)(object)uiValue : defaultValue,
+            Type t when t == typeof(long) => child.TryGetInt64(out var lValue) ? (T)(object)lValue : defaultValue,
+            Type t when t == typeof(ulong) => child.TryGetUInt64(out var ulValue) ? (T)(object)ulValue : defaultValue,
+            Type t when t == typeof(short) => child.TryGetInt16(out var sValue) ? (T)(object)sValue : defaultValue,
+            Type t when t == typeof(ushort) => child.TryGetUInt16(out var usValue) ? (T)(object)usValue : defaultValue,
+            Type t when t == typeof(byte) => child.TryGetByte(out var bValue) ? (T)(object)bValue : defaultValue,
+            Type t when t == typeof(sbyte) => child.TryGetSByte(out var sbValue) ? (T)(object)sbValue : defaultValue,
+            Type t when t == typeof(float) => child.TryGetSingle(out var fValue) ? (T)(object)fValue : defaultValue,
+            Type t when t == typeof(double) => child.TryGetDouble(out var dValue) ? (T)(object)dValue : defaultValue,
+            Type t when t == typeof(decimal) => child.TryGetDecimal(out var mValue) ? (T)(object)mValue : defaultValue,
+            Type t when t == typeof(DateTime) => child.TryGetDateTime(out var dtValue) ? (T)(object)dtValue : defaultValue,
+            Type t when t == typeof(DateTimeOffset) => child.TryGetDateTimeOffset(out var dtoValue) ? (T)(object)dtoValue : defaultValue,
+            Type t when t == typeof(Guid) => child.TryGetGuid(out var gValue) ? (T)(object)gValue : defaultValue,
+            Type t when t.IsEnum =>
+                child.ValueKind == JsonValueKind.String && Enum.TryParse(t, child.GetString(), out var enumValue)
+                    ? (T)enumValue
+                    : child.TryGetInt32(out var enumInt) && Enum.IsDefined(t, enumInt)
+                        ? (T)Enum.ToObject(t, enumInt)
+                        : defaultValue,
+
             _ => throw new ArgumentException($"{nameof(GetPropertyOrDefault)}<{targetType.Name}> is not supported")
         };
     }
@@ -110,13 +130,32 @@ public static class JsonHelper
         return targetType switch
         {
             Type t when t == typeof(string) => parent.ValueKind == JsonValueKind.String ? (T)(object)parent.GetString()! : defaultValue,
-            Type t when t == typeof(int) => parent.TryGetInt32(out var iValue) ? (T)(object)iValue : defaultValue,
-            Type t when t == typeof(uint) => parent.TryGetUInt32(out var uiValue) ? (T)(object)uiValue : defaultValue,
-            Type t when t == typeof(float) => parent.TryGetSingle(out var fValue) ? (T)(object)fValue : defaultValue,
             Type t when t == typeof(bool) =>
                 parent.ValueKind == JsonValueKind.True || parent.ValueKind == JsonValueKind.False
                     ? (T)(object)parent.GetBoolean()
                     : defaultValue,
+
+            Type t when t == typeof(int) => parent.TryGetInt32(out var iValue) ? (T)(object)iValue : defaultValue,
+            Type t when t == typeof(uint) => parent.TryGetUInt32(out var uiValue) ? (T)(object)uiValue : defaultValue,
+            Type t when t == typeof(long) => parent.TryGetInt64(out var lValue) ? (T)(object)lValue : defaultValue,
+            Type t when t == typeof(ulong) => parent.TryGetUInt64(out var ulValue) ? (T)(object)ulValue : defaultValue,
+            Type t when t == typeof(short) => parent.TryGetInt16(out var sValue) ? (T)(object)sValue : defaultValue,
+            Type t when t == typeof(ushort) => parent.TryGetUInt16(out var usValue) ? (T)(object)usValue : defaultValue,
+            Type t when t == typeof(byte) => parent.TryGetByte(out var bValue) ? (T)(object)bValue : defaultValue,
+            Type t when t == typeof(sbyte) => parent.TryGetSByte(out var sbValue) ? (T)(object)sbValue : defaultValue,
+            Type t when t == typeof(float) => parent.TryGetSingle(out var fValue) ? (T)(object)fValue : defaultValue,
+            Type t when t == typeof(double) => parent.TryGetDouble(out var dValue) ? (T)(object)dValue : defaultValue,
+            Type t when t == typeof(decimal) => parent.TryGetDecimal(out var mValue) ? (T)(object)mValue : defaultValue,
+            Type t when t == typeof(DateTime) => parent.TryGetDateTime(out var dtValue) ? (T)(object)dtValue : defaultValue,
+            Type t when t == typeof(DateTimeOffset) => parent.TryGetDateTimeOffset(out var dtoValue) ? (T)(object)dtoValue : defaultValue,
+            Type t when t == typeof(Guid) => parent.TryGetGuid(out var gValue) ? (T)(object)gValue : defaultValue,
+            Type t when t.IsEnum =>
+                parent.ValueKind == JsonValueKind.String && Enum.TryParse(t, parent.GetString(), out var enumValue)
+                    ? (T)enumValue
+                    : parent.TryGetInt32(out var enumInt) && Enum.IsDefined(t, enumInt)
+                        ? (T)Enum.ToObject(t, enumInt)
+                        : defaultValue,
+
             _ => throw new ArgumentException($"{nameof(GetElementOrDefault)}<{targetType.Name}> is not supported")
         };
     }
@@ -193,7 +232,7 @@ public static class JsonHelper
                 var x when x.StartsWith("Array<LocalEnum.") => new LDtkEnumArraySettings([.. value.EnumerateArray()
                     .Where(x => x.ValueKind != JsonValueKind.Null)
                     .Select(x => x.GetElementOrDefault(string.Empty))]),
-                var x when x.StartsWith("Array<FilePath") => new LDtkEnumArraySettings([.. value.EnumerateArray()
+                var x when x.StartsWith("Array<FilePath") => new LDtkFilePathArraySettings([.. value.EnumerateArray()
                     .Where(x => x.ValueKind != JsonValueKind.Null)
                     .Select(x => x.GetElementOrDefault(string.Empty))]),
                 var x when x.StartsWith("Array<Tile") => new LDtkTileArraySettings([.. value.EnumerateArray()

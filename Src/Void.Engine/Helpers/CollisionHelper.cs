@@ -17,7 +17,7 @@ namespace Void.Engine.Helpers;
 ///   <item><description><b>Collision Normals:</b> Get the direction of impact for collision resolution</description></item>
 ///   <item><description><b>Reflection:</b> Bounce velocities off surfaces</description></item>
 ///   <item><description><b>Pushback/Resolution:</b> Resolve overlaps by pushing objects out of each other</description></item>
-///   <item><description><b>Move &amp; Slide:</b> Move objects with automatic collision resolution against obstacles</description></item>
+///   <item><description><b>Move &amp; Slide:</b> Move objects with axis-separated collision resolution for proper wall sliding</description></item>
 ///   <item><description><b>Bounds Conversion:</b> Convert shapes to bounding boxes for broadphase optimization</description></item>
 /// </list>
 /// </para>
@@ -183,8 +183,12 @@ public static class CollisionHelper
     /// <returns>The closest point on the circle to the given point.</returns>
     public static Vect2 ClosestPointCircle(Vect2 point, Vect2 center, float radius)
     {
-        Vect2 direction = (point - center).Normalized();
-        return center + direction * radius;
+        Vect2 direction = point - center;
+
+        if (direction.LengthSquared() < MathHelper.Epsilon * MathHelper.Epsilon)
+            return center + new Vect2(0, radius);
+
+        return center + direction.Normalized() * radius;
     }
 
     /// <summary>
@@ -202,8 +206,24 @@ public static class CollisionHelper
         float d3 = Cross(a1 - b1, b2 - b1);
         float d4 = Cross(a2 - b1, b2 - b1);
 
+        // Check if any point is exactly on the other line
+        if (MathF.Abs(d1) < MathHelper.Epsilon) return PointOnSegment(b1, a1, a2);
+        if (MathF.Abs(d2) < MathHelper.Epsilon) return PointOnSegment(b2, a1, a2);
+        if (MathF.Abs(d3) < MathHelper.Epsilon) return PointOnSegment(a1, b1, b2);
+        if (MathF.Abs(d4) < MathHelper.Epsilon) return PointOnSegment(a2, b1, b2);
+
+        // Standard intersection test
         return (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) &&
                (d3 > 0 && d4 < 0 || d3 < 0 && d4 > 0);
+    }
+
+    private static bool PointOnSegment(Vect2 point, Vect2 start, Vect2 end)
+    {
+        // Check if point is within the bounding box of the segment
+        return point.X >= MathF.Min(start.X, end.X) - MathHelper.Epsilon &&
+               point.X <= MathF.Max(start.X, end.X) + MathHelper.Epsilon &&
+               point.Y >= MathF.Min(start.Y, end.Y) - MathHelper.Epsilon &&
+               point.Y <= MathF.Max(start.Y, end.Y) + MathHelper.Epsilon;
     }
     #endregion
 
@@ -294,6 +314,141 @@ public static class CollisionHelper
                LineLine(start, end, rect.TopRight, rect.BottomRight) ||
                LineLine(start, end, rect.BottomRight, rect.BottomLeft) ||
                LineLine(start, end, rect.BottomLeft, rect.TopLeft);
+    }
+
+    /// <summary>
+    /// Checks if a line segment intersects a rectangle and returns the closest hit point and normal.
+    /// </summary>
+    /// <param name="start">Start point of the line segment.</param>
+    /// <param name="end">End point of the line segment.</param>
+    /// <param name="rect">The rectangle.</param>
+    /// <param name="hitPoint">The point where the line hits the rectangle.</param>
+    /// <param name="hitNormal">The normal at the hit point.</param>
+    /// <returns><see langword="true"/> if the line segment intersects the rectangle; otherwise, <see langword="false"/>.</returns>
+    public static bool LineRect(Vect2 start, Vect2 end, Rect2 rect, out Vect2 hitPoint, out Vect2 hitNormal)
+    {
+        hitPoint = Vect2.Zero;
+        hitNormal = Vect2.Zero;
+
+        if (PointRect(start, rect))
+        {
+            hitPoint = start;
+            hitNormal = GetNormalFromInside(start, rect);
+            return true;
+        }
+
+        if (PointRect(end, rect))
+        {
+            hitPoint = end;
+            hitNormal = GetNormalFromInside(end, rect);
+            return true;
+        }
+
+        float closestDistance = float.MaxValue;
+        bool hit = false;
+
+        if (LineLine(start, end, rect.TopLeft, rect.TopRight))
+        {
+            if (TryGetLineIntersection(start, end, rect.TopLeft, rect.TopRight, out Vect2 point))
+            {
+                float dist = Vect2.DistanceSquared(start, point);
+                if (dist < closestDistance)
+                {
+                    closestDistance = dist;
+                    hitPoint = point;
+                    hitNormal = new Vect2(0, -1);
+                    hit = true;
+                }
+            }
+        }
+
+        if (LineLine(start, end, rect.TopRight, rect.BottomRight))
+        {
+            if (TryGetLineIntersection(start, end, rect.TopRight, rect.BottomRight, out Vect2 point))
+            {
+                float dist = Vect2.DistanceSquared(start, point);
+                if (dist < closestDistance)
+                {
+                    closestDistance = dist;
+                    hitPoint = point;
+                    hitNormal = new Vect2(1, 0);
+                    hit = true;
+                }
+            }
+        }
+
+        if (LineLine(start, end, rect.BottomRight, rect.BottomLeft))
+        {
+            if (TryGetLineIntersection(start, end, rect.BottomRight, rect.BottomLeft, out Vect2 point))
+            {
+                float dist = Vect2.DistanceSquared(start, point);
+                if (dist < closestDistance)
+                {
+                    closestDistance = dist;
+                    hitPoint = point;
+                    hitNormal = new Vect2(0, 1);
+                    hit = true;
+                }
+            }
+        }
+
+        if (LineLine(start, end, rect.BottomLeft, rect.TopLeft))
+        {
+            if (TryGetLineIntersection(start, end, rect.BottomLeft, rect.TopLeft, out Vect2 point))
+            {
+                float dist = Vect2.DistanceSquared(start, point);
+                if (dist < closestDistance)
+                {
+                    closestDistance = dist;
+                    hitPoint = point;
+                    hitNormal = new Vect2(-1, 0);
+                    hit = true;
+                }
+            }
+        }
+
+        return hit;
+    }
+
+    private static bool TryGetLineIntersection(Vect2 a1, Vect2 a2, Vect2 b1, Vect2 b2, out Vect2 intersection)
+    {
+        intersection = Vect2.Zero;
+
+        float x1 = a1.X, y1 = a1.Y;
+        float x2 = a2.X, y2 = a2.Y;
+        float x3 = b1.X, y3 = b1.Y;
+        float x4 = b2.X, y4 = b2.Y;
+
+        float denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+
+        if (MathF.Abs(denominator) < MathHelper.Epsilon)
+            return false;
+
+        float t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
+        float u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator;
+
+        if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
+        {
+            intersection = new Vect2(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+            return true;
+        }
+
+        return false;
+    }
+
+    private static Vect2 GetNormalFromInside(Vect2 point, Rect2 rect)
+    {
+        float distToLeft = point.X - rect.Left;
+        float distToRight = rect.Right - point.X;
+        float distToTop = point.Y - rect.Top;
+        float distToBottom = rect.Bottom - point.Y;
+
+        float minDist = MathF.Min(MathF.Min(distToLeft, distToRight), MathF.Min(distToTop, distToBottom));
+
+        if (minDist == distToLeft) return new Vect2(-1, 0);
+        if (minDist == distToRight) return new Vect2(1, 0);
+        if (minDist == distToTop) return new Vect2(0, -1);
+        return new Vect2(0, 1);
     }
 
     /// <summary>
@@ -396,7 +551,11 @@ public static class CollisionHelper
         hitPoint = Vect2.Zero;
         distance = float.MaxValue;
 
-        Vect2 invDir = new(1f / direction.X, 1f / direction.Y);
+        // Avoid division by zero
+        float dirX = MathF.Abs(direction.X) < MathHelper.Epsilon ? MathHelper.Epsilon : direction.X;
+        float dirY = MathF.Abs(direction.Y) < MathHelper.Epsilon ? MathHelper.Epsilon : direction.Y;
+
+        Vect2 invDir = new(1f / dirX, 1f / dirY);
 
         float t1 = (rect.Left - origin.X) * invDir.X;
         float t2 = (rect.Right - origin.X) * invDir.X;
@@ -521,7 +680,7 @@ public static class CollisionHelper
     /// <param name="hitPoint">The point of impact.</param>
     /// <param name="hitNormal">The normal at the point of impact.</param>
     /// <returns><see langword="true"/> if a collision will occur during the movement; otherwise, <see langword="false"/>.</returns>
-    public static bool SweptRectRect(Rect2 moving, Vect2 velocity, Rect2 obstacle, 
+    public static bool SweptRectRect(Rect2 moving, Vect2 velocity, Rect2 obstacle,
         out float timeOfImpact, out Vect2 hitPoint, out Vect2 hitNormal)
     {
         timeOfImpact = 1f;
@@ -546,22 +705,13 @@ public static class CollisionHelper
         if (RaycastRect(movingCenter, velocity.Normalized(), expandedObstacle, out Vect2 point, out float distance))
         {
             float velocityLength = velocity.Length();
-            
+
             if (distance <= velocityLength)
             {
                 timeOfImpact = distance / velocityLength;
                 hitPoint = point;
-                
-                // Calculate normal based on which side was hit
-                if (MathF.Abs(point.X - expandedObstacle.Left) < 0.001f)
-                    hitNormal = new Vect2(-1, 0);
-                else if (MathF.Abs(point.X - expandedObstacle.Right) < 0.001f)
-                    hitNormal = new Vect2(1, 0);
-                else if (MathF.Abs(point.Y - expandedObstacle.Top) < 0.001f)
-                    hitNormal = new Vect2(0, -1);
-                else if (MathF.Abs(point.Y - expandedObstacle.Bottom) < 0.001f)
-                    hitNormal = new Vect2(0, 1);
-                
+                hitNormal = GetSweptNormal(point, expandedObstacle);
+
                 return true;
             }
         }
@@ -604,27 +754,32 @@ public static class CollisionHelper
         if (RaycastRect(center, velocity.Normalized(), expandedObstacle, out Vect2 point, out float distance))
         {
             float velocityLength = velocity.Length();
-            
+
             if (distance <= velocityLength)
             {
                 timeOfImpact = distance / velocityLength;
                 hitPoint = point;
-                
-                // Calculate normal based on which side was hit
-                if (MathF.Abs(point.X - expandedObstacle.Left) < 0.001f)
-                    hitNormal = new Vect2(-1, 0);
-                else if (MathF.Abs(point.X - expandedObstacle.Right) < 0.001f)
-                    hitNormal = new Vect2(1, 0);
-                else if (MathF.Abs(point.Y - expandedObstacle.Top) < 0.001f)
-                    hitNormal = new Vect2(0, -1);
-                else if (MathF.Abs(point.Y - expandedObstacle.Bottom) < 0.001f)
-                    hitNormal = new Vect2(0, 1);
-                
+                hitNormal = GetSweptNormal(point, expandedObstacle);
+
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static Vect2 GetSweptNormal(Vect2 point, Rect2 expandedObstacle)
+    {
+        if (MathF.Abs(point.X - expandedObstacle.Left) < MathHelper.Epsilon)
+            return new Vect2(-1, 0);
+        else if (MathF.Abs(point.X - expandedObstacle.Right) < MathHelper.Epsilon)
+            return new Vect2(1, 0);
+        else if (MathF.Abs(point.Y - expandedObstacle.Top) < MathHelper.Epsilon)
+            return new Vect2(0, -1);
+        else if (MathF.Abs(point.Y - expandedObstacle.Bottom) < MathHelper.Epsilon)
+            return new Vect2(0, 1);
+
+        return Vect2.Zero;
     }
 
     /// <summary>
@@ -640,7 +795,7 @@ public static class CollisionHelper
     /// <param name="hitPoint">The point of impact.</param>
     /// <param name="hitNormal">The normal at the point of impact.</param>
     /// <returns><see langword="true"/> if a collision will occur during the movement; otherwise, <see langword="false"/>.</returns>
-    public static bool SweptCircleCircle(Vect2 centerA, float radiusA, Vect2 velocity, 
+    public static bool SweptCircleCircle(Vect2 centerA, float radiusA, Vect2 velocity,
         Vect2 centerB, float radiusB,
         out float timeOfImpact, out Vect2 hitPoint, out Vect2 hitNormal)
     {
@@ -663,7 +818,7 @@ public static class CollisionHelper
         if (RaycastCircle(centerA, velocity.Normalized(), centerB, combinedRadius, out Vect2 point, out float distance))
         {
             float velocityLength = velocity.Length();
-            
+
             if (distance <= velocityLength)
             {
                 timeOfImpact = distance / velocityLength;
@@ -904,47 +1059,44 @@ public static class CollisionHelper
     #region Move & Slide
     /// <summary>
     /// Moves a rectangle with collision resolution against a list of obstacles.
+    /// Uses axis separation (X first, then Y) for proper wall sliding.
     /// </summary>
     /// <param name="rect">The rectangle to move.</param>
     /// <param name="velocity">The desired movement velocity.</param>
     /// <param name="obstacles">The list of obstacle rectangles.</param>
-    /// <param name="iterations">The number of resolution iterations (default: 4).</param>
     /// <returns>The new position after resolving collisions.</returns>
     /// <remarks>
-    /// This method performs iterative collision resolution, making it suitable for games
-    /// where objects need to slide along walls. The velocity is modified during resolution
-    /// to prevent continuous collisions.
+    /// This method moves on the X axis first and resolves any collisions, then moves on the Y axis.
+    /// This axis separation prevents corner sticking and allows proper wall sliding.
     /// </remarks>
-    public static Vect2 MoveAndSlideRect(Rect2 rect, Vect2 velocity, IEnumerable<Rect2> obstacles, int iterations = 4)
+    public static Vect2 MoveAndSlideRect(Rect2 rect, Vect2 velocity, IEnumerable<Rect2> obstacles)
     {
         Vect2 position = rect.Position;
 
-        for (int i = 0; i < iterations; i++)
+        position.X += velocity.X;
+        foreach (var obstacle in obstacles) // First pass: X axis
         {
-            Vect2 newPos = position + velocity;
-            Rect2 newRect = new(newPos, rect.Size);
-
-            bool collided = false;
-
-            foreach (var obstacle in obstacles)
+            Rect2 xRect = new(position, rect.Size);
+            if (RectRect(xRect, obstacle))
             {
-                if (RectRect(newRect, obstacle))
-                {
-                    Vect2 push = PushRectRect(newRect, obstacle);
-                    newPos += push;
-                    newRect = new(newPos, rect.Size);
-
-                    if (push.X != 0) velocity.X = 0;
-                    if (push.Y != 0) velocity.Y = 0;
-
-                    collided = true;
-                }
+                if (velocity.X > 0)
+                    position.X = obstacle.Left - rect.Width;
+                else if (velocity.X < 0)
+                    position.X = obstacle.Right;
             }
+        }
 
-            position = newPos;
-
-            if (!collided)
-                break;
+        position.Y += velocity.Y;
+        foreach (var obstacle in obstacles) // Second pass: Y axis
+        {
+            Rect2 yRect = new(position, rect.Size);
+            if (RectRect(yRect, obstacle))
+            {
+                if (velocity.Y > 0)
+                    position.Y = obstacle.Top - rect.Height;
+                else if (velocity.Y < 0)
+                    position.Y = obstacle.Bottom;
+            }
         }
 
         return position;
@@ -952,57 +1104,65 @@ public static class CollisionHelper
 
     /// <summary>
     /// Moves a circle with collision resolution against a list of obstacles.
+    /// Uses axis separation (X first, then Y) for proper wall sliding.
     /// </summary>
     /// <param name="center">The center of the circle.</param>
     /// <param name="radius">The radius of the circle.</param>
     /// <param name="velocity">The desired movement velocity.</param>
     /// <param name="rects">The list of obstacle rectangles.</param>
     /// <param name="circles">The list of obstacle circles (center, radius tuples).</param>
-    /// <param name="iterations">The number of resolution iterations (default: 4).</param>
     /// <returns>The new position after resolving collisions.</returns>
     /// <remarks>
-    /// This method performs iterative collision resolution, making it suitable for games
-    /// where objects need to slide along walls. The velocity is modified during resolution
-    /// to prevent continuous collisions.
+    /// This method moves on the X axis first and resolves any collisions, then moves on the Y axis.
+    /// This axis separation prevents corner sticking and allows proper wall sliding.
     /// </remarks>
     public static Vect2 MoveAndSlideCircle(Vect2 center, float radius, Vect2 velocity,
-        IEnumerable<Rect2> rects, IEnumerable<(Vect2 center, float radius)> circles, int iterations = 4)
+        IEnumerable<Rect2> rects, IEnumerable<(Vect2 center, float radius)> circles)
     {
         Vect2 position = center;
 
-        for (int i = 0; i < iterations; i++)
+        position.X += velocity.X;
+        foreach (var rect in rects)
         {
-            Vect2 newPos = position + velocity;
-            bool collided = false;
-
-            foreach (var rect in rects)
+            if (RectCircle(rect, position, radius))
             {
-                if (RectCircle(rect, newPos, radius))
-                {
-                    Vect2 push = PushCircleRect(newPos, radius, rect);
-                    newPos += push;
-                    if (push.X != 0) velocity.X = 0;
-                    if (push.Y != 0) velocity.Y = 0;
-                    collided = true;
-                }
+                if (velocity.X > 0)
+                    position.X = rect.Left - radius;
+                else if (velocity.X < 0)
+                    position.X = rect.Right + radius;
             }
-
-            foreach (var (circleCenter, circleRadius) in circles)
+        }
+        foreach (var (circleCenter, circleRadius) in circles)
+        {
+            if (CircleCircle(position, radius, circleCenter, circleRadius))
             {
-                if (CircleCircle(newPos, radius, circleCenter, circleRadius))
-                {
-                    Vect2 push = PushCircleCircle(newPos, radius, circleCenter, circleRadius);
-                    newPos += push;
-                    if (push.X != 0) velocity.X = 0;
-                    if (push.Y != 0) velocity.Y = 0;
-                    collided = true;
-                }
+                if (velocity.X > 0)
+                    position.X = circleCenter.X - (radius + circleRadius);
+                else if (velocity.X < 0)
+                    position.X = circleCenter.X + (radius + circleRadius);
             }
+        }
 
-            position = newPos;
-
-            if (!collided)
-                break;
+        position.Y += velocity.Y;
+        foreach (var rect in rects)
+        {
+            if (RectCircle(rect, position, radius))
+            {
+                if (velocity.Y > 0)
+                    position.Y = rect.Top - radius;
+                else if (velocity.Y < 0)
+                    position.Y = rect.Bottom + radius;
+            }
+        }
+        foreach (var (circleCenter, circleRadius) in circles)
+        {
+            if (CircleCircle(position, radius, circleCenter, circleRadius))
+            {
+                if (velocity.Y > 0)
+                    position.Y = circleCenter.Y - (radius + circleRadius);
+                else if (velocity.Y < 0)
+                    position.Y = circleCenter.Y + (radius + circleRadius);
+            }
         }
 
         return position;

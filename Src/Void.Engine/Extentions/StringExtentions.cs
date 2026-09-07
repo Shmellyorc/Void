@@ -294,7 +294,27 @@ public static class StringExtensions
         if (string.IsNullOrEmpty(v))
             return [];
 
-        return v.Split(separator)
+        return v.Split(separator, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim())
+            .Where(s => !string.IsNullOrEmpty(s))
+            .ToArray();
+    }
+
+    /// <summary>
+    /// Splits the string by a separator, trims each part, and removes empty entries.
+    /// </summary>
+    /// <param name="v">The string to split.</param>
+    /// <param name="separator">The separator string.</param>
+    /// <returns>An array of trimmed, non-empty parts.</returns>
+    public static string[] SplitAndTrim(this string v, string separator)
+    {
+        if (string.IsNullOrEmpty(v) || string.IsNullOrEmpty(separator))
+            return [];
+
+        if (separator.Length == 1)
+            return SplitAndTrim(v, separator[0]);
+
+        return v.Split([separator], StringSplitOptions.RemoveEmptyEntries)
             .Select(s => s.Trim())
             .Where(s => !string.IsNullOrEmpty(s))
             .ToArray();
@@ -386,4 +406,28 @@ public static class StringExtensions
 
         return string.Join(separator, values);
     }
+
+    /// <summary>
+    /// Parses the string to an integer.
+    /// </summary>
+    public static int ToInt(this string v, int defaultValue = 0)
+        => int.TryParse(v, out int result) ? result : defaultValue;
+
+    /// <summary>
+    /// Parses the string to a float.
+    /// </summary>
+    public static float ToFloat(this string v, float defaultValue = 0f)
+        => float.TryParse(v, out float result) ? result : defaultValue;
+
+    /// <summary>
+    /// Parses the string to a double.
+    /// </summary>
+    public static double ToDouble(this string v, double defaultValue = 0.0)
+        => double.TryParse(v, out double result) ? result : defaultValue;
+
+    /// <summary>
+    /// Parses the string to a decimal.
+    /// </summary>
+    public static decimal ToDecimal(this string v, decimal defaultValue = 0m)
+        => decimal.TryParse(v, out decimal result) ? result : defaultValue;
 }

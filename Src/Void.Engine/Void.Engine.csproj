@@ -8,7 +8,7 @@
 
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Engine</PackageId>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
     <Description>Lightweight 2D game framework for .NET with batched rendering, asset protection (AES-GCM), pathfinding (A* + flow fields), coroutines, LDtk level editor support, encrypted saving, mod support, and post-processing shaders.</Description>
@@ -23,22 +23,47 @@
 
   <PropertyGroup>
     <PackageReleaseNotes>
-    [1.1.0] 2026.09.01
-      * CollisionHelper class with full collision detection and resolution:
-      * Primitives: IsWithinRadius, IsCircleOverlap, ClosestPointRect, ClosestPointCircle, LineLine
-      * Shape to Shape: RectRect, CircleCircle, RectCircle
-      * Point to Shape: PointRect, PointCircle
-      * Line to Shape: LineLine, LineRect, LineCircle
-      * Distance Between Shapes: DistanceRectRect, DistanceCircleCircle, DistanceRectCircle
-      * Raycasting: RaycastRect, RaycastCircle, RaycastAny
-      * Swept Collision (prevents tunneling): SweptRectRect, SweptCircleRect, SweptCircleCircle
-      * Collision Normals: GetCollisionNormal (Rect, Circle, Circle-Circle)
-      * Reflection: Reflect velocity off surfaces
-      * Containment: RectContainsRect, RectContainsCircle, CircleContainsCircle, CircleContainsRect
-      * Pushback: PushRectRect, PushCircleRect, PushCircleCircle
-      * Move and Slide: MoveAndSlideRect, MoveAndSlideCircle
-      * Bounds Conversion: GetCircleBounds (for broadphase optimization)
-      * Rect2 now delegates all collision logic to CollisionHelper
+    [1.2.0] 2026.9.7
+      Added:
+      * Added other datatypes for GetPropertyOrDefault and GetElementOrDefault
+      * Added Rect2.Lerp and Rect2.SmoothStep with static/instance variants
+      * Added epsilon guard in RaycastRect to prevent division by zero
+      * Added LineRect with hit point/normal output
+      * Added angle utilities to MathHelper (WrapAngle, WrapAngleDegrees, AngleDifference, MoveTowardsAngle)
+      * Added Damp for exponential decay smoothing
+      * Added Repeat for value wrapping in range
+      * Added SmootherStep for 5th order interpolation
+      * Added Frac for fractional part extraction
+      * Added documentation for supported enum types and ulong limitation
+      * Added missing Ninepatch and DrawText overloads
+
+      Fixed:
+      * Fixed visibility checks to account for scale and origin
+      * Fixed the DrawCommandComparer to properly check for texture validity
+      * Fixed MoveAndSlideRect corner sticking by separating X and Y axis collision resolution
+      * Fixed MoveAndSlideCircle X axis position being overwritten instead of adding to velocity
+      * Fixed LineLine edge cases (collinear lines, shared endpoints, point-on-line)
+      * Fixed RaycastRect division by zero
+      * Fixed swept collision hitPoint/hitNormal assignment
+      * Fixed ClosestPointCircle center-point edge case
+      * Fixed LDtk Array FilePath settings returning incorrect settings type
+      * Fixed BeaconHandle TryGet returning true for value types when data type mismatch
+
+      Changed:
+      * Moved scale and origin to WriteQuadUnsafe where vertices are generated
+      * Replaced push-based collision resolution with direct position snapping based on movement direction
+      * Improved performance with deterministic 2-pass collision checks (X axis, then Y axis)
+      * Made Rect2 interpolation delegate-compatible for Tween animation system
+      * Updated EnumExtensions to support all enum underlying types via Convert.ToInt64
+      * Reorganized SpriteBatcher public API for consistent parameter ordering
+      * Extracted EngineDrawNinePatch to eliminate duplicate logic
+      * Moved implementation details to private regions
+      * Separated DrawAtlasDebugPage into dedicated region
+
+      Removed:
+      * Removed pre-scaling of dstRect in EngineDraw and EngineDrawBypassAtlas
+      * Removed iteration parameter and simplified collision logic
+      * Removed per-frame List allocations in MoveAndSlide methods
     </PackageReleaseNotes>
   </PropertyGroup>
 

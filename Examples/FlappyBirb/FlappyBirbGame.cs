@@ -199,12 +199,12 @@ public sealed class FlappyBirbGame(GameSettings settings) : Game(settings)
         _birb.Draw(_batch);
 
         // Draw score centered at the top
-        _batch.DrawText(Globals.Font, _score.ToString(), new Vect2(_bgRect.Width / 2f, 10), Color.White, TextAlignment.TopCenter, Vect2.One, 1f);
+        _batch.DrawText(Globals.Font, _score.ToString(), new Vect2(_bgRect.Width / 2f, 10), Color.White, Vect2.One, TextAlignment.TopCenter, 1f);
 
         // Draw game over message when dead
         if (_gameOver)
         {
-            _batch.DrawText(Globals.Font, "Game Over!\n\nPress Space\nto restart", new Vect2(_bgRect.Width / 2f, _bgRect.Height / 2f), Color.White, TextAlignment.Center, Vect2.One, 1f);
+            _batch.DrawText(Globals.Font, "Game Over!\n\nPress Space\nto restart", new Vect2(_bgRect.Width / 2f, _bgRect.Height / 2f), Color.White, Vect2.One, TextAlignment.Center, 1f);
         }
 
         _batch.End();

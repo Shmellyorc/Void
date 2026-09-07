@@ -105,7 +105,7 @@ public static class AlignHelpers
     {
         var result = align switch
         {
-            HAlign.Center => MathHelper.Center(parent, child),
+            HAlign.Center => MathHelper.CenterOffset(parent, child),
             HAlign.Right => parent - child,
             HAlign.Stretch => 0f,
             _ => 0f
@@ -136,7 +136,7 @@ public static class AlignHelpers
     {
         var result = align switch
         {
-            VAlign.Center => MathHelper.Center(parent, child),
+            VAlign.Center => MathHelper.CenterOffset(parent, child),
             VAlign.Bottom => parent - child,
             VAlign.Stretch => 0f,
             _ => 0f
@@ -409,4 +409,17 @@ public static class AlignHelpers
     /// <returns>An array of positions for each item.</returns>
     public static float[] DistributeEvenly(float containerSize, int itemCount, float spacing) =>
         DistributeEvenly(containerSize, itemCount, 0f, spacing);
+
+    /// <summary>
+    /// Smoothly damps a vector towards a target vector using exponential decay.
+    /// </summary>
+    /// <param name="current">The current vector.</param>
+    /// <param name="target">The target vector to damp towards.</param>
+    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
+    /// <param name="dt">The delta time in seconds.</param>
+    /// <returns>The damped vector.</returns>
+    public static Vect2 Damp(Vect2 current, Vect2 target, float smoothing, float dt) => new(
+        MathHelper.Damp(current.X, target.X, smoothing, dt),
+        MathHelper.Damp(current.Y, target.Y, smoothing, dt)
+    );
 }

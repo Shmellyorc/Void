@@ -151,8 +151,18 @@ public static class MathHelper
     /// <param name="b">The second value.</param>
     /// <param name="clamped">If true, rounds the result.</param>
     /// <returns>The center offset.</returns>
-    public static float Center(float a, float b, bool clamped = false)
+    public static float CenterOffset(float a, float b, bool clamped = false)
         => clamped ? MathF.Round((a - b) / 2f) : (a - b) / 2f;
+
+    /// <summary>
+    /// Calculates the midpoint between two values.
+    /// </summary>
+    /// <param name="a">The first value.</param>
+    /// <param name="b">The second value.</param>
+    /// <param name="clamped">If true, rounds the result to the nearest integer.</param>
+    /// <returns>The midpoint between the two values.</returns>
+    public static float Center(float a, float b, bool clamped = false)
+        => clamped ? MathF.Round((a + b) / 2f) : (a + b) / 2f;
 
     /// <summary>
     /// Clamps a value between 0 and 1.
@@ -328,4 +338,89 @@ public static class MathHelper
     /// <returns>The snapped value.</returns>
     public static float Snap(float value, float gridSize)
         => MathF.Round(value / gridSize) * gridSize;
+
+    /// <summary>
+    /// Wraps an angle in radians to the range [-PI, PI].
+    /// </summary>
+    /// <param name="radians">The angle in radians.</param>
+    /// <returns>The wrapped angle in radians.</returns>
+    public static float WrapAngle(float radians)
+        => Wrap(radians, -PI, PI);
+
+    /// <summary>
+    /// Wraps an angle in degrees to the range [-180, 180].
+    /// </summary>
+    /// <param name="degrees">The angle in degrees.</param>
+    /// <returns>The wrapped angle in degrees.</returns>
+    public static float WrapAngleDegrees(float degrees)
+        => Wrap(degrees, -180f, 180f);
+
+    /// <summary>
+    /// Calculates the shortest angular difference between two angles.
+    /// </summary>
+    /// <param name="a">The first angle in radians.</param>
+    /// <param name="b">The second angle in radians.</param>
+    /// <returns>The shortest angle difference in radians (-PI to PI).</returns>
+    public static float AngleDifference(float a, float b)
+        => WrapAngle(b - a);
+
+    /// <summary>
+    /// Moves an angle towards a target angle by a maximum delta, taking the shortest path.
+    /// </summary>
+    /// <param name="current">The current angle in radians.</param>
+    /// <param name="target">The target angle in radians.</param>
+    /// <param name="maxDelta">The maximum amount to rotate.</param>
+    /// <returns>The new angle after moving towards the target.</returns>
+    public static float MoveTowardsAngle(float current, float target, float maxDelta)
+    {
+        float diff = WrapAngle(target - current);
+
+        if (MathF.Abs(diff) <= maxDelta)
+            return target;
+
+        return current + MathF.Sign(diff) * maxDelta;
+    }
+
+    /// <summary>
+    /// Smoothly damps a value towards a target using exponential decay.
+    /// </summary>
+    /// <param name="a">The start value.</param>
+    /// <param name="b">The target value.</param>
+    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
+    /// <param name="dt">The delta time in seconds.</param>
+    /// <returns>The damped value.</returns>
+    public static float Damp(float a, float b, float smoothing, float dt)
+        => Lerp(a, b, 1f - MathF.Exp(-smoothing * dt));
+
+    /// <summary>
+    /// Repeats a value within the range [0, length).
+    /// </summary>
+    /// <param name="value">The value to repeat.</param>
+    /// <param name="length">The length of the repeat interval.</param>
+    /// <returns>The repeated value.</returns>
+    public static float Repeat(float value, float length)
+        => Math.Clamp(value - MathF.Floor(value / length) * length, 0f, length);
+
+    /// <summary>
+    /// Performs a smoother Hermite interpolation between two values (5th order).
+    /// </summary>
+    /// <param name="a">The start value.</param>
+    /// <param name="b">The end value.</param>
+    /// <param name="t">The interpolation factor (0-1).</param>
+    /// <returns>The smoothly interpolated value.</returns>
+    public static float SmootherStep(float a, float b, float t)
+    {
+        t = Saturate(t);
+        t = t * t * t * (t * (t * 6f - 15f) + 10f);
+
+        return Lerp(a, b, t);
+    }
+
+    /// <summary>
+    /// Gets the fractional part of a value.
+    /// </summary>
+    /// <param name="value">The value to get the fractional part of.</param>
+    /// <returns>The fractional part of the value.</returns>
+    public static float Frac(float value)
+        => value - MathF.Floor(value);
 }

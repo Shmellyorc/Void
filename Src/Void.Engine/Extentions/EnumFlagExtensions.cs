@@ -58,6 +58,22 @@ namespace System;
 /// </code>
 /// </para>
 /// <para>
+/// <b>Supported Enum Types:</b>
+/// <list type="bullet">
+///   <item><description><see cref="byte"/></description></item>
+///   <item><description><see cref="sbyte"/></description></item>
+///   <item><description><see cref="short"/></description></item>
+///   <item><description><see cref="ushort"/></description></item>
+///   <item><description><see cref="int"/></description></item>
+///   <item><description><see cref="uint"/></description></item>
+///   <item><description><see cref="long"/></description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>Note:</b> Enums with <see cref="ulong"/> underlying type are not supported
+/// if values exceed <see cref="long.MaxValue"/>.
+/// </para>
+/// <para>
 /// <b>Thread Safety:</b>
 /// These extension methods are thread-safe as they operate on value types.
 /// </para>
@@ -72,7 +88,7 @@ public static class EnumExtensions
     /// <param name="flag">The flag to add.</param>
     /// <returns>The enum value with the flag set.</returns>
     public static T SetFlag<T>(this T value, T flag) where T : Enum
-        => (T)(object)((int)(object)value | (int)(object)flag);
+        => (T)Enum.ToObject(typeof(T), Convert.ToInt64(value) | Convert.ToInt64(flag));
 
     /// <summary>
     /// Removes the specified flag from the enum value.
@@ -82,7 +98,7 @@ public static class EnumExtensions
     /// <param name="flag">The flag to remove.</param>
     /// <returns>The enum value with the flag cleared.</returns>
     public static T ClearFlag<T>(this T value, T flag) where T : Enum
-        => (T)(object)((int)(object)value & ~(int)(object)flag);
+        => (T)Enum.ToObject(typeof(T), Convert.ToInt64(value) & ~Convert.ToInt64(flag));
 
     /// <summary>
     /// Toggles the specified flag on the enum value.
@@ -92,7 +108,7 @@ public static class EnumExtensions
     /// <param name="flag">The flag to toggle.</param>
     /// <returns>The enum value with the flag toggled.</returns>
     public static T ToggleFlag<T>(this T value, T flag) where T : Enum
-        => (T)(object)((int)(object)value ^ (int)(object)flag);
+        => (T)Enum.ToObject(typeof(T), Convert.ToInt64(value) ^ Convert.ToInt64(flag));
 
     /// <summary>
     /// Determines whether all specified flags are set on the enum value.
@@ -102,7 +118,7 @@ public static class EnumExtensions
     /// <param name="flags">The flags to check for.</param>
     /// <returns><see langword="true"/> if all specified flags are set; otherwise, <see langword="false"/>.</returns>
     public static bool HasAllFlags<T>(this T value, T flags) where T : Enum
-        => ((int)(object)value & (int)(object)flags) == (int)(object)flags;
+        => (Convert.ToInt64(value) & Convert.ToInt64(flags)) == Convert.ToInt64(flags);
 
     /// <summary>
     /// Determines whether any of the specified flags are set on the enum value.
@@ -112,7 +128,7 @@ public static class EnumExtensions
     /// <param name="flags">The flags to check for.</param>
     /// <returns><see langword="true"/> if any specified flag is set; otherwise, <see langword="false"/>.</returns>
     public static bool HasAnyFlag<T>(this T value, T flags) where T : Enum
-        => ((int)(object)value & (int)(object)flags) != 0;
+        => (Convert.ToInt64(value) & Convert.ToInt64(flags)) != 0;
 
     /// <summary>
     /// Determines whether the enum value has exactly the specified flag and no others.
@@ -122,7 +138,7 @@ public static class EnumExtensions
     /// <param name="flag">The flag to check for.</param>
     /// <returns><see langword="true"/> if the enum value has exactly the specified flag; otherwise, <see langword="false"/>.</returns>
     public static bool HasOnlyFlag<T>(this T value, T flag) where T : Enum
-        => (int)(object)value == (int)(object)flag;
+        => Convert.ToInt64(value) == Convert.ToInt64(flag);
 
     /// <summary>
     /// Determines whether the enum value has no flags set (value is zero).
@@ -131,5 +147,5 @@ public static class EnumExtensions
     /// <param name="value">The enum value to check.</param>
     /// <returns><see langword="true"/> if the enum value is zero; otherwise, <see langword="false"/>.</returns>
     public static bool HasNoFlags<T>(this T value) where T : Enum
-        => (int)(object)value == 0;
+        => Convert.ToInt64(value) == 0;
 }

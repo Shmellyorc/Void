@@ -144,8 +144,19 @@ public readonly struct BeaconHandle
     /// </remarks>
     public bool TryGet<TData>(int index, out TData data)
     {
-        data = Get<TData>(index);
+        if (index < 0 || index >= Data.Length)
+        {
+            data = default;
+            return false;
+        }
 
-        return data is TData;
+        if (Data[index] is not TData typed)
+        {
+            data = default;
+            return false;
+        }
+
+        data = typed;
+        return true;
     }
 }

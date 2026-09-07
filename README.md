@@ -5,14 +5,12 @@
 </p>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine)
-[![NuGet](https://img.shields.io/nuget/v/Void.Templates)](https://www.nuget.org/packages/Void.Templates)
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 
 ### NuGet Packages
 | Package | Version | Downloads |
 |---------|---------|-----------|
-| [Void.Engine](https://www.nuget.org/packages/Void.Engine) | 1.1.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine) |
+| [Void.Engine](https://www.nuget.org/packages/Void.Engine) | 1.2.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine) |
 | [Void.Packer](https://www.nuget.org/packages/Void.Packer) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer)](https://www.nuget.org/packages/Void.Packer) |
 | [Void.Packer.CLI](https://www.nuget.org/packages/Void.Packer.CLI) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer.CLI)](https://www.nuget.org/packages/Void.Packer.CLI) |
 | [Void.Templates](https://www.nuget.org/packages/Void.Templates) | 1.0.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Templates)](https://www.nuget.org/packages/Void.Templates) |
