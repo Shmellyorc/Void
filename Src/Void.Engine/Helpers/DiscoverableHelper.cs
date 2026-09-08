@@ -8,6 +8,8 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
+using System.Reflection;
+
 namespace Void.Engine.Helpers;
 
 /// <summary>
@@ -96,8 +98,43 @@ public static class DiscoverableHelper
 
     private static void OnAssemblyLoad(object sender, AssemblyLoadEventArgs args)
     {
-        if (IsGameAssembly(args.LoadedAssembly))
-            Interlocked.Increment(ref _loadVersion);
+        Interlocked.Increment(ref _loadVersion);
+    }
+
+    private static bool ShouldScanAssembly(Assembly assembly)
+    {
+        try
+        {
+            var settings = GameSettings.Instance;
+            var name = assembly.GetName().Name;
+
+            if (name == null)
+                return false;
+
+            return settings.DiscoverableScanMode switch
+            {
+                AssemblyScanMode.All => true,
+                AssemblyScanMode.ExcludeFramework => IsDefaultAllowed(name),
+                AssemblyScanMode.Custom => settings.DiscoverableAssemblyFilter?.Invoke(assembly) ?? true,
+                AssemblyScanMode.Whitelist => settings.DiscoverableAssemblies.Contains(name),
+                AssemblyScanMode.Blacklist => !settings.DiscoverableAssemblies.Contains(name),
+                _ => IsDefaultAllowed(name)
+            };
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool IsDefaultAllowed(string name)
+    {
+        return
+            !name.StartsWith("System.", StringComparison.OrdinalIgnoreCase) &&
+            !name.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) &&
+            !name.StartsWith("Void.", StringComparison.OrdinalIgnoreCase) &&
+            !name.StartsWith("netstandard", StringComparison.OrdinalIgnoreCase) &&
+            !name.StartsWith("mscorlib", StringComparison.OrdinalIgnoreCase);
     }
 
     private static List<Type> AllTypes
@@ -114,7 +151,8 @@ public static class DiscoverableHelper
                     return _allTypes;
 
                 _allTypes = AppDomain.CurrentDomain.GetAssemblies()
-                    .Where(a => !a.IsDynamic && IsGameAssembly(a))
+                    .Where(a => !a.IsDynamic)
+                    .Where(ShouldScanAssembly)
                     .SelectMany(a =>
                     {
                         try { return a.GetTypes(); }
@@ -143,32 +181,32 @@ public static class DiscoverableHelper
         }
     }
 
-    private static bool IsGameAssembly(Assembly assembly)
-    {
-        var name = assembly.GetName().Name;
-        if (name == null) return false;
+    // private static bool IsGameAssembly(Assembly assembly)
+    // {
+    //     var name = assembly.GetName().Name;
+    //     if (name == null) return false;
 
-        if (name.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
-            name.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
-            name.StartsWith("Void.", StringComparison.OrdinalIgnoreCase) ||
-            name.Equals("netstandard", StringComparison.OrdinalIgnoreCase) ||
-            name.Equals("mscorlib", StringComparison.OrdinalIgnoreCase))
-            return false;
+    //     if (name.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
+    //         name.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
+    //         name.StartsWith("Void.", StringComparison.OrdinalIgnoreCase) ||
+    //         name.Equals("netstandard", StringComparison.OrdinalIgnoreCase) ||
+    //         name.Equals("mscorlib", StringComparison.OrdinalIgnoreCase))
+    //         return false;
 
-        var settings = GameSettings.Instance;
-        if (settings?.DiscoverableScanMode == null)
-            return true;
+    //     var settings = GameSettings.Instance;
+    //     if (settings?.DiscoverableScanMode == null)
+    //         return true;
 
-        return settings.DiscoverableScanMode switch
-        {
-            AssemblyScanMode.All => true,
-            AssemblyScanMode.ExcludeFramework => IsGameAssembly(assembly),
-            AssemblyScanMode.Custom => settings.DiscoverableAssemblyFilter?.Invoke(assembly) ?? true,
-            AssemblyScanMode.Whitelist => settings.DiscoverableAssemblies.Contains(name),
-            AssemblyScanMode.Blacklist => !settings.DiscoverableAssemblies.Contains(name),
-            _ => true
-        };
-    }
+    //     return settings.DiscoverableScanMode switch
+    //     {
+    //         AssemblyScanMode.All => true,
+    //         AssemblyScanMode.ExcludeFramework => IsGameAssembly(assembly),
+    //         AssemblyScanMode.Custom => settings.DiscoverableAssemblyFilter?.Invoke(assembly) ?? true,
+    //         AssemblyScanMode.Whitelist => settings.DiscoverableAssemblies.Contains(name),
+    //         AssemblyScanMode.Blacklist => !settings.DiscoverableAssemblies.Contains(name),
+    //         _ => true
+    //     };
+    // }
 
     private static IEnumerable<(Type Type, DiscoverableAttribute Meta)> AllWithMeta() =>
         AllTypes.Select(t => (Type: t, Meta: _metaCache.GetOrAdd(t, GetMeta)))
@@ -498,6 +536,132 @@ public static class DiscoverableHelper
     /// <returns>A read-only list of matching types sorted by priority.</returns>
     public static IReadOnlyList<Type> FindManyByNameAndCategory<T>(Enum name, string category) =>
         FindManyByNameAndCategory<T>(name.ToEnumString(), category);
+
+
+
+
+
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types matching the specified internal name.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name to match.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByName<T>(string name, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByName<T>(name);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types matching the specified internal name using an enum.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByName<T>(Enum name, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByName<T>(name);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types within the specified category.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The category to match.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByCategory<T>(string category, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByCategory<T>(category);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types within the specified category using an enum.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="category">The enum representing the category.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByCategory<T>(Enum category, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByCategory<T>(category);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types matching the specified internal name and category.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name to match.</param>
+    /// <param name="category">The category to match.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByNameAndCategory<T>(string name, string category, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByNameAndCategory<T>(name, category);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types matching the specified internal name and category.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The internal name to match.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByNameAndCategory<T>(string name, Enum category, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByNameAndCategory<T>(name, category);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types matching the specified internal name and category.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The category to match.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByNameAndCategory<T>(Enum name, string category, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByNameAndCategory<T>(name, category);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types matching the specified internal name and category using enums.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="name">The enum representing the internal name.</param>
+    /// <param name="category">The enum representing the category.</param>
+    /// <param name="types">When this method returns, contains a read-only list of matching types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one matching type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindManyByNameAndCategory<T>(Enum name, Enum category, out IReadOnlyList<Type> types)
+    {
+        types = FindManyByNameAndCategory<T>(name, category);
+        return types.Count > 0;
+    }
+
+    /// <summary>
+    /// Attempts to retrieve all discoverable types that implement or inherit from the specified type.
+    /// </summary>
+    /// <typeparam name="T">The base type or interface to filter by.</typeparam>
+    /// <param name="types">When this method returns, contains a read-only list of discoverable types sorted by priority.</param>
+    /// <returns><see langword="true"/> if at least one discoverable type was found; otherwise, <see langword="false"/>.</returns>
+    public static bool TryFindAll<T>(out IReadOnlyList<Type> types)
+    {
+        types = FindAll<T>();
+        return types.Count > 0;
+    }
+
 
     private static DiscoverableAttribute GetMeta(Type t) =>
         t.GetCustomAttribute<DiscoverableAttribute>(inherit: false);
