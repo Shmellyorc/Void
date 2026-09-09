@@ -181,33 +181,6 @@ public static class DiscoverableHelper
         }
     }
 
-    // private static bool IsGameAssembly(Assembly assembly)
-    // {
-    //     var name = assembly.GetName().Name;
-    //     if (name == null) return false;
-
-    //     if (name.StartsWith("System.", StringComparison.OrdinalIgnoreCase) ||
-    //         name.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase) ||
-    //         name.StartsWith("Void.", StringComparison.OrdinalIgnoreCase) ||
-    //         name.Equals("netstandard", StringComparison.OrdinalIgnoreCase) ||
-    //         name.Equals("mscorlib", StringComparison.OrdinalIgnoreCase))
-    //         return false;
-
-    //     var settings = GameSettings.Instance;
-    //     if (settings?.DiscoverableScanMode == null)
-    //         return true;
-
-    //     return settings.DiscoverableScanMode switch
-    //     {
-    //         AssemblyScanMode.All => true,
-    //         AssemblyScanMode.ExcludeFramework => IsGameAssembly(assembly),
-    //         AssemblyScanMode.Custom => settings.DiscoverableAssemblyFilter?.Invoke(assembly) ?? true,
-    //         AssemblyScanMode.Whitelist => settings.DiscoverableAssemblies.Contains(name),
-    //         AssemblyScanMode.Blacklist => !settings.DiscoverableAssemblies.Contains(name),
-    //         _ => true
-    //     };
-    // }
-
     private static IEnumerable<(Type Type, DiscoverableAttribute Meta)> AllWithMeta() =>
         AllTypes.Select(t => (Type: t, Meta: _metaCache.GetOrAdd(t, GetMeta)))
                 .Where(x => x.Meta != null);
