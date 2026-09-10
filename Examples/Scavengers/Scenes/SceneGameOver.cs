@@ -114,8 +114,8 @@ public sealed class SceneGameOver : Scene
             $"Game Over!\n\nLasted {PlayTime()}\nLooted {Looted()}\n\nPress Interact Key\nto continue",
             GameSettings.Instance.Viewport / 2,
             Color.WithAlpha(Color.White, _textFade),
-            TextAlignment.Center,
             Vect2.One,
+            TextAlignment.Center,
             1f
         );
 

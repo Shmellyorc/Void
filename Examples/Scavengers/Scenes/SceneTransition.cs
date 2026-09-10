@@ -84,8 +84,8 @@ public sealed class SceneTransition : Scene
             $"Day {Globals.Data.Days}",
             GameSettings.Instance.Viewport / 2,
             Color.WithAlpha(Color.White, _textFade),
-            TextAlignment.Center,
             Vect2.One,
+            TextAlignment.Center,
             1f
         );
 

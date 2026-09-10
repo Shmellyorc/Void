@@ -324,7 +324,6 @@ public sealed class SceneGame : Scene
             new Rect2(8 + 28, 8, 100, 16),
             Color.White,
             Vect2.One,
-            0f,
             TextAlignment.CenterLeft,
             TextWrapMode.None
         );
