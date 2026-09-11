@@ -66,6 +66,10 @@ internal static class GamepadDatabase
             if (!string.Equals(platform, currentPlatform, StringComparison.OrdinalIgnoreCase))
                 continue;
 
+            // Keep VOID's bundled SDL database useful after the SDL3 migration.
+            // SDL owns the hardware-specific mapping; VOID owns the public state API.
+            SDL3.SDL.AddGamepadMapping(line);
+
             int mappingsEnd = rest.LastIndexOf(',', platformIndex);
             int nameComma = rest.IndexOf(",");
             if (nameComma < 0) continue;

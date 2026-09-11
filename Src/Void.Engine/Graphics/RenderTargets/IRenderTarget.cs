@@ -69,7 +69,7 @@ public interface IRenderTarget
     /// <param name="buffer">The vertex buffer to draw.</param>
     /// <param name="vertexStart">The starting vertex index in the buffer.</param>
     /// <param name="vertexCount">The number of vertices to draw.</param>
-    /// <param name="states">The render states (blend mode, transform, shader, texture) to apply.</param>
+    /// <param name="states">The backend-neutral batch render state to apply.</param>
     /// <remarks>
     /// <para>
     /// This method renders the specified range of vertices from the vertex buffer
@@ -77,7 +77,7 @@ public interface IRenderTarget
     /// how the vertices are rendered (points, lines, triangles, etc.).
     /// </para>
     /// </remarks>
-    void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, SFRenderStates states);
+    void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, BatchRenderState states);
 
     /// <summary>
     /// Displays the rendered content to the target surface.

@@ -116,7 +116,8 @@ public sealed class SceneGameOver : Scene
             Color.WithAlpha(Color.White, _textFade),
             Vect2.One,
             TextAlignment.Center,
-            1f
+            1f,
+            TextAlignment.CenterLeft, 0f
         );
 
         _batch.End();

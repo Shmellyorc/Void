@@ -1,277 +1,346 @@
 // ============================================================================
 //  ShaderProgram.cs
 // ============================================================================
-//  Internal runtime GPU shader program wrapper. Handles compilation,
-//  uniform management, and shader binding.
-//
-//  Copyright (c) 2025 Void Engine
-//  Licensed under the MIT License.
+//  Renderer-neutral shader program wrapper. Sources and uniform values belong
+//  to VOID; the active renderer owns the actual GPU program implementation.
 // ============================================================================
 
-using System;
-using Void.Engine.Logs;
+using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Graphics.Shaders;
 
 /// <summary>
-/// Internal runtime GPU shader program wrapper.
+/// Stores renderer-neutral shader sources and uniforms, creating the backend
+/// <see cref="IGraphicsShaderProgram"/> lazily on the active graphics device.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="ShaderProgram"/> class wraps an SFML shader and provides
-/// methods for setting uniforms, binding, and unbinding. It is used internally
-/// by the engine and is not intended for direct use by game code.
-/// </para>
-/// <para>
-/// Shader programs are created from vertex and fragment shader source strings.
-/// Compilation is lazy - the shader is only compiled when first used.
-/// </para>
-/// </remarks>
 public sealed class ShaderProgram : IDisposable
 {
-    private SFShader _shader;
-    private readonly string _vertexSource;
-    private readonly string _fragmentSource;
+    private readonly ShaderSource[] _sources;
+
+    private readonly Dictionary<string, float> _floatUniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _intUniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Vect2> _vect2Uniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Vect3> _vect3Uniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Vect4> _vect4Uniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Color> _colorUniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Matrix4x4> _matrixUniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Texture> _textureUniforms = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _currentTextureUniforms = new(StringComparer.Ordinal);
+
+    private IGraphicsDevice _graphicsDevice;
+    private IGraphicsShaderProgram _graphicsProgram;
     private bool _disposed;
-    private bool _isCompiled;
+
+    /// <summary>Gets the shader sources used to create backend programs.</summary>
+    public ReadOnlyMemory<ShaderSource> Sources => _sources;
 
     /// <summary>
-    /// Gets the underlying SFML shader.
+    /// Gets whether this program has valid sources and is not disposed. When a
+    /// renderer is active this also verifies that the backend program can be created.
     /// </summary>
-    internal SFShader SFShader => EnsureCompiled();
+    public bool IsValid
+        => !_disposed && _sources.Length > 0 && (_graphicsProgram?.IsValid ?? true);
 
     /// <summary>
-    /// Gets a value indicating whether the shader program is valid and compiled.
+    /// Creates a text shader program with vertex and fragment stages.
+    /// Existing .shader assets default to GLSL; custom shader types can choose
+    /// another language for renderer plugins that support it.
     /// </summary>
-    public bool IsValid => !_disposed && _isCompiled && _shader != null && !_shader.IsInvalid;
-
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ShaderProgram"/> class from source strings.
-    /// </summary>
-    /// <param name="vertexSource">The vertex shader source code.</param>
-    /// <param name="fragmentSource">The fragment shader source code.</param>
-    internal ShaderProgram(string vertexSource, string fragmentSource)
+    public ShaderProgram(
+        string vertexSource,
+        string fragmentSource,
+        ShaderLanguage language = ShaderLanguage.Glsl)
     {
-        _vertexSource = vertexSource;
-        _fragmentSource = fragmentSource;
+        if (string.IsNullOrWhiteSpace(vertexSource))
+            throw new ArgumentException("Vertex shader source cannot be empty.", nameof(vertexSource));
+        if (string.IsNullOrWhiteSpace(fragmentSource))
+            throw new ArgumentException("Fragment shader source cannot be empty.", nameof(fragmentSource));
+
+        _sources =
+        [
+            new ShaderSource(ShaderStage.Vertex, language, Encoding.UTF8.GetBytes(vertexSource)),
+            new ShaderSource(ShaderStage.Fragment, language, Encoding.UTF8.GetBytes(fragmentSource))
+        ];
     }
 
     /// <summary>
-    /// Ensures the shader is compiled, compiling it if necessary.
+    /// Creates a program from arbitrary renderer-neutral shader stages. This is
+    /// the path custom shader implementations can use for GLSL, HLSL, SPIR-V,
+    /// DXIL, MSL, or another backend-supported language.
     /// </summary>
-    /// <returns>The compiled SFML shader.</returns>
-    /// <exception cref="ObjectDisposedException">Thrown if the shader program has been disposed.</exception>
-    private SFShader EnsureCompiled()
+    public ShaderProgram(ReadOnlyMemory<ShaderSource> sources)
     {
-        if (_disposed)
-            throw new ObjectDisposedException(nameof(ShaderProgram));
+        if (sources.IsEmpty)
+            throw new ArgumentException("At least one shader source is required.", nameof(sources));
 
-        if (_isCompiled)
-            return _shader;
+        _sources = sources.ToArray();
+    }
 
-        try
-        {
-            _shader = SFShader.FromString(_vertexSource, null, _fragmentSource);
-            _isCompiled = true;
-            
-            Logger.Instance.DebugWithCategory("ShaderProgram", 
-                "Shader compiled successfully. Vertex: {0} chars, Fragment: {1} chars", 
-                _vertexSource?.Length ?? 0, _fragmentSource?.Length ?? 0);
-        }
-        catch (Exception ex)
-        {
-            Logger.Instance.ErrorWithCategory("ShaderProgram", 
-                "Failed to compile shader: {0}", ex.Message);
-            throw;
-        }
+    public void SetUniform(string name, float value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _floatUniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
 
-        return _shader;
+    public void SetUniform(string name, int value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _intUniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
+
+    public void SetUniform(string name, Vect2 value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _vect2Uniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
+
+    public void SetUniform(string name, Vect3 value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _vect3Uniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
+
+    public void SetUniform(string name, Vect4 value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _vect4Uniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
+
+    public void SetUniform(string name, Color value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _colorUniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
+
+    public void SetUniform(string name, Matrix4x4 value)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _matrixUniforms[name] = value;
+        if (_graphicsProgram?.IsValid == true)
+            _graphicsProgram.SetUniform(name, value);
+    }
+
+    public void SetUniform(string name, Texture texture)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+
+        if (texture == null)
+            return;
+
+        _textureUniforms[name] = texture;
+        ApplyTextureUniform(name, texture);
+    }
+
+    /// <summary>Uses the current draw command texture for a named sampler.</summary>
+    public void SetCurrentTexture(string name)
+    {
+        PrepareUniformName(name);
+        ClearUniform(name);
+        _currentTextureUniforms.Add(name);
     }
 
     /// <summary>
-    /// Ensures the shader program is valid for the specified operation.
+    /// Explicitly binds this renderer-neutral program for code that uses the
+    /// legacy Bind/Unbind style. Batch-level SetShader still takes precedence.
     /// </summary>
-    /// <param name="operation">The operation being attempted (for logging).</param>
-    /// <returns>True if the shader is valid, false otherwise.</returns>
-    private bool EnsureValid(string operation)
+    public void Bind()
+    {
+        ThrowIfDisposed();
+
+        if (RendererRuntime.IsAvailable)
+            EnsureGraphicsProgram();
+
+        ShaderState.Bind(this);
+    }
+
+    public void Unbind()
     {
         if (_disposed)
+            return;
+
+        ShaderState.Unbind(this);
+    }
+
+    internal bool TryGetGraphicsProgram(out IGraphicsShaderProgram program)
+    {
+        ThrowIfDisposed();
+
+        if (!RendererRuntime.TryGetDevice(out IGraphicsDevice activeDevice))
         {
-            Logger.Instance.WarningWithCategory("ShaderProgram", 
-                "Cannot {0} - shader program is disposed.", operation);
+            program = null;
             return false;
         }
 
-        // Try to compile if not compiled yet
-        if (!_isCompiled)
+        if (_graphicsProgram != null && !ReferenceEquals(activeDevice, _graphicsDevice))
+            ReleaseGraphicsProgram();
+
+        if (_graphicsProgram == null)
         {
-            try
-            {
-                EnsureCompiled();
-            }
-            catch (Exception ex)
-            {
-                Logger.Instance.WarningWithCategory("ShaderProgram", 
-                    "Cannot {0} - compilation failed: {1}", operation, ex.Message);
-                return false;
-            }
+            _graphicsDevice = activeDevice;
+            _graphicsProgram = activeDevice.CreateShaderProgram(
+                new ShaderProgramDescription(_sources));
+
+            ApplyCachedUniforms(_graphicsProgram);
+
+            Logger.Instance.DebugWithCategory(
+                "ShaderProgram",
+                "Shader program created for active {0} renderer with {1} stage(s).",
+                RendererRuntime.Backend?.Api.ToString() ?? "unknown",
+                _sources.Length);
         }
 
-        if (_shader == null || _shader.IsInvalid)
-        {
-            Logger.Instance.WarningWithCategory("ShaderProgram", 
-                "Cannot {0} - shader program is invalid.", operation);
+        program = _graphicsProgram;
+        return program?.IsValid == true;
+    }
+
+    /// <summary>
+    /// Applies per-draw VOID state and returns the backend-owned program.
+    /// The conventional uniforms are optional; backends ignore missing names.
+    /// </summary>
+    internal bool TryPrepareForDraw(
+        IGraphicsTexture drawTexture,
+        Matrix4x4 viewProjection,
+        out IGraphicsShaderProgram program)
+    {
+        if (!TryGetGraphicsProgram(out program))
             return false;
+
+        program.SetUniform("uViewProjection", viewProjection);
+        program.SetUniform("uUseTexture", drawTexture != null ? 1 : 0);
+
+        // Texture uniforms can point at resources recreated after an unload or
+        // device switch, so resolve them at draw time rather than only at set time.
+        foreach ((string name, Texture texture) in _textureUniforms)
+            ApplyTextureUniform(program, name, texture);
+
+        if (drawTexture != null)
+        {
+            program.SetUniform(
+                "uTextureSize",
+                new Vect2(drawTexture.Description.Width, drawTexture.Description.Height));
+
+            // Existing SpriteBatcher shader behavior automatically supplied the
+            // current sprite texture as uTexture. Preserve that convention.
+            program.SetTexture("uTexture", drawTexture);
+
+            foreach (string name in _currentTextureUniforms)
+                program.SetTexture(name, drawTexture);
         }
 
         return true;
     }
 
-    #region Uniform Setters
-
-    /// <summary>
-    /// Sets a float uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="value">The float value.</param>
-    public void SetUniform(string name, float value)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, value);
-    }
-
-    /// <summary>
-    /// Sets an integer uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="value">The integer value.</param>
-    public void SetUniform(string name, int value)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, value);
-    }
-
-    /// <summary>
-    /// Sets a 2D vector uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="value">The vector value.</param>
-    public void SetUniform(string name, Vect2 value)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, new SFVec2(value.X, value.Y));
-    }
-
-    /// <summary>
-    /// Sets a 3D vector uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="value">The vector value.</param>
-    public void SetUniform(string name, Vect3 value)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, new SFVec3(value.X, value.Y, value.Z));
-    }
-
-    /// <summary>
-    /// Sets a 4D vector uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="value">The vector value.</param>
-    public void SetUniform(string name, Vect4 value)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, new SFVec4(value.X, value.Y, value.Z, value.W));
-    }
-
-    /// <summary>
-    /// Sets a color uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="color">The color value.</param>
-    public void SetUniform(string name, Color color)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, color);
-    }
-
-    /// <summary>
-    /// Sets a texture uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="texture">The texture value.</param>
-    public void SetUniform(string name, SFTexture texture)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, texture);
-    }
-
-    /// <summary>
-    /// Sets a current texture type uniform.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="currentTexture">The current texture type.</param>
-    public void SetUniform(string name, SFShader.CurrentTextureType currentTexture)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, currentTexture);
-    }
-
-    /// <summary>
-    /// Sets a 4x4 matrix uniform value.
-    /// </summary>
-    /// <param name="name">The uniform name.</param>
-    /// <param name="matrix">The matrix value.</param>
-    public void SetUniform(string name, Matrix4x4 matrix)
-    {
-        if (!EnsureValid($"set uniform '{name}'")) return;
-        _shader.SetUniform(name, new SFMat4(
-            matrix.M11, matrix.M12, matrix.M13, matrix.M14,
-            matrix.M21, matrix.M22, matrix.M23, matrix.M24,
-            matrix.M31, matrix.M32, matrix.M33, matrix.M34,
-            matrix.M41, matrix.M42, matrix.M43, matrix.M44
-        ));
-    }
-
-    #endregion
-
-    /// <summary>
-    /// Binds the shader program to the graphics pipeline.
-    /// </summary>
-    public void Bind()
-    {
-        if (!EnsureValid("bind shader")) return;
-        ShaderState.Bind(_shader);
-    }
-
-    /// <summary>
-    /// Unbinds the shader program from the graphics pipeline.
-    /// </summary>
-    public void Unbind()
-    {
-        if (_disposed)
-        {
-            Logger.Instance.WarningWithCategory("ShaderProgram", 
-                "Cannot unbind shader - shader program is disposed.");
-            return;
-        }
-
-        ShaderState.Unbind();
-    }
-
-    /// <summary>
-    /// Disposes the shader program and releases all resources.
-    /// </summary>
     public void Dispose()
     {
         if (_disposed)
             return;
 
-        _shader?.Dispose();
+        ShaderState.Unbind(this);
+        ReleaseGraphicsProgram();
+
+        _floatUniforms.Clear();
+        _intUniforms.Clear();
+        _vect2Uniforms.Clear();
+        _vect3Uniforms.Clear();
+        _vect4Uniforms.Clear();
+        _colorUniforms.Clear();
+        _matrixUniforms.Clear();
+        _textureUniforms.Clear();
+        _currentTextureUniforms.Clear();
+
         _disposed = true;
-
-        Logger.Instance.DebugWithCategory("ShaderProgram", "Shader program disposed.");
-
         GC.SuppressFinalize(this);
     }
+
+    private IGraphicsShaderProgram EnsureGraphicsProgram()
+    {
+        if (!TryGetGraphicsProgram(out IGraphicsShaderProgram program))
+            throw new InvalidOperationException("No active graphics device is available for this shader program.");
+
+        return program;
+    }
+
+    private void ApplyCachedUniforms(IGraphicsShaderProgram program)
+    {
+        foreach ((string name, float value) in _floatUniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, int value) in _intUniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, Vect2 value) in _vect2Uniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, Vect3 value) in _vect3Uniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, Vect4 value) in _vect4Uniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, Color value) in _colorUniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, Matrix4x4 value) in _matrixUniforms)
+            program.SetUniform(name, value);
+        foreach ((string name, Texture texture) in _textureUniforms)
+            ApplyTextureUniform(program, name, texture);
+    }
+
+    private void ApplyTextureUniform(string name, Texture texture)
+    {
+        if (_graphicsProgram?.IsValid == true)
+            ApplyTextureUniform(_graphicsProgram, name, texture);
+    }
+
+    private static void ApplyTextureUniform(
+        IGraphicsShaderProgram program,
+        string name,
+        Texture texture)
+    {
+        if (texture != null && texture.TryGetGraphicsTexture(out IGraphicsTexture graphicsTexture))
+            program.SetTexture(name, graphicsTexture);
+    }
+
+    private void ClearUniform(string name)
+    {
+        _floatUniforms.Remove(name);
+        _intUniforms.Remove(name);
+        _vect2Uniforms.Remove(name);
+        _vect3Uniforms.Remove(name);
+        _vect4Uniforms.Remove(name);
+        _colorUniforms.Remove(name);
+        _matrixUniforms.Remove(name);
+        _textureUniforms.Remove(name);
+        _currentTextureUniforms.Remove(name);
+    }
+
+    private void PrepareUniformName(string name)
+    {
+        ThrowIfDisposed();
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+    }
+
+    private void ReleaseGraphicsProgram()
+    {
+        _graphicsProgram?.Dispose();
+        _graphicsProgram = null;
+        _graphicsDevice = null;
+    }
+
+    private void ThrowIfDisposed()
+        => ObjectDisposedException.ThrowIf(_disposed, this);
 }

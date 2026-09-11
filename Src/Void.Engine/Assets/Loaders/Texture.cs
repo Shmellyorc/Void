@@ -1,345 +1,255 @@
 // ============================================================================
 //  Texture.cs
 // ============================================================================
-//  Texture asset that wraps SFML texture data with loading, unloading,
-//  and management capabilities.
-//
-//  Copyright (c) 2025 Void Engine
-//  Licensed under the MIT License.
+//  Game-facing renderer-neutral texture asset. Encoded source bytes remain in
+//  Data; decoded RGBA pixels can recreate backend-owned GPU resources.
 // ============================================================================
+
+using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Assets.Loaders;
 
-/// <summary>
-/// A texture asset that handles texture data with loading, unloading,
-/// and management capabilities.
-/// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="Texture"/> class implements <see cref="IAsset"/> and manages
-/// the underlying graphics texture resource. It supports loading from file data,
-/// creating textures programmatically, and wrapping existing textures.
-/// </para>
-/// <para>
-/// Textures can be created in several ways:
-/// <list type="bullet">
-///   <item><description><b>Loaded from Data:</b> Loaded by <see cref="AssetManager"/> from file data</description></item>
-///   <item><description><b>Programmatic:</b> Created via constructor with size and optional color</description></item>
-///   <item><description><b>Wrapped:</b> Wraps an existing texture or render target texture</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Texture Types:</b>
-/// <list type="bullet">
-///   <item><description><see cref="AssetType.Normal"/> - Standard loaded texture (managed by AssetManager)</description></item>
-///   <item><description><see cref="AssetType.Instanced"/> - Programmatically created texture (not managed)</description></item>
-///   <item><description><see cref="AssetType.Atlas"/> - Texture from a render target (not managed)</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Load a texture through AssetManager
-/// var texture = AssetManager.Instance.Load&lt;Texture&gt;("textures/player.png");
-/// 
-/// // Create a texture programmatically
-/// var whiteTexture = new Texture(new Vect2(32, 32), Color.White);
-/// 
-/// // Use the texture in rendering
-/// sprite.Texture = texture;
-/// 
-/// // Check texture properties
-/// Vect2 size = texture.Size;
-/// int width = texture.Width;
-/// int height = texture.Height;
-/// Rect2 bounds = texture.Bounds;
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
-/// </remarks>
 public sealed class Texture : IAsset, IEquatable<Texture>
 {
-    private SFImage _image;
-    private SFTexture _texture;
-    private readonly bool _repeated, _smooth;
+    private readonly bool _repeated;
+    private readonly bool _smooth;
 
-    /// <summary>
-    /// Gets the size of the texture in pixels.
-    /// </summary>
+    private byte[] _decodedPixels;
+    private IGraphicsDevice _graphicsDevice;
+    private IGraphicsTexture _graphicsTexture;
+    private bool _ownsGraphicsTexture = true;
+
     public Vect2 Size { get; private set; }
-
-    /// <summary>
-    /// Gets the width of the texture in pixels.
-    /// </summary>
     public int Width { get; private set; }
-
-    /// <summary>
-    /// Gets the height of the texture in pixels.
-    /// </summary>
     public int Height { get; private set; }
-
-    /// <summary>
-    /// Gets a value indicating whether the texture repeats when sampled beyond its bounds.
-    /// </summary>
     public bool Repeated => _repeated;
-
-    /// <summary>
-    /// Gets a value indicating whether the texture is smoothly interpolated.
-    /// </summary>
     public bool Smooth => _smooth;
-
-    /// <summary>
-    /// Gets the unique identifier of the texture.
-    /// </summary>
     public uint Id { get; }
-
-    /// <summary>
-    /// Gets the normalized path or tag used to identify the texture.
-    /// </summary>
     public string Tag { get; }
 
-    /// <summary>
-    /// Gets the raw texture data bytes.
-    /// </summary>
+    /// <summary>Original encoded source bytes retained for GPU recreation.</summary>
     public byte[] Data { get; }
 
-    /// <summary>
-    /// Gets a value indicating whether the texture is loaded and ready for use.
-    /// </summary>
     public bool IsValid { get; private set; }
-
-    /// <summary>
-    /// Gets the bounding rectangle of the texture.
-    /// </summary>
     public Rect2 Bounds => new(Vect2.Zero, Size);
-
-    /// <summary>
-    /// Gets the last access time of the texture for eviction tracking.
-    /// </summary>
     public DateTime LastAccessTime { get; private set; }
-
-    /// <summary>
-    /// Gets the asset type of the texture.
-    /// </summary>
     public AssetType Type { get; }
 
     internal Texture(uint id, byte[] data, string tag, bool repeated, bool smooth)
     {
         Id = id;
-        Data = data;
+        Data = data ?? Array.Empty<byte>();
         Tag = tag;
         _repeated = repeated;
         _smooth = smooth;
-
         Type = AssetType.Normal;
         LastAccessTime = DateTime.Now;
     }
 
-    /// <summary>
-    /// Creates a new texture with the specified size and color.
-    /// </summary>
-    /// <param name="size">The size of the texture in pixels.</param>
-    /// <param name="color">The fill color of the texture.</param>
     public Texture(Vect2 size, Color color)
     {
-        _image = new SFImage(new((uint)size.X, (uint)size.Y), color);
-        _texture = new SFTexture(_image)
-        {
-            Repeated = _repeated,
-            Smooth = _smooth
-        };
+        int width = checked((int)size.X);
+        int height = checked((int)size.Y);
+        if (width <= 0 || height <= 0)
+            throw new ArgumentOutOfRangeException(nameof(size));
 
+        Data = Array.Empty<byte>();
         Id = AssetManager.GetNextId();
         Size = size;
-        Width = (int)size.X;
-        Height = (int)size.Y;
-
+        Width = width;
+        Height = height;
         Type = AssetType.Instanced;
         LastAccessTime = DateTime.Now;
+        _decodedPixels = CreateSolidPixels(width, height, color);
         IsValid = true;
     }
 
-    /// <summary>
-    /// Creates a new white texture with the specified size.
-    /// </summary>
-    /// <param name="size">The size of the texture in pixels.</param>
     public Texture(Vect2 size) : this(size, Color.White) { }
 
-    internal Texture(SFRenderTexture renderTexture)
-    {
-        _texture = renderTexture.Texture;
-
-        Id = AssetManager.GetNextId();
-        Size = _texture.Size;
-        Width = (int)Size.X;
-        Height = (int)Size.Y;
-
-        Type = AssetType.Atlas;
-        LastAccessTime = DateTime.Now;
-        IsValid = true;
-    }
-
-    internal Texture(SFTexture renderTexture)
-    {
-        _texture = renderTexture;
-
-        Id = AssetManager.GetNextId();
-        Size = _texture.Size;
-        Width = (int)Size.X;
-        Height = (int)Size.Y;
-
-        Type = AssetType.Instanced;
-        LastAccessTime = DateTime.Now;
-        IsValid = true;
-    }
-
     /// <summary>
-    /// Finalizer that ensures resources are cleaned up if <see cref="Dispose"/> wasn't called.
+    /// Wraps a renderer-owned texture without taking ownership. Used by render
+    /// targets and atlas pages.
     /// </summary>
+    internal Texture(IGraphicsDevice device, IGraphicsTexture graphicsTexture, AssetType type = AssetType.Atlas)
+    {
+        ArgumentNullException.ThrowIfNull(device);
+        ArgumentNullException.ThrowIfNull(graphicsTexture);
+
+        Data = Array.Empty<byte>();
+        Id = AssetManager.GetNextId();
+        Width = graphicsTexture.Description.Width;
+        Height = graphicsTexture.Description.Height;
+        Size = new Vect2(Width, Height);
+        Type = type;
+        LastAccessTime = DateTime.Now;
+        IsValid = graphicsTexture.IsValid;
+
+        _graphicsDevice = device;
+        _graphicsTexture = graphicsTexture;
+        _ownsGraphicsTexture = false;
+    }
+
     ~Texture() => Dispose();
 
-    /// <summary>
-    /// Updates this texture from another texture source.
-    /// </summary>
-    /// <param name="sourceTexture">The source texture to copy from.</param>
-    internal void UpdateFrom(SFTexture sourceTexture)
-    {
-        if (sourceTexture == null || sourceTexture.IsInvalid)
-            return;
-
-        var image = sourceTexture.CopyToImage();
-        _texture?.Dispose();
-        _texture = new SFTexture(image);
-        Size = _texture.Size;
-        Width = (int)Size.X;
-        Height = (int)Size.Y;
-        image.Dispose();
-
-        LastAccessTime = DateTime.Now;
-        IsValid = true;
-    }
-
-    /// <summary>
-    /// Loads the texture data into memory.
-    /// </summary>
     public void Load()
     {
         if (Type == AssetType.None)
             throw new InvalidOperationException($"Texture type is '{Type}'.");
 
         if (Type == AssetType.Instanced || Type == AssetType.Atlas || IsValid)
-        {
             return;
-        }
 
-        _image = new SFImage(Data);
-        _texture = new SFTexture(_image);
+        if (!EnsureDecodedPixels())
+            throw new InvalidOperationException($"Texture '{Tag ?? Id.ToString()}' has no decodable source data.");
 
-        Size = _texture.Size;
-        Width = (int)_texture.Size.X;
-        Height = (int)_texture.Size.Y;
-
+        Size = new Vect2(Width, Height);
         LastAccessTime = DateTime.Now;
         IsValid = true;
     }
 
-    /// <summary>
-    /// Unloads the texture data from memory.
-    /// </summary>
     public void Unload()
     {
-        if (Type == AssetType.Instanced || Type == AssetType.Atlas || !IsValid)
+        if (Type == AssetType.Instanced || Type == AssetType.Atlas)
             return;
 
-        _image?.Dispose();
-        _texture?.Dispose();
-
+        ReleaseGraphicsTexture();
+        _decodedPixels = null;
         IsValid = false;
     }
 
-    /// <summary>
-    /// Disposes the texture and releases all resources.
-    /// </summary>
     public void Dispose()
     {
-        _image?.Dispose();
-        _texture?.Dispose();
-
+        ReleaseGraphicsTexture();
+        _decodedPixels = null;
+        IsValid = false;
         GC.SuppressFinalize(this);
     }
 
-    /// <summary>
-    /// Determines whether two textures are equal.
-    /// </summary>
+    internal bool TryCopyPixelRegion(Rect2 sourceRect, out byte[] pixels, out int width, out int height)
+    {
+        LastAccessTime = DateTime.Now;
+
+        if (Type == AssetType.Normal && !IsValid)
+            Load();
+
+        if (!EnsureDecodedPixels())
+        {
+            pixels = null;
+            width = 0;
+            height = 0;
+            return false;
+        }
+
+        return RgbaPixelBuffer.TryCopyRegion(
+            _decodedPixels,
+            Width,
+            Height,
+            sourceRect,
+            out pixels,
+            out width,
+            out height);
+    }
+
+    internal bool TryGetGraphicsTexture(out IGraphicsTexture texture)
+    {
+        LastAccessTime = DateTime.Now;
+
+        if (!RendererRuntime.TryGetDevice(out IGraphicsDevice activeDevice))
+        {
+            texture = null;
+            return false;
+        }
+
+        if (_graphicsTexture != null && !ReferenceEquals(activeDevice, _graphicsDevice))
+            ReleaseGraphicsTexture();
+
+        if (_graphicsTexture == null)
+        {
+            if (!EnsureDecodedPixels())
+            {
+                texture = null;
+                return false;
+            }
+
+            var description = new TextureDescription(
+                Width,
+                Height,
+                TextureFormat.RGBA8,
+                TextureUsage.Sampled | TextureUsage.TransferDestination,
+                _smooth ? TextureFilter.Linear : TextureFilter.Nearest,
+                _smooth ? TextureFilter.Linear : TextureFilter.Nearest,
+                _repeated ? TextureWrap.Repeat : TextureWrap.ClampToEdge,
+                _repeated ? TextureWrap.Repeat : TextureWrap.ClampToEdge);
+
+            _graphicsDevice = activeDevice;
+            _graphicsTexture = activeDevice.CreateTexture(description, _decodedPixels);
+            _ownsGraphicsTexture = true;
+        }
+
+        texture = _graphicsTexture;
+        return texture?.IsValid == true;
+    }
+
+    private bool EnsureDecodedPixels()
+    {
+        if (_decodedPixels is { Length: > 0 })
+            return true;
+
+        if (Data == null || Data.Length == 0)
+            return false;
+
+        DecodedImage decoded = ImageDecoder.DecodeRgba(Data);
+        _decodedPixels = decoded.Pixels;
+        Width = decoded.Width;
+        Height = decoded.Height;
+        Size = new Vect2(Width, Height);
+        return true;
+    }
+
+    private void ReleaseGraphicsTexture()
+    {
+        if (_ownsGraphicsTexture)
+            _graphicsTexture?.Dispose();
+
+        _graphicsTexture = null;
+        _graphicsDevice = null;
+        _ownsGraphicsTexture = true;
+    }
+
+    private static byte[] CreateSolidPixels(int width, int height, Color color)
+    {
+        byte[] pixels = new byte[checked(width * height * 4)];
+        for (int i = 0; i < pixels.Length; i += 4)
+        {
+            pixels[i] = color.R;
+            pixels[i + 1] = color.G;
+            pixels[i + 2] = color.B;
+            pixels[i + 3] = color.A;
+        }
+        return pixels;
+    }
+
     public static bool operator ==(in Texture a, in Texture b)
     {
         if (ReferenceEquals(a, b))
+            return true;
+        if (a is null || b is null)
             return false;
-        if (a is null)
-            return !(b is null);
-
         return a.Equals(b);
     }
 
-    /// <summary>
-    /// Determines whether two textures are not equal.
-    /// </summary>
-    public static bool operator !=(in Texture a, in Texture b)
-    {
-        if (ReferenceEquals(a, b))
-            return false;
-        if (a is null)
-            return !(b is null);
+    public static bool operator !=(in Texture a, in Texture b) => !(a == b);
 
-        return !a.Equals(b);
-    }
-
-    /// <summary>
-    /// Determines whether the current texture is equal to another texture.
-    /// </summary>
     public bool Equals(Texture other)
     {
         if (other is null)
             return false;
         if (ReferenceEquals(this, other))
             return true;
-        return Id == other?.Id;
+        return Id == other.Id;
     }
 
-    /// <summary>
-    /// Determines whether the current texture is equal to the specified object.
-    /// </summary>
-    public override bool Equals(object obj)
-        => obj is Texture other && Equals(other);
-
-    /// <summary>
-    /// Returns the hash code for the current texture.
-    /// </summary>
-    public override int GetHashCode()
-        => HashCode.Combine(Id);
-
-    /// <summary>
-    /// Returns a string representation of the current texture.
-    /// </summary>
-    public override string ToString()
-        => $"Texture({Id}, {Data.Length}, {Tag}, {IsValid})";
-
-    /// <summary>
-    /// Implicitly converts a texture to an SFML texture.
-    /// </summary>
-    public static implicit operator SFTexture(Texture v)
-    {
-        v.LastAccessTime = DateTime.Now;
-
-        if (v.Type == AssetType.Normal)
-        {
-            if (v._texture == null || !v.IsValid || v._texture.IsInvalid)
-                v.Load();
-        }
-
-        return v._texture;
-    }
+    public override bool Equals(object obj) => obj is Texture other && Equals(other);
+    public override int GetHashCode() => HashCode.Combine(Id);
+    public override string ToString() => $"Texture({Id}, {Data?.Length ?? 0}, {Tag}, {IsValid})";
 }

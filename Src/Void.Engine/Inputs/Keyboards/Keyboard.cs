@@ -1,14 +1,11 @@
 // ============================================================================
 //  Keyboard.cs
 // ============================================================================
-//  Provides access to keyboard input with bit-packed key states for
-//  low-memory and high-performance key state tracking.
+//  SDL3-backed keyboard polling with VOID's existing bit-packed state format.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
-
-using System;
 
 namespace Void.Engine.Inputs.Keyboards;
 
@@ -16,51 +13,6 @@ namespace Void.Engine.Inputs.Keyboards;
 /// Provides access to keyboard input with bit-packed key states for
 /// low-memory and high-performance key state tracking.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="Keyboard"/> class manages keyboard input by polling the
-/// current state of all keyboard keys and packing them into two 64-bit
-/// integers for efficient storage and querying.
-/// </para>
-/// <para>
-/// <b>Key Storage:</b>
-/// <list type="bullet">
-///   <item><description>Keys 0-63 are stored in <c>_keysLow</c></description></item>
-///   <item><description>Keys 64-100 are stored in <c>_keysHigh</c></description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Update keyboard state (called automatically by the engine)
-/// Keyboard.Update();
-/// 
-/// // Get the current keyboard state snapshot
-/// var state = Keyboard.GetState();
-/// 
-/// // Query individual keys
-/// if (state.IsKeyDown(KeyboardKey.W))
-///     MoveForward();
-/// 
-/// if (state.IsKeyDown(KeyboardKey.Escape))
-///     ExitGame();
-/// 
-/// // Check modifier keys
-/// if (state.IsKeyDown(KeyboardKey.LControl) &amp;&amp; state.IsKeyDown(KeyboardKey.S))
-///     SaveGame();
-/// </code>
-/// </para>
-/// <para>
-/// <b>Input Focus:</b>
-/// When <see cref="GameSettings.IgnoreInputWhenUnfocused"/> is enabled,
-/// keyboard input is ignored when the game window is not focused.
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. All operations should be performed on
-/// the main thread.
-/// </para>
-/// </remarks>
 public static class Keyboard
 {
     private static ulong _keysLow;
@@ -68,10 +20,118 @@ public static class Keyboard
     private static bool _capsLock;
     private static bool _numLock;
 
+    // KeyboardKey intentionally keeps VOID's existing numeric values. Never cast
+    // those values directly to an SDL scancode; the enum layouts are different.
+    private static readonly SDL3.SDL.Scancode[] _scancodes =
+    [
+        SDL3.SDL.Scancode.A,
+        SDL3.SDL.Scancode.B,
+        SDL3.SDL.Scancode.C,
+        SDL3.SDL.Scancode.D,
+        SDL3.SDL.Scancode.E,
+        SDL3.SDL.Scancode.F,
+        SDL3.SDL.Scancode.G,
+        SDL3.SDL.Scancode.H,
+        SDL3.SDL.Scancode.I,
+        SDL3.SDL.Scancode.J,
+        SDL3.SDL.Scancode.K,
+        SDL3.SDL.Scancode.L,
+        SDL3.SDL.Scancode.M,
+        SDL3.SDL.Scancode.N,
+        SDL3.SDL.Scancode.O,
+        SDL3.SDL.Scancode.P,
+        SDL3.SDL.Scancode.Q,
+        SDL3.SDL.Scancode.R,
+        SDL3.SDL.Scancode.S,
+        SDL3.SDL.Scancode.T,
+        SDL3.SDL.Scancode.U,
+        SDL3.SDL.Scancode.V,
+        SDL3.SDL.Scancode.W,
+        SDL3.SDL.Scancode.X,
+        SDL3.SDL.Scancode.Y,
+        SDL3.SDL.Scancode.Z,
+
+        SDL3.SDL.Scancode.Alpha0,
+        SDL3.SDL.Scancode.Alpha1,
+        SDL3.SDL.Scancode.Alpha2,
+        SDL3.SDL.Scancode.Alpha3,
+        SDL3.SDL.Scancode.Alpha4,
+        SDL3.SDL.Scancode.Alpha5,
+        SDL3.SDL.Scancode.Alpha6,
+        SDL3.SDL.Scancode.Alpha7,
+        SDL3.SDL.Scancode.Alpha8,
+        SDL3.SDL.Scancode.Alpha9,
+
+        SDL3.SDL.Scancode.Escape,
+        SDL3.SDL.Scancode.LCtrl,
+        SDL3.SDL.Scancode.LShift,
+        SDL3.SDL.Scancode.LAlt,
+        SDL3.SDL.Scancode.LGUI,
+        SDL3.SDL.Scancode.RCtrl,
+        SDL3.SDL.Scancode.RShift,
+        SDL3.SDL.Scancode.RAlt,
+        SDL3.SDL.Scancode.RGUI,
+        SDL3.SDL.Scancode.Application,
+        SDL3.SDL.Scancode.Leftbracket,
+        SDL3.SDL.Scancode.Rightbracket,
+        SDL3.SDL.Scancode.Semicolon,
+        SDL3.SDL.Scancode.Comma,
+        SDL3.SDL.Scancode.Period,
+        SDL3.SDL.Scancode.Apostrophe,
+        SDL3.SDL.Scancode.Slash,
+        SDL3.SDL.Scancode.Backslash,
+        SDL3.SDL.Scancode.Grave,
+        SDL3.SDL.Scancode.Equals,
+        SDL3.SDL.Scancode.Minus,
+        SDL3.SDL.Scancode.Space,
+        SDL3.SDL.Scancode.Return,
+        SDL3.SDL.Scancode.Backspace,
+        SDL3.SDL.Scancode.Tab,
+        SDL3.SDL.Scancode.Pageup,
+        SDL3.SDL.Scancode.Pagedown,
+        SDL3.SDL.Scancode.End,
+        SDL3.SDL.Scancode.Home,
+        SDL3.SDL.Scancode.Insert,
+        SDL3.SDL.Scancode.Delete,
+        SDL3.SDL.Scancode.KpPlus,
+        SDL3.SDL.Scancode.KpMinus,
+        SDL3.SDL.Scancode.KpMultiply,
+        SDL3.SDL.Scancode.KpDivide,
+        SDL3.SDL.Scancode.Left,
+        SDL3.SDL.Scancode.Right,
+        SDL3.SDL.Scancode.Up,
+        SDL3.SDL.Scancode.Down,
+        SDL3.SDL.Scancode.Kp0,
+        SDL3.SDL.Scancode.Kp1,
+        SDL3.SDL.Scancode.Kp2,
+        SDL3.SDL.Scancode.Kp3,
+        SDL3.SDL.Scancode.Kp4,
+        SDL3.SDL.Scancode.Kp5,
+        SDL3.SDL.Scancode.Kp6,
+        SDL3.SDL.Scancode.Kp7,
+        SDL3.SDL.Scancode.Kp8,
+        SDL3.SDL.Scancode.Kp9,
+        SDL3.SDL.Scancode.F1,
+        SDL3.SDL.Scancode.F2,
+        SDL3.SDL.Scancode.F3,
+        SDL3.SDL.Scancode.F4,
+        SDL3.SDL.Scancode.F5,
+        SDL3.SDL.Scancode.F6,
+        SDL3.SDL.Scancode.F7,
+        SDL3.SDL.Scancode.F8,
+        SDL3.SDL.Scancode.F9,
+        SDL3.SDL.Scancode.F10,
+        SDL3.SDL.Scancode.F11,
+        SDL3.SDL.Scancode.F12,
+        SDL3.SDL.Scancode.F13,
+        SDL3.SDL.Scancode.F14,
+        SDL3.SDL.Scancode.F15,
+        SDL3.SDL.Scancode.Pause,
+    ];
+
     /// <summary>
     /// Gets a snapshot of the current keyboard state.
     /// </summary>
-    /// <returns>A <see cref="KeyboardState"/> containing the current key states.</returns>
     public static KeyboardState GetState()
     {
         UpdateState();
@@ -84,24 +144,37 @@ public static class Keyboard
         _keysHigh = 0;
 
         if (GameSettings.Instance.IgnoreInputWhenUnfocused &&
-        (!Game.Instance.Window.IsOpen || !Game.Instance.Window.IsFocused))
+            (!Game.Instance.Window.IsOpen || !Game.Instance.Window.IsFocused))
+        {
+            _capsLock = false;
+            _numLock = false;
             return;
-
-        for (int i = 0; i < 64; i++)
-        {
-            var key = (SFKeyboard.Key)i;
-            if (SFKeyboard.IsKeyPressed(key))
-                _keysLow |= (1UL << i);
         }
 
-        for (int i = 64; i < 101; i++)
+        ReadOnlySpan<bool> state = SDL3.SDL.GetKeyboardState(out int keyCount);
+        int voidKeyCount = Math.Min(_scancodes.Length, (int)KeyboardKey.KeyCount);
+
+        for (int i = 0; i < voidKeyCount; i++)
         {
-            var key = (SFKeyboard.Key)i;
-            if (SFKeyboard.IsKeyPressed(key))
-                _keysHigh |= (1UL << (i - 64));
+            int scancode = (int)_scancodes[i];
+            if (scancode < 0 || scancode >= keyCount || scancode >= state.Length || !state[scancode])
+                continue;
+
+            if (i < 64)
+                _keysLow |= 1UL << i;
+            else
+                _keysHigh |= 1UL << (i - 64);
         }
 
+        // Preserve the previous VOID behavior for now; these were always false
+        // in the SFML implementation too. Lock-state reporting can be added later
+        // without changing KeyboardState's public API.
         _capsLock = false;
         _numLock = false;
     }
+
+    /// <summary>
+    /// Updates the keyboard state. This method is called automatically by GetState.
+    /// </summary>
+    public static void Update() => UpdateState();
 }

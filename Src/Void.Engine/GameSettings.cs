@@ -1,3 +1,6 @@
+using Void.Engine.Graphics.Rendering;
+using Void.Engine.Systems;
+
 // ============================================================================
 //  GameSettings.cs
 // ============================================================================
@@ -34,7 +37,7 @@ public sealed class GameSettings
     private static readonly Lazy<GameSettings> _instance = new(() => new GameSettings());
     private bool _isFixedTimeStepSet, _ignoreInputSet, _isFullscreenSet,
         _isVSyncSet, _useApplicationDataSet, _setLogMinLevel,
-        _setWindowScaleMode, _setDefaultSortMode;
+        _setWindowScaleMode, _setDefaultSortMode, _setOpenGLVersion;
 
     /// <summary>
     /// Gets the singleton settings instance.
@@ -246,6 +249,59 @@ public sealed class GameSettings
     public bool Fullscreen { get; private set; }
 
     /// <summary>
+    /// Uses desktop/borderless fullscreen and enables fullscreen.
+    /// The selected display keeps its current desktop resolution and refresh rate.
+    /// </summary>
+    public GameSettings SetDesktopFullscreen()
+    {
+        _isFullscreenSet = true;
+        Fullscreen = true;
+        FullscreenStyle = FullscreenStyle.Desktop;
+        FullscreenWidth = 0;
+        FullscreenHeight = 0;
+        FullscreenRefreshRate = 0f;
+        return this;
+    }
+
+    /// <summary>
+    /// Requests exclusive fullscreen at the given resolution and optional
+    /// refresh rate. A refresh rate of zero lets SDL choose the closest rate.
+    /// Calling this method also enables fullscreen.
+    /// </summary>
+    public GameSettings SetFullscreenMode(uint width, uint height, float refreshRate = 0f)
+    {
+        if (width == 0)
+            throw new ArgumentOutOfRangeException(nameof(width), "Fullscreen width must be greater than zero.");
+        if (height == 0)
+            throw new ArgumentOutOfRangeException(nameof(height), "Fullscreen height must be greater than zero.");
+        if (refreshRate < 0f)
+            throw new ArgumentOutOfRangeException(nameof(refreshRate), "Refresh rate cannot be negative.");
+
+        _isFullscreenSet = true;
+        Fullscreen = true;
+        FullscreenStyle = FullscreenStyle.Exclusive;
+        FullscreenWidth = checked((int)width);
+        FullscreenHeight = checked((int)height);
+        FullscreenRefreshRate = refreshRate;
+        return this;
+    }
+
+    /// <summary>Gets the configured fullscreen policy.</summary>
+    public FullscreenStyle FullscreenStyle { get; private set; }
+
+    /// <summary>Gets the requested exclusive fullscreen width, or zero for desktop fullscreen.</summary>
+    public int FullscreenWidth { get; private set; }
+
+    /// <summary>Gets the requested exclusive fullscreen height, or zero for desktop fullscreen.</summary>
+    public int FullscreenHeight { get; private set; }
+
+    /// <summary>
+    /// Gets the requested exclusive refresh rate in Hz, or zero when SDL should
+    /// choose the closest available refresh rate.
+    /// </summary>
+    public float FullscreenRefreshRate { get; private set; }
+
+    /// <summary>
     /// Sets VSync. Default is true.
     /// </summary>
     public GameSettings SetVsync(bool value)
@@ -278,6 +334,40 @@ public sealed class GameSettings
     /// Gets the window resolution.
     /// </summary>
     public Vect2 Window { get; private set; }
+
+    /// <summary>
+    /// Selects the initial display by its current zero-based enumeration index.
+    /// Default is 0 (the first/primary display on normal desktop layouts).
+    /// </summary>
+    public GameSettings SetDisplay(int displayIndex)
+    {
+        if (displayIndex < 0)
+            throw new ArgumentOutOfRangeException(nameof(displayIndex), "Display index cannot be negative.");
+
+        DisplayIndex = displayIndex;
+        return this;
+    }
+
+    /// <summary>
+    /// Gets the configured initial display index.
+    /// </summary>
+    public int DisplayIndex { get; private set; }
+
+    /// <summary>
+    /// Selects the preferred window-system backend on Linux.
+    /// Default is X11/XWayland first with native Wayland fallback.
+    /// This setting has no effect on Windows or macOS.
+    /// </summary>
+    public GameSettings SetLinuxWindowBackend(LinuxWindowBackend backend)
+    {
+        LinuxWindowBackend = backend;
+        return this;
+    }
+
+    /// <summary>
+    /// Gets the configured Linux window-system preference.
+    /// </summary>
+    public LinuxWindowBackend LinuxWindowBackend { get; private set; }
 
     /// <summary>
     /// Sets the internal render resolution. Default is 320x180.
@@ -362,6 +452,50 @@ public sealed class GameSettings
     /// Gets the maximum delta time in seconds.
     /// </summary>
     public float MaxDeltaTime { get; private set; }
+
+    #endregion
+
+    #region Renderer
+
+    /// <summary>
+    /// Registers a custom renderer backend factory. If no custom renderer is set,
+    /// VOID uses its built-in OpenGL renderer.
+    /// </summary>
+    public GameSettings SetRenderer(Func<IRendererBackend> rendererFactory)
+    {
+        RendererFactory = rendererFactory ?? throw new ArgumentNullException(nameof(rendererFactory));
+        return this;
+    }
+
+    /// <summary>
+    /// Registers a custom renderer backend with a public parameterless constructor.
+    /// </summary>
+    public GameSettings SetRenderer<T>() where T : IRendererBackend, new()
+        => SetRenderer(() => new T());
+
+    /// <summary>
+    /// Gets the custom renderer factory, or null when VOID should use its built-in OpenGL renderer.
+    /// </summary>
+    public Func<IRendererBackend> RendererFactory { get; private set; }
+
+    /// <summary>
+    /// Sets the requested OpenGL context version for VOID's built-in OpenGL renderer.
+    /// Default is 3.3. Custom renderers may ignore this setting.
+    /// </summary>
+    public GameSettings SetOpenGLVersion(uint major, uint minor)
+    {
+        if (major == 0)
+            throw new ArgumentOutOfRangeException(nameof(major), "OpenGL major version must be greater than zero.");
+
+        _setOpenGLVersion = true;
+        OpenGLVersion = new GraphicsVersion(major, minor);
+        return this;
+    }
+
+    /// <summary>
+    /// Gets the requested OpenGL context version. Defaults to 3.3.
+    /// </summary>
+    public GraphicsVersion OpenGLVersion { get; private set; }
 
     #endregion
 
@@ -1035,6 +1169,16 @@ public sealed class GameSettings
         DeadZone = DeadZone <= 0f ? 0.15f : DeadZone;
         IgnoreInputWhenUnfocused = !_ignoreInputSet || IgnoreInputWhenUnfocused;
         Fullscreen = _isFullscreenSet && Fullscreen;
+        if (FullscreenStyle == FullscreenStyle.Exclusive &&
+            (FullscreenWidth <= 0 || FullscreenHeight <= 0))
+        {
+            // Defensive fallback: exclusive mode is only valid with a concrete
+            // resolution. Public setters normally guarantee this.
+            FullscreenStyle = FullscreenStyle.Desktop;
+            FullscreenWidth = 0;
+            FullscreenHeight = 0;
+            FullscreenRefreshRate = 0f;
+        }
         VSync = !_isVSyncSet || VSync;
         UseApplicationData = _useApplicationDataSet && UseApplicationData;
         AppVersion = AppVersion.IsEmpty() ? "1.0.0.0" : AppVersion;
@@ -1045,6 +1189,7 @@ public sealed class GameSettings
         LogMaxFiles = LogMaxFiles == 0 ? 10 : LogMaxFiles;
         SuperSample = SuperSample <= 0 ? 4 : SuperSample;
         WindowScaleMode = !_setWindowScaleMode ? WindowScaleMode.Fit : WindowScaleMode;
+        OpenGLVersion = !_setOpenGLVersion ? new GraphicsVersion(3, 3) : OpenGLVersion;
         AppLogFolder = AppLogFolder.IsEmpty() ? "Logs" : AppLogFolder;
         AppSaveFolder = AppSaveFolder.IsEmpty() ? "Saves" : AppSaveFolder;
         AppConfigFolder = AppConfigFolder.IsEmpty() ? "Config" : AppConfigFolder;

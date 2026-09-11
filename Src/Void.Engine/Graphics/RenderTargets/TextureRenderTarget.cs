@@ -1,103 +1,89 @@
 // ============================================================================
 //  TextureRenderTarget.cs
 // ============================================================================
-//  Internal implementation of IRenderTarget that wraps SFML's render texture
-//  for off-screen rendering. Supports both standalone render textures and
-//  window-backed rendering for the main game view.
-//
-//  Copyright (c) 2025 Void Engine
-//  Licensed under the MIT License.
+//  Renderer-owned off-screen target. No SFML render texture is involved.
 // ============================================================================
+
+using Void.Engine.Graphics.Rendering;
+
+namespace Void.Engine.Graphics.RenderTargets;
 
 internal sealed class TextureRenderTarget : IRenderTarget
 {
-    private readonly SFRenderTexture _texture;
-    private readonly Window _window;
-    private readonly int _width;
-    private readonly int _height;
+    private readonly IGraphicsDevice _device;
+    private readonly IGraphicsRenderTarget _graphicsTarget;
+    private readonly Texture _texture;
     private readonly bool _sRGB;
     private bool _disposed;
 
-    public int Width => _width;
-    public int Height => _height;
+    public int Width => _graphicsTarget.Description.Width;
+    public int Height => _graphicsTarget.Description.Height;
     public bool Srgb => _sRGB;
-    public Vect2 Size => new(_width, _height);
+    public Vect2 Size => new(Width, Height);
 
-    internal SFRenderTexture RenderTexture => _window != null ? _window._renderTexture : _texture;
+    internal IGraphicsDevice GraphicsDevice => _device;
+    internal IGraphicsRenderTarget GraphicsRenderTarget => _graphicsTarget;
+    internal IGraphicsTexture GraphicsTexture => _graphicsTarget.ColorTexture;
 
     internal TextureRenderTarget(int width, int height, bool sRGB = false)
     {
-        _width = width;
-        _height = height;
-        _sRGB = sRGB;
-        _texture = new SFRenderTexture(new((uint)width, (uint)height));
-        _window = null;
-    }
+        if (!RendererRuntime.TryGetDevice(out IGraphicsDevice device))
+            throw new InvalidOperationException("A renderer must be initialized before creating a render target.");
 
-    internal TextureRenderTarget(Window window)
-    {
-        _window = window ?? throw new ArgumentNullException(nameof(window));
-        _texture = null;
-        // Use viewport size, not render texture size
-        _width = (int)GameSettings.Instance.Viewport.X;
-        _height = (int)GameSettings.Instance.Viewport.Y;
-        _sRGB = false;
+        _device = device;
+        _sRGB = sRGB;
+        _graphicsTarget = _device.CreateRenderTarget(new RenderTargetDescription(
+            width,
+            height,
+            sRGB ? TextureFormat.SRgba8 : TextureFormat.RGBA8));
+
+        // The render target owns ColorTexture. This game-facing wrapper does not.
+        _texture = new Texture(_device, _graphicsTarget.ColorTexture, AssetType.Atlas);
     }
 
     public Texture GetTexture()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-
-        var renderTexture = RenderTexture;
-        if (renderTexture == null || renderTexture.IsInvalid)
-            return null;
-
-        var image = renderTexture.Texture.CopyToImage();
-
-        var sfTexture = new SFTexture(image);
-        image.Dispose();
-
-        return new Texture(sfTexture);
+        ThrowIfDisposed();
+        return _texture;
     }
 
     public void Clear(Color color)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-        var texture = RenderTexture;
-        if (texture == null || texture.IsInvalid) return;
-        texture.Clear(color);
+        ThrowIfDisposed();
+        _device.SetRenderTarget(_graphicsTarget);
+        _device.Clear(color);
     }
 
     public void Display()
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-        var texture = RenderTexture;
-        if (texture == null || texture.IsInvalid) return;
-        texture.Display();
+        ThrowIfDisposed();
+        // Renderer-owned FBO textures are immediately available after drawing.
     }
 
-    public void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, SFRenderStates states)
+    public void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, BatchRenderState states)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
+        ThrowIfDisposed();
+        ArgumentNullException.ThrowIfNull(buffer);
         buffer.Draw(this, vertexStart, vertexCount, states);
     }
 
     public void SetView(Camera camera)
     {
-        if (_disposed) throw new ObjectDisposedException(nameof(TextureRenderTarget));
-        var texture = RenderTexture;
-        if (texture == null || texture.IsInvalid) return;
-        texture.SetView(camera);
+        ThrowIfDisposed();
+        // Camera transforms are carried in BatchRenderState.ViewProjection.
     }
 
     public void Dispose()
     {
-        if (_disposed) return;
+        if (_disposed)
+            return;
 
-        if (_texture != null)
-            _texture.Dispose();
-
+        _texture.Dispose(); // non-owning wrapper
+        _graphicsTarget.Dispose();
         _disposed = true;
         GC.SuppressFinalize(this);
     }
+
+    private void ThrowIfDisposed()
+        => ObjectDisposedException.ThrowIf(_disposed, this);
 }

@@ -207,7 +207,7 @@ public sealed class SoundInstancePool : IDisposable
             {
                 instance.Update(deltaTime);
 
-                if (instance.IsStopped)
+                if (instance.IsComplete)
                     completedInstances.Add(instance);
             }
 
@@ -302,7 +302,7 @@ public sealed class SoundInstancePool : IDisposable
                     return instance;
                 }
 
-                var recycled = _activeInstances.FirstOrDefault(x => x.IsStopped);
+                var recycled = _activeInstances.FirstOrDefault(x => x.IsComplete);
                 if (recycled != null)
                 {
                     UnsubscribeFromInstanceEvents(recycled);
@@ -321,8 +321,11 @@ public sealed class SoundInstancePool : IDisposable
 
                 if (lowestPriority != null)
                 {
-                    lowestPriority.Stop();
+                    // Prevent Stop() from firing the pool callback and returning
+                    // this same instance to the available queue while we are
+                    // deliberately stealing/reusing it.
                     UnsubscribeFromInstanceEvents(lowestPriority);
+                    lowestPriority.Stop();
                     lowestPriority.Reset();
                     SubscribeToInstanceEvents(lowestPriority);
                     InstanceRecycled?.Invoke(this, new SoundEventArgs(lowestPriority));
@@ -336,8 +339,11 @@ public sealed class SoundInstancePool : IDisposable
 
                 if (oldest != null)
                 {
-                    oldest.Stop();
+                    // Same rule as priority stealing: detach pool callbacks
+                    // before Stop(), otherwise Stop() can enqueue the instance
+                    // while this method is still returning it for immediate reuse.
                     UnsubscribeFromInstanceEvents(oldest);
+                    oldest.Stop();
                     oldest.Reset();
                     SubscribeToInstanceEvents(oldest);
                     InstanceRecycled?.Invoke(this, new SoundEventArgs(oldest));

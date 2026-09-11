@@ -325,7 +325,8 @@ public sealed class SceneGame : Scene
             Color.White,
             Vect2.One,
             TextAlignment.CenterLeft,
-            TextWrapMode.None
+            TextWrapMode.None,
+            0f
         );
 
         _batch.End();

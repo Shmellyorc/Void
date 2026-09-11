@@ -440,16 +440,6 @@ public struct Color : IEquatable<Color>
             (byte)Math.Max(a.B - b.B, 0),
             (byte)Math.Max(a.A - b.A, 0)
         );
-
-    /// <summary>
-    /// Implicitly converts an SFML color to a Void Engine color.
-    /// </summary>
-    public static implicit operator Color(in SFColor v) => new(v.R, v.G, v.B, v.A);
-
-    /// <summary>
-    /// Implicitly converts a Void Engine color to an SFML color.
-    /// </summary>
-    public static implicit operator SFColor(in Color v) => new(v.R, v.G, v.B, v.A);
     #endregion
 
     #region IEquatable

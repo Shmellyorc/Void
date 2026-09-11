@@ -1,3 +1,6 @@
+using RenderPrimitiveType = Void.Engine.Graphics.Rendering.PrimitiveType;
+using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
+
 // ============================================================================
 //  PrimitiveBatcher.cs
 // ============================================================================
@@ -60,7 +63,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
     private struct PrimitiveCommand
     {
-        public SFPrimitiveType PrimitiveType;
+        public RenderPrimitiveType PrimitiveType;
         public int VertexCount;
         public int VertexOffset;
         public float Depth;
@@ -69,7 +72,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
     private PrimitiveCommand[] _cmds;
     private readonly PrimitiveCommandComparer _comparer;
     private int _vertexIndex;
-    private SFVertex[] _sortedVertexData;
+    private RenderVertex[] _sortedVertexData;
 
     /// <summary>
     /// Gets the name of the batcher.
@@ -91,7 +94,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
             _capacity = GetDefaultCapacity();
 
         _cmds = new PrimitiveCommand[_capacity];
-        _sortedVertexData = new SFVertex[_capacity];
+        _sortedVertexData = new RenderVertex[_capacity];
         _comparer = new PrimitiveCommandComparer(_sortMode);
         _vertexIndex = 0;
     }
@@ -176,7 +179,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
         int index = 0;
         while (index < _cmdCount)
         {
-            SFPrimitiveType currentType = _cmds[index].PrimitiveType;
+            RenderPrimitiveType currentType = _cmds[index].PrimitiveType;
             int vertexStart = _cmds[index].VertexOffset;
             int vertexCount = 0;
 
@@ -240,7 +243,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
             ResizeBuffers();
     }
 
-    private void AddCommand(SFPrimitiveType primitiveType, int vertexCount, float depth)
+    private void AddCommand(RenderPrimitiveType primitiveType, int vertexCount, float depth)
     {
         if (_cmdCount >= _cmds.Length)
         {
@@ -277,10 +280,10 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
         EnsureVertexCapacity(2);
 
-        _vertexData[_vertexIndex++] = new SFVertex(start, color);
-        _vertexData[_vertexIndex++] = new SFVertex(end, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(start, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(end, color);
 
-        AddCommand(SFPrimitiveType.Lines, 2, depth);
+        AddCommand(RenderPrimitiveType.Lines, 2, depth);
     }
 
     /// <summary>
@@ -300,9 +303,9 @@ public sealed class PrimitiveBatcher : BaseBatcher
         EnsureVertexCapacity(points.Length);
 
         for (int i = 0; i < points.Length; i++)
-            _vertexData[_vertexIndex++] = new SFVertex(points[i], color);
+            _vertexData[_vertexIndex++] = new RenderVertex(points[i], color);
 
-        AddCommand(SFPrimitiveType.LineStrip, points.Length, depth);
+        AddCommand(RenderPrimitiveType.LineStrip, points.Length, depth);
     }
 
     /// <summary>
@@ -320,9 +323,9 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
         EnsureVertexCapacity(1);
 
-        _vertexData[_vertexIndex++] = new SFVertex(position, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(position, color);
 
-        AddCommand(SFPrimitiveType.Points, 1, depth);
+        AddCommand(RenderPrimitiveType.Points, 1, depth);
     }
 
     /// <summary>
@@ -341,9 +344,9 @@ public sealed class PrimitiveBatcher : BaseBatcher
         EnsureVertexCapacity(positions.Length);
 
         for (int i = 0; i < positions.Length; i++)
-            _vertexData[_vertexIndex++] = new SFVertex(positions[i], color);
+            _vertexData[_vertexIndex++] = new RenderVertex(positions[i], color);
 
-        AddCommand(SFPrimitiveType.Points, positions.Length, depth);
+        AddCommand(RenderPrimitiveType.Points, positions.Length, depth);
     }
 
     /// <summary>
@@ -410,14 +413,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
             p3 += position;
         }
 
-        _vertexData[_vertexIndex++] = new SFVertex(p0, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p1, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p2, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p0, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p2, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p3, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p0, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p1, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p2, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p0, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p2, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p3, color);
 
-        AddCommand(SFPrimitiveType.Triangles, 6, depth);
+        AddCommand(RenderPrimitiveType.Triangles, 6, depth);
     }
 
     /// <summary>
@@ -482,16 +485,16 @@ public sealed class PrimitiveBatcher : BaseBatcher
             p3 += position;
         }
 
-        _vertexData[_vertexIndex++] = new SFVertex(p0, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p1, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p1, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p2, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p2, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p3, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p3, color);
-        _vertexData[_vertexIndex++] = new SFVertex(p0, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p0, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p1, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p1, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p2, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p2, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p3, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p3, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(p0, color);
 
-        AddCommand(SFPrimitiveType.Lines, 8, depth);
+        AddCommand(RenderPrimitiveType.Lines, 8, depth);
     }
 
     /// <summary>
@@ -529,7 +532,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
         float cos = MathF.Cos(rotation);
         float sin = MathF.Sin(rotation);
 
-        _vertexData[_vertexIndex++] = new SFVertex(center, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(center, color);
 
         for (int i = 0; i <= segments; i++)
         {
@@ -542,13 +545,13 @@ public sealed class PrimitiveBatcher : BaseBatcher
             float rx = sx * cos - sy * sin + origin.X;
             float ry = sx * sin + sy * cos + origin.Y;
 
-            _vertexData[_vertexIndex++] = new SFVertex(
+            _vertexData[_vertexIndex++] = new RenderVertex(
                 new Vect2(center.X + rx, center.Y + ry),
                 color
             );
         }
 
-        AddCommand(SFPrimitiveType.TriangleFan, vertexCount, depth);
+        AddCommand(RenderPrimitiveType.TriangleFan, vertexCount, depth);
     }
 
     /// <summary>
@@ -608,17 +611,17 @@ public sealed class PrimitiveBatcher : BaseBatcher
             }
             else
             {
-                _vertexData[_vertexIndex++] = new SFVertex(prevPoint, color);
-                _vertexData[_vertexIndex++] = new SFVertex(point, color);
+                _vertexData[_vertexIndex++] = new RenderVertex(prevPoint, color);
+                _vertexData[_vertexIndex++] = new RenderVertex(point, color);
             }
 
             prevPoint = point;
         }
 
-        _vertexData[_vertexIndex++] = new SFVertex(prevPoint, color);
-        _vertexData[_vertexIndex++] = new SFVertex(firstPoint, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(prevPoint, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(firstPoint, color);
 
-        AddCommand(SFPrimitiveType.Lines, vertexCount, depth);
+        AddCommand(RenderPrimitiveType.Lines, vertexCount, depth);
     }
 
     /// <summary>
@@ -669,12 +672,12 @@ public sealed class PrimitiveBatcher : BaseBatcher
             Vect2 v1 = Transform(vertices[i]);
             Vect2 v2 = Transform(vertices[i + 1]);
 
-            _vertexData[_vertexIndex++] = new SFVertex(v0, color);
-            _vertexData[_vertexIndex++] = new SFVertex(v1, color);
-            _vertexData[_vertexIndex++] = new SFVertex(v2, color);
+            _vertexData[_vertexIndex++] = new RenderVertex(v0, color);
+            _vertexData[_vertexIndex++] = new RenderVertex(v1, color);
+            _vertexData[_vertexIndex++] = new RenderVertex(v2, color);
         }
 
-        AddCommand(SFPrimitiveType.Triangles, vertexCount, depth);
+        AddCommand(RenderPrimitiveType.Triangles, vertexCount, depth);
     }
 
     /// <summary>
@@ -724,15 +727,15 @@ public sealed class PrimitiveBatcher : BaseBatcher
         for (int i = 1; i < vertices.Length; i++)
         {
             Vect2 curr = Transform(vertices[i]);
-            _vertexData[_vertexIndex++] = new SFVertex(prev, color);
-            _vertexData[_vertexIndex++] = new SFVertex(curr, color);
+            _vertexData[_vertexIndex++] = new RenderVertex(prev, color);
+            _vertexData[_vertexIndex++] = new RenderVertex(curr, color);
             prev = curr;
         }
 
-        _vertexData[_vertexIndex++] = new SFVertex(prev, color);
-        _vertexData[_vertexIndex++] = new SFVertex(first, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(prev, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(first, color);
 
-        AddCommand(SFPrimitiveType.Lines, vertexCount, depth);
+        AddCommand(RenderPrimitiveType.Lines, vertexCount, depth);
     }
 
     /// <summary>
@@ -750,11 +753,11 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
         EnsureVertexCapacity(3);
 
-        _vertexData[_vertexIndex++] = new SFVertex(a, color);
-        _vertexData[_vertexIndex++] = new SFVertex(b, color);
-        _vertexData[_vertexIndex++] = new SFVertex(c, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(a, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(b, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(c, color);
 
-        AddCommand(SFPrimitiveType.Triangles, 3, depth);
+        AddCommand(RenderPrimitiveType.Triangles, 3, depth);
     }
 
     /// <summary>
@@ -772,14 +775,14 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
         EnsureVertexCapacity(6);
 
-        _vertexData[_vertexIndex++] = new SFVertex(a, color);
-        _vertexData[_vertexIndex++] = new SFVertex(b, color);
-        _vertexData[_vertexIndex++] = new SFVertex(b, color);
-        _vertexData[_vertexIndex++] = new SFVertex(c, color);
-        _vertexData[_vertexIndex++] = new SFVertex(c, color);
-        _vertexData[_vertexIndex++] = new SFVertex(a, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(a, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(b, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(b, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(c, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(c, color);
+        _vertexData[_vertexIndex++] = new RenderVertex(a, color);
 
-        AddCommand(SFPrimitiveType.Lines, 6, depth);
+        AddCommand(RenderPrimitiveType.Lines, 6, depth);
     }
 
     #endregion

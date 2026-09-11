@@ -564,26 +564,6 @@ public struct Rect2 : IEquatable<Rect2>
     /// Determines whether two rectangles are not equal.
     /// </summary>
     public static bool operator !=(in Rect2 a, in Rect2 b) => !a.Equals(b);
-
-    /// <summary>
-    /// Implicitly converts an SFML FloatRect to a Rect2.
-    /// </summary>
-    public static implicit operator Rect2(in SFFloatRect v) => new(v.Left, v.Top, v.Width, v.Height);
-
-    /// <summary>
-    /// Implicitly converts an SFML IntRect to a Rect2.
-    /// </summary>
-    public static implicit operator Rect2(in SFIntRect v) => new(v.Left, v.Top, v.Width, v.Height);
-
-    /// <summary>
-    /// Implicitly converts a Rect2 to an SFML FloatRect.
-    /// </summary>
-    public static implicit operator SFFloatRect(in Rect2 v) => new(new(v._position.X, v._position.Y), new(v._size.X, v._size.Y));
-
-    /// <summary>
-    /// Implicitly converts a Rect2 to an SFML IntRect.
-    /// </summary>
-    public static implicit operator SFIntRect(in Rect2 v) => new(new((int)v._position.X, (int)v._position.Y), new((int)v._size.X, (int)v._size.Y));
     #endregion
 
     #region IEquatable

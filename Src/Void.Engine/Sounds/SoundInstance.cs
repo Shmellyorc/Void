@@ -1,134 +1,25 @@
-// ============================================================================
-//  SoundInstance.cs
-// ============================================================================
-//  Represents a single sound instance with playback control, volume management,
-//  panning, pitch adjustment, and event notifications.
-//
-//  Copyright (c) 2025 Void Engine
-//  Licensed under the MIT License.
-// ============================================================================
+using System;
+using Void.Engine.Assets.Loaders;
+using Void.Engine.Audio;
+using Void.Engine.Helpers;
+using Void.Engine.Logs;
 
 namespace Void.Engine.Sounds;
 
-/// <summary>
-/// Defines the playback status of a sound instance.
-/// </summary>
 public enum SoundStatus
 {
-    /// <summary>
-    /// The sound is stopped and not playing.
-    /// </summary>
     Stopped,
-
-    /// <summary>
-    /// The sound is paused and can be resumed.
-    /// </summary>
     Paused,
-
-    /// <summary>
-    /// The sound is currently playing.
-    /// </summary>
     Playing,
 }
 
 /// <summary>
-/// Represents a playable sound instance with full playback control, volume management,
-/// panning, pitch adjustment, and event notifications.
+/// Pooled playable sound source backed by Silk.NET/OpenAL.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="SoundInstance"/> class provides comprehensive control over
-/// individual sound playback including volume, pitch, panning, looping, and
-/// priority management. It supports category-based volume control and raises
-/// events for completion, stopping, looping, and errors.
-/// </para>
-/// <para>
-/// <b>Creation Flow:</b>
-/// <list type="number">
-///   <item><description>Load a <see cref="Sound"/> asset through <see cref="AssetManager.Load{T}"/></description></item>
-///   <item><description>Call <see cref="Sound.CreateInstance"/> which obtains an instance from the <see cref="SoundInstancePool"/></description></item>
-///   <item><description>The pool initializes the instance with the sound buffer and priority</description></item>
-///   <item><description>Call <see cref="Play"/> to begin playback</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Lifecycle Management:</b>
-/// Sound instances are managed by the <see cref="SoundInstancePool"/> singleton.
-/// The pool maintains a fixed number of pre-allocated instances (default: 255)
-/// that are reused to avoid garbage collection pressure. When an instance is
-/// obtained, it moves from the available queue to the active list. When playback
-/// completes or the instance is disposed, it is reset and returned to the
-/// available queue for reuse.
-/// </para>
-/// <para>
-/// <b>Voice Allocation:</b>
-/// If all instances are active and a new sound needs to play, the pool will:
-/// <list type="bullet">
-///   <item><description>Recycle any stopped instances first</description></item>
-///   <item><description>Steal the lowest priority playing instance if the new sound has higher priority</description></item>
-///   <item><description>Steal the oldest playing instance as a fallback</description></item>
-///   <item><description>Return <see langword="null"/> if no instance can be allocated</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// Example usage:
-/// <code>
-/// // Load sound asset through AssetManager
-/// var soundAsset = AssetManager.Instance.Load&lt;Sound&gt;("explosion.wav");
-/// 
-/// // Create a sound instance from the asset (pool handles allocation)
-/// var sound = soundAsset.CreateInstance(SoundCategory.SFX);
-/// sound.Volume = 0.8f;
-/// sound.Pan = -0.5f;
-/// sound.Play();
-/// 
-/// // Handle completion - instance auto-returns to pool
-/// sound.SoundCompleted += (s, e) =>
-/// {
-///     Console.WriteLine("Sound finished playing");
-///     sound.Dispose(); // Returns the instance to the available pool
-/// };
-/// </code>
-/// </para>
-/// <para>
-/// <b>Volume System:</b>
-/// The effective volume is calculated as: <c>RawVolume × CategoryVolume</c>.
-/// The raw volume is set per-instance, while the category volume is controlled
-/// globally through <see cref="SoundHelper.SetCategoryVolume{T}"/>.
-/// </para>
-/// <para>
-/// <b>Event Order:</b>
-/// <list type="number">
-///   <item><description><see cref="SoundLooped"/> - Fired each loop iteration (if looping)</description></item>
-///   <item><description><see cref="SoundCompleted"/> - Fired when natural playback ends</description></item>
-///   <item><description><see cref="SoundStopped"/> - Fired when stopped manually or interrupted</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Asset Eviction Awareness:</b>
-/// If the underlying <see cref="Sound"/> asset is evicted from the AssetManager
-/// cache, the instance remains valid as long as it holds a reference to the
-/// sound buffer. However, attempting to create new instances from an evicted
-/// asset will automatically reload it.
-/// </para>
-/// <para>
-/// <b>Update Loop:</b>
-/// The <see cref="SoundInstancePool"/> runs a background task that updates all
-/// active sound instances at 60Hz. This task advances playback time, fires
-/// loop events, detects completion, and automatically returns completed
-/// instances to the pool.
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. All operations should be performed on the
-/// main thread or synchronized appropriately. The underlying pool uses locks
-/// internally for thread safety.
-/// </para>
-/// </remarks>
 public sealed class SoundInstance : IDisposable
 {
-    private SFSound _sfmlSound;
-    private SFSoundBuffer _buffer;
+    private uint _source;
+    private AudioBuffer _buffer;
     private bool _isInitialized;
     private float _playTime;
     private bool _isDisposed;
@@ -137,43 +28,18 @@ public sealed class SoundInstance : IDisposable
     private int _loopCount;
     private bool _wasPlaying;
     private bool _wasPaused;
+    private SoundStatus _status;
 
-    /// <summary>
-    /// Gets a value indicating whether the sound instance has been disposed.
-    /// </summary>
+    private float _rawVolume = 1f;
+    private float _volume = 1f;
+    private float _pitch = 1f;
+    private float _pan;
+    private bool _looping;
+
     public bool IsDisposed => _isDisposed;
-
-    /// <summary>
-    /// Gets or sets the category of the sound for volume grouping.
-    /// </summary>
     public Enum Category { get; internal set; }
+    public SoundStatus Status => _isDisposed || !_isInitialized ? SoundStatus.Stopped : _status;
 
-    /// <summary>
-    /// Gets the current playback status of the sound.
-    /// </summary>
-    public SoundStatus Status
-    {
-        get
-        {
-            if (_isDisposed || !_isInitialized)
-                return SoundStatus.Stopped;
-
-            return (SoundStatus)_sfmlSound.Status;
-        }
-    }
-
-    /// <summary>
-    /// Gets or sets the volume of the sound between 0 and 1.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// The volume is affected by category volume, so the actual output volume
-    /// is the raw volume multiplied by the category volume.
-    /// </para>
-    /// <para>
-    /// Setting this property to 0 mutes the sound, while 1 is maximum volume.
-    /// </para>
-    /// </remarks>
     public float Volume
     {
         get => _volume;
@@ -185,18 +51,9 @@ public sealed class SoundInstance : IDisposable
                 return;
 
             _rawVolume = Math.Clamp(value, 0f, 1f);
-
-            if (Category != null)
-                ApplyCategoryVolume(Category);
-            else
-            {
-                _volume = _rawVolume;
-                _sfmlSound.Volume = _volume * 100f;
-            }
+            ApplyCategoryVolume(Category);
         }
     }
-    private float _rawVolume = 1f;
-    private float _volume = 1f;
 
     internal void ApplyCategoryVolume(Enum category)
     {
@@ -207,23 +64,15 @@ public sealed class SoundInstance : IDisposable
         if (category != null)
         {
             var method = typeof(SoundHelper).GetMethod(nameof(SoundHelper.GetCategoryVolume));
-            var genericMethod = method.MakeGenericMethod(category.GetType());
-            categoryVolume = (float)genericMethod.Invoke(null, new[] { category });
+            var genericMethod = method?.MakeGenericMethod(category.GetType());
+            if (genericMethod != null)
+                categoryVolume = (float)genericMethod.Invoke(null, new object[] { category });
         }
 
-        _volume = _rawVolume * categoryVolume;
-        _sfmlSound.Volume = _volume * 100f;
+        _volume = _rawVolume * categoryVolume * SoundHelper.MasterVolume;
+        AudioRuntime.SetGain(_source, _volume);
     }
 
-    /// <summary>
-    /// Gets or sets the pitch of the sound between 0.1 and 10.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Pitch values above 1 speed up playback and increase pitch, while values
-    /// below 1 slow down playback and decrease pitch. A value of 1 is normal speed.
-    /// </para>
-    /// </remarks>
     public float Pitch
     {
         get => _pitch;
@@ -234,24 +83,13 @@ public sealed class SoundInstance : IDisposable
             if (MathHelper.AlmostEquals(value, _pitch, MathHelper.Epsilon))
                 return;
 
+            // OpenAL 1.1 guarantees 0.5..2.0. Keep the public API permissive but
+            // clamp the backend value to the portable range.
             _pitch = Math.Clamp(value, 0.1f, 10f);
-            _sfmlSound.Pitch = _pitch;
+            AudioRuntime.SetPitch(_source, _pitch);
         }
     }
-    private float _pitch = 1f;
 
-    /// <summary>
-    /// Gets or sets the pan of the sound between -1 (left) and 1 (right).
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Panning controls the stereo balance of the sound. A value of -1 pans
-    /// fully to the left, 1 pans fully to the right, and 0 centers the sound.
-    /// </para>
-    /// <para>
-    /// When pan is set to near zero, the sound is reset to normal stereo positioning.
-    /// </para>
-    /// </remarks>
     public float Pan
     {
         get => _pan;
@@ -261,24 +99,12 @@ public sealed class SoundInstance : IDisposable
                 return;
 
             _pan = Math.Clamp(value, -1f, 1f);
-
             if (MathHelper.AlmostZero(_pan, MathHelper.Epsilon))
-            {
-                _sfmlSound.RelativeToListener = false;
-                _sfmlSound.Position = new(0f, 0f, 0f);
                 _pan = 0f;
-                return;
-            }
-
-            _sfmlSound.RelativeToListener = true;
-            _sfmlSound.Position = new(_pan, 0f, 0f);
+            AudioRuntime.SetPan(_source, _pan);
         }
     }
-    private float _pan = 0f;
 
-    /// <summary>
-    /// Gets or sets whether the sound should loop.
-    /// </summary>
     public bool Looping
     {
         get => _looping;
@@ -288,118 +114,51 @@ public sealed class SoundInstance : IDisposable
                 return;
 
             _looping = value;
-
-            if (_isInitialized && _sfmlSound != null)
-                _sfmlSound.IsLooping = _looping;
+            if (_isInitialized)
+                AudioRuntime.SetLooping(_source, value);
         }
     }
-    private bool _looping;
 
-    /// <summary>
-    /// Gets the current playback time of the sound in seconds.
-    /// </summary>
     public float PlayTime => _playTime;
-
-    /// <summary>
-    /// Gets the total duration of the sound in seconds.
-    /// </summary>
-    public float Duration => _buffer != null && !_buffer.IsInvalid ? _buffer.Duration.AsSeconds() : 0f;
-
-    /// <summary>
-    /// Gets the playback progress as a value between 0 and 1.
-    /// </summary>
-    public float Progress => Duration > 0 ? Math.Clamp(_playTime / Duration, 0f, 1f) : 0f;
-
-    /// <summary>
-    /// Gets the number of times the sound has looped.
-    /// </summary>
+    public float Duration => _buffer?.Duration ?? 0f;
+    public float Progress => Duration > 0f ? Math.Clamp(_playTime / Duration, 0f, 1f) : 0f;
     public int LoopCount => _loopCount;
-
-    /// <summary>
-    /// Gets a value indicating whether the sound is currently playing.
-    /// </summary>
     public bool IsPlaying => Status == SoundStatus.Playing;
-
-    /// <summary>
-    /// Gets a value indicating whether the sound is currently paused.
-    /// </summary>
     public bool IsPaused => Status == SoundStatus.Paused;
-
-    /// <summary>
-    /// Gets a value indicating whether the sound is currently stopped.
-    /// </summary>
     public bool IsStopped => Status == SoundStatus.Stopped;
-
-    /// <summary>
-    /// Gets a value indicating whether the sound has completed playback and stopped.
-    /// </summary>
     public bool IsComplete => IsStopped && _hasNotifiedCompletion;
-
-    /// <summary>
-    /// Gets a value indicating whether the sound instance is valid and ready for use.
-    /// </summary>
     public bool IsValid => _isInitialized && !_isDisposed;
-
-    /// <summary>
-    /// Gets or sets the priority of the sound for voice allocation.
-    /// </summary>
     public SoundPriority Priority { get; set; } = SoundPriority.Normal;
 
-    /// <summary>
-    /// Gets the name of the sound.
-    /// </summary>
     public string SoundName
     {
         get => _soundName;
         internal set => _soundName = value;
     }
 
-    /// <summary>
-    /// Occurs when the sound completes playback.
-    /// </summary>
     public event EventHandler<SoundCompletedEventArgs> SoundCompleted;
-
-    /// <summary>
-    /// Occurs when the sound stops playing.
-    /// </summary>
     public event EventHandler<SoundStoppedEventArgs> SoundStopped;
-
-    /// <summary>
-    /// Occurs when the sound loops.
-    /// </summary>
     public event EventHandler<SoundLoopedEventArgs> SoundLooped;
-
-    /// <summary>
-    /// Occurs when an error occurs during sound playback.
-    /// </summary>
     public event EventHandler<SoundErrorEventArgs> SoundError;
 
     internal SoundInstance()
     {
-        _isInitialized = false;
-        _playTime = 0f;
-        _isDisposed = false;
-        _hasNotifiedCompletion = false;
-        _loopCount = 0;
-        _wasPlaying = false;
-        _wasPaused = false;
-        _looping = false;
+        _status = SoundStatus.Stopped;
     }
 
-    internal void Initialize(SFSoundBuffer buffer, Enum category = null, SoundPriority priority = SoundPriority.Normal)
+    internal void Initialize(AudioBuffer buffer, Enum category = null, SoundPriority priority = SoundPriority.Normal)
     {
         if (_isDisposed)
             throw new ObjectDisposedException(nameof(SoundInstance));
+        if (buffer == null || !buffer.IsValid)
+            throw new ArgumentException("Sound buffer is null or invalid.", nameof(buffer));
 
-        if (_isInitialized && Status != SoundStatus.Stopped)
-            Stop();
+        if (_isInitialized)
+            Reset();
 
-        _buffer = buffer;
-
-        if (_sfmlSound == null)
-            _sfmlSound = new SFSound(buffer);
-        else
-            _sfmlSound.SoundBuffer = buffer;
+        _source = _source == 0 ? AudioRuntime.CreateSource() : _source;
+        _buffer = buffer.AddReference();
+        AudioRuntime.BindBuffer(_source, _buffer.Handle);
 
         Category = category;
         Priority = priority;
@@ -409,10 +168,17 @@ public sealed class SoundInstance : IDisposable
         _loopCount = 0;
         _wasPlaying = false;
         _wasPaused = false;
-
         _looping = false;
-        if (_sfmlSound != null)
-            _sfmlSound.IsLooping = false;
+        _rawVolume = 1f;
+        _volume = 1f;
+        _pitch = 1f;
+        _pan = 0f;
+        _status = SoundStatus.Stopped;
+
+        AudioRuntime.SetLooping(_source, false);
+        AudioRuntime.SetPitch(_source, 1f);
+        AudioRuntime.SetPan(_source, 0f);
+        ApplyCategoryVolume(category);
     }
 
     internal void Update(float deltaTime)
@@ -422,31 +188,42 @@ public sealed class SoundInstance : IDisposable
 
         try
         {
-            if (Status == SoundStatus.Playing)
+            if (_status == SoundStatus.Playing)
             {
-                _playTime += deltaTime;
+                float duration = Duration;
+                float effectivePitch = Math.Clamp(_pitch, 0.5f, 2f);
+                _playTime += Math.Max(0f, deltaTime) * effectivePitch;
 
-                if (Looping && _buffer != null && _playTime >= _buffer.Duration.AsSeconds())
+                if (_looping && duration > 0f)
                 {
-                    _loopCount++;
-                    _playTime = 0f;
-                    SoundLooped?.Invoke(this, new SoundLoopedEventArgs(this, _loopCount));
+                    while (_playTime >= duration)
+                    {
+                        _playTime -= duration;
+                        _loopCount++;
+                        SoundLooped?.Invoke(this, new SoundLoopedEventArgs(this, _loopCount));
+                    }
                 }
-
-                if (!Looping && !_hasNotifiedCompletion && _buffer != null && _playTime >= _buffer.Duration.AsSeconds())
+                else if (!_looping && duration > 0f && _playTime >= duration)
                 {
-                    _hasNotifiedCompletion = true;
-                    SoundCompleted?.Invoke(this, new SoundCompletedEventArgs(this, false, _loopCount));
+                    _playTime = duration;
+                    _status = SoundStatus.Stopped;
+                    AudioRuntime.Stop(_source);
+
+                    if (!_hasNotifiedCompletion)
+                    {
+                        _hasNotifiedCompletion = true;
+                        SoundCompleted?.Invoke(this, new SoundCompletedEventArgs(this, false, _loopCount));
+                    }
                 }
             }
-            else if (Status == SoundStatus.Stopped && _isInitialized)
-            {
-                if (!_hasNotifiedCompletion)
-                {
-                    _hasNotifiedCompletion = true;
-                    SoundStopped?.Invoke(this, new SoundStoppedEventArgs(this, _wasPlaying, _wasPaused));
-                }
-            }
+            // Do not auto-notify/recycle a freshly initialized instance that
+            // has not been played yet. CreateInstance() returns the instance to
+            // game code before Play() is called, and the pool update thread can
+            // run during that setup window.
+            //
+            // Explicit Stop() already raises SoundStopped synchronously, while
+            // natural completion is handled above, so no generic "Stopped"
+            // branch is needed here.
         }
         catch (Exception ex)
         {
@@ -454,11 +231,6 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
-    /// <summary>
-    /// Starts playing the sound.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when the sound instance is not initialized.</exception>
-    /// <exception cref="ObjectDisposedException">Thrown when the sound instance has been disposed.</exception>
     public void Play()
     {
         if (!_isInitialized)
@@ -468,14 +240,15 @@ public sealed class SoundInstance : IDisposable
 
         try
         {
+            if (_status == SoundStatus.Stopped)
+                _playTime = 0f;
+
             _hasNotifiedCompletion = false;
             _wasPlaying = true;
             _wasPaused = false;
-
-            if (_sfmlSound != null)
-                _sfmlSound.IsLooping = _looping;
-
-            _sfmlSound.Play();
+            AudioRuntime.SetLooping(_source, _looping);
+            AudioRuntime.Play(_source);
+            _status = SoundStatus.Playing;
         }
         catch (Exception ex)
         {
@@ -484,22 +257,17 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
-    /// <summary>
-    /// Pauses the sound playback.
-    /// </summary>
     public void Pause()
     {
-        if (_isDisposed)
+        if (_isDisposed || _status != SoundStatus.Playing)
             return;
 
         try
         {
-            if (Status == SoundStatus.Playing)
-            {
-                _wasPaused = true;
-                _wasPlaying = false;
-                _sfmlSound.Pause();
-            }
+            AudioRuntime.Pause(_source);
+            _wasPaused = true;
+            _wasPlaying = false;
+            _status = SoundStatus.Paused;
         }
         catch (Exception ex)
         {
@@ -507,20 +275,19 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
-    /// <summary>
-    /// Stops the sound playback and resets to the beginning.
-    /// </summary>
     public void Stop()
     {
-        if (_isDisposed)
+        if (_isDisposed || !_isInitialized)
             return;
 
         try
         {
-            bool wasPlaying = Status == SoundStatus.Playing;
-            bool wasPaused = Status == SoundStatus.Paused;
+            bool wasPlaying = _status == SoundStatus.Playing;
+            bool wasPaused = _status == SoundStatus.Paused;
 
-            _sfmlSound.Stop();
+            AudioRuntime.Stop(_source);
+            _status = SoundStatus.Stopped;
+            _playTime = 0f;
 
             if (!_hasNotifiedCompletion)
             {
@@ -536,8 +303,22 @@ public sealed class SoundInstance : IDisposable
 
     internal void Reset()
     {
-        if (_isDisposed || !_isInitialized || _sfmlSound == null)
+        try
         {
+            if (_source != 0)
+            {
+                AudioRuntime.Stop(_source);
+                AudioRuntime.SetLooping(_source, false);
+                AudioRuntime.BindBuffer(_source, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Failed to reset sound."));
+        }
+        finally
+        {
+            _buffer?.Release();
             _buffer = null;
             _isInitialized = false;
             _playTime = 0f;
@@ -551,62 +332,12 @@ public sealed class SoundInstance : IDisposable
             _looping = false;
             _pitch = 1f;
             _pan = 0f;
+            _status = SoundStatus.Stopped;
             Category = null;
             _isDisposed = false;
-            return;
-        }
-
-        try
-        {
-            if (_sfmlSound.CPointer != IntPtr.Zero)
-            {
-                _sfmlSound?.Stop();
-                _sfmlSound.IsLooping = false;
-                _sfmlSound.SoundBuffer = null;
-            }
-
-            _buffer = null;
-            _isInitialized = false;
-            _playTime = 0f;
-            _hasNotifiedCompletion = false;
-            _loopCount = 0;
-            _wasPlaying = false;
-            _wasPaused = false;
-            _looping = false;
-            _rawVolume = 1f;
-            _volume = 1f;
-            _pitch = 1f;
-            _pan = 0f;
-            Category = null;
-            _isDisposed = false;
-        }
-        catch (ObjectDisposedException)
-        {
-            _sfmlSound = null;
-            _buffer = null;
-            _isInitialized = false;
-            _playTime = 0f;
-            _hasNotifiedCompletion = false;
-            _loopCount = 0;
-            _wasPlaying = false;
-            _wasPaused = false;
-            _looping = false;
-            _rawVolume = 1f;
-            _volume = 1f;
-            _pitch = 1f;
-            _pan = 0f;
-            Category = null;
-            _isDisposed = false;
-        }
-        catch (Exception ex)
-        {
-            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Failed to reset sound."));
         }
     }
 
-    /// <summary>
-    /// Disposes the sound instance and releases all resources.
-    /// </summary>
     public void Dispose()
     {
         if (_isDisposed)
@@ -614,11 +345,19 @@ public sealed class SoundInstance : IDisposable
 
         try
         {
-            _sfmlSound?.Stop();
-            _sfmlSound?.Dispose();
+            if (_source != 0)
+            {
+                AudioRuntime.Stop(_source);
+                AudioRuntime.BindBuffer(_source, 0);
+                AudioRuntime.DeleteSource(_source);
+                _source = 0;
+            }
+
+            _buffer?.Release();
             _buffer = null;
-            _isDisposed = true;
             _isInitialized = false;
+            _status = SoundStatus.Stopped;
+            _isDisposed = true;
         }
         catch (Exception ex)
         {

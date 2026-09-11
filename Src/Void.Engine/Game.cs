@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 //  Game.cs
 // ============================================================================
 //  The core game class. Manages the game loop, window, timing, and application
@@ -8,6 +8,8 @@
 //  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
+
+using System.Diagnostics;
 
 namespace Void.Engine;
 
@@ -33,8 +35,8 @@ public class Game : IDisposable
     private readonly GameSettings _settings;
     private readonly Window _window;
     private readonly FrameTime _timing;
-    private readonly SFClock _sfClock;
-    private SFTime _previousTime;
+    private readonly Stopwatch _clock;
+    private double _previousTimeSeconds;
     private bool _isDisposed;
 
     internal int _scrollWheel;
@@ -186,8 +188,6 @@ public class Game : IDisposable
         Logger.Instance.Info("Version: {0}  Hash: {1}", Version, VersionHash);
         Logger.Instance.Info();
 
-        LoadDefaultFont();
-
         _window = new Window(
             (int)_settings.Window.X,
             (int)_settings.Window.Y,
@@ -200,7 +200,11 @@ public class Game : IDisposable
             OnMouseWheelScrolled = delta => _scrollWheel += delta
         };
 
-        _sfClock = new SFClock();
+        // Renderer is active before font loading so SpriteFont builds only the
+        // renderer-neutral atlas instead of a duplicate SFML GPU texture.
+        LoadDefaultFont();
+
+        _clock = new Stopwatch();
         _timing = new FrameTime();
 
         Logger.Instance.Info("VOID setting up Application folders...");
@@ -246,16 +250,16 @@ public class Game : IDisposable
     {
         OnEnter();
 
-        _sfClock.Restart();
-        _previousTime = SFTime.Zero;
+        _clock.Restart();
+        _previousTimeSeconds = 0d;
 
         while (_window.IsOpen)
         {
             _window.DispatchEvents();
 
-            var currentTime = _sfClock.ElapsedTime;
-            float rawDelta = (currentTime - _previousTime).AsSeconds();
-            _previousTime = currentTime;
+            double currentTime = _clock.Elapsed.TotalSeconds;
+            float rawDelta = (float)(currentTime - _previousTimeSeconds);
+            _previousTimeSeconds = currentTime;
 
             _timing.Update(rawDelta);
 
@@ -361,6 +365,7 @@ public class Game : IDisposable
         BeaconManager.Instance.Clear();
         AssetManager.Instance.Clear();
         AtlasManager.Instance.Clear();
+        Inputs.Gamepads.Gamepad.Shutdown();
         _window.Dispose();
 
         GC.SuppressFinalize(this);

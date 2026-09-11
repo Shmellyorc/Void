@@ -134,36 +134,6 @@ public struct Vect2 : IEquatable<Vect2>
     public static bool operator !=(in Vect2 a, in Vect2 b) => !a.Equals(b);
 
     /// <summary>
-    /// Implicitly converts an SFML Vector2f to a Vect2.
-    /// </summary>
-    public static implicit operator Vect2(in SFVector2f v) => new(v.X, v.Y);
-
-    /// <summary>
-    /// Implicitly converts an SFML Vector2i to a Vect2.
-    /// </summary>
-    public static implicit operator Vect2(in SFVector2i v) => new(v.X, v.Y);
-
-    /// <summary>
-    /// Implicitly converts an SFML Vector2u to a Vect2.
-    /// </summary>
-    public static implicit operator Vect2(in SFVector2u v) => new(v.X, v.Y);
-
-    /// <summary>
-    /// Implicitly converts a Vect2 to an SFML Vector2f.
-    /// </summary>
-    public static implicit operator SFVector2f(in Vect2 v) => new(v.X, v.Y);
-
-    /// <summary>
-    /// Implicitly converts a Vect2 to an SFML Vector2i.
-    /// </summary>
-    public static implicit operator SFVector2i(in Vect2 v) => new((int)v.X, (int)v.Y);
-
-    /// <summary>
-    /// Implicitly converts a Vect2 to an SFML Vector2u.
-    /// </summary>
-    public static implicit operator SFVector2u(in Vect2 v) => new((uint)v.X, (uint)v.Y);
-
-    /// <summary>
     /// Adds two vectors component-wise.
     /// </summary>
     public static Vect2 operator +(in Vect2 a, in Vect2 b) => new(a.X + b.X, a.Y + b.Y);

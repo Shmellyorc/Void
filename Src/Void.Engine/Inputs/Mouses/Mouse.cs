@@ -89,15 +89,7 @@ public static class Mouse
             (!Game.Instance.Window.IsOpen || !Game.Instance.Window.IsFocused))
             return;
 
-        for (int i = 0; i < 5; i++)
-        {
-            var sfmlButton = (SFMouse.Button)i;
-            _buttons[i] = SFMouse.IsButtonPressed(sfmlButton);
-        }
-
-        var pos = SFMouse.GetPosition(Game.Instance.Window._window);
-        _x = pos.X;
-        _y = pos.Y;
+        Game.Instance.Window.GetMouseState(_buttons, out _x, out _y);
         _scrollWheel = Game.Instance._scrollWheel;
     }
 
@@ -107,7 +99,7 @@ public static class Mouse
     /// <param name="x">The X-coordinate to set the mouse position to.</param>
     /// <param name="y">The Y-coordinate to set the mouse position to.</param>
     public static void SetPosition(int x, int y)
-        => SFMouse.SetPosition(new Vect2(x, y));
+        => Game.Instance.Window.SetGlobalMousePosition(x, y);
 
     /// <summary>
     /// Sets the mouse cursor position relative to the specified game window.
@@ -116,7 +108,10 @@ public static class Mouse
     /// <param name="y">The Y-coordinate to set the mouse position to.</param>
     /// <param name="game">The game instance containing the target window.</param>
     public static void SetPosition(int x, int y, Game game)
-        => SFMouse.SetPosition(new Vect2(x, y), game.Window);
+    {
+        ArgumentNullException.ThrowIfNull(game);
+        game.Window.SetMousePosition(x, y);
+    }
 
     /// <summary>
     /// Updates the mouse state. This method is called automatically

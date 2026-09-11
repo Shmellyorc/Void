@@ -1,24 +1,30 @@
+// ============================================================================
+//  ShaderState.cs
+// ============================================================================
+//  Renderer-neutral explicit shader binding state.
+// ============================================================================
+
 namespace Void.Engine.Graphics.Shaders;
 
 internal static class ShaderState
 {
-    private static SFShader _currentShader;
+    private static ShaderProgram _currentProgram;
 
-    public static void Bind(SFShader shader)
+    internal static ShaderProgram GetCurrent() => _currentProgram;
+
+    internal static void Bind(ShaderProgram program)
     {
-        if (_currentShader == shader) return;
+        if (ReferenceEquals(_currentProgram, program))
+            return;
 
-        SFShader.Bind(shader);
-        _currentShader = shader;
+        _currentProgram = program;
     }
 
-    public static SFShader GetCurrent() => _currentShader;
-
-    public static void Unbind()
+    internal static void Unbind(ShaderProgram program = null)
     {
-        if (_currentShader == null) return;
+        if (program != null && !ReferenceEquals(_currentProgram, program))
+            return;
 
-        SFShader.Bind(null);
-        _currentShader = null;
+        _currentProgram = null;
     }
 }

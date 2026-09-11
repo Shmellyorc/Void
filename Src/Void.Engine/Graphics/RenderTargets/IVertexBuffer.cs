@@ -1,3 +1,6 @@
+using RenderPrimitiveType = Void.Engine.Graphics.Rendering.PrimitiveType;
+using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
+
 // ============================================================================
 //  IVertexBuffer.cs
 // ============================================================================
@@ -33,10 +36,10 @@ namespace Void.Engine.Graphics.RenderTargets;
 /// <code>
 /// // Create a vertex buffer
 /// var buffer = new VertexBuffer(1024);
-/// buffer.PrimitiveType = SFPrimitiveType.Triangles;
+/// buffer.PrimitiveType = RenderPrimitiveType.Triangles;
 /// 
 /// // Update with vertex data
-/// var vertices = new SFVertex[] { ... };
+/// var vertices = new RenderVertex[] { ... };
 /// buffer.Update(vertices, vertices.Length, 0);
 /// 
 /// // Draw to render target
@@ -61,16 +64,16 @@ public interface IVertexBuffer
     /// <para>
     /// The primitive type determines how vertices are interpreted:
     /// <list type="bullet">
-    ///   <item><description><see cref="SFPrimitiveType.Points"/> - Each vertex is a point</description></item>
-    ///   <item><description><see cref="SFPrimitiveType.Lines"/> - Vertices form line segments</description></item>
-    ///   <item><description><see cref="SFPrimitiveType.LineStrip"/> - Vertices form a continuous line</description></item>
-    ///   <item><description><see cref="SFPrimitiveType.Triangles"/> - Vertices form triangles</description></item>
-    ///   <item><description><see cref="SFPrimitiveType.TriangleStrip"/> - Vertices form a triangle strip</description></item>
-    ///   <item><description><see cref="SFPrimitiveType.TriangleFan"/> - Vertices form a triangle fan</description></item>
+    ///   <item><description><see cref="Void.Engine.Graphics.Rendering.PrimitiveType.Points"/> - Each vertex is a point</description></item>
+    ///   <item><description><see cref="Void.Engine.Graphics.Rendering.PrimitiveType.Lines"/> - Vertices form line segments</description></item>
+    ///   <item><description><see cref="Void.Engine.Graphics.Rendering.PrimitiveType.LineStrip"/> - Vertices form a continuous line</description></item>
+    ///   <item><description><see cref="Void.Engine.Graphics.Rendering.PrimitiveType.Triangles"/> - Vertices form triangles</description></item>
+    ///   <item><description><see cref="Void.Engine.Graphics.Rendering.PrimitiveType.TriangleStrip"/> - Vertices form a triangle strip</description></item>
+    ///   <item><description><see cref="Void.Engine.Graphics.Rendering.PrimitiveType.TriangleFan"/> - Vertices form a triangle fan</description></item>
     /// </list>
     /// </para>
     /// </remarks>
-    SFPrimitiveType PrimitiveType { get; set; }
+    RenderPrimitiveType PrimitiveType { get; set; }
 
     /// <summary>
     /// Updates the vertex buffer with new vertex data.
@@ -88,7 +91,7 @@ public interface IVertexBuffer
     /// the buffer without re-uploading all data.
     /// </para>
     /// </remarks>
-    void Update(ReadOnlySpan<SFVertex> vertices, uint vertexCount, uint offset);
+    void Update(ReadOnlySpan<RenderVertex> vertices, uint vertexCount, uint offset);
 
     /// <summary>
     /// Draws the vertex buffer to the specified render target.
@@ -96,7 +99,7 @@ public interface IVertexBuffer
     /// <param name="target">The render target to draw to.</param>
     /// <param name="vertexStart">The starting vertex index in the buffer.</param>
     /// <param name="vertexCount">The number of vertices to draw.</param>
-    /// <param name="states">The render states (blend mode, transform, shader, texture) to apply.</param>
+    /// <param name="states">The backend-neutral batch render state to apply.</param>
     /// <remarks>
     /// <para>
     /// This method renders the specified range of vertices to the render target
@@ -107,7 +110,7 @@ public interface IVertexBuffer
     /// blending, transformation, shaders, and textures.
     /// </para>
     /// </remarks>
-    void Draw(IRenderTarget target, uint vertexStart, uint vertexCount, SFRenderStates states);
+    void Draw(IRenderTarget target, uint vertexStart, uint vertexCount, BatchRenderState states);
 
     /// <summary>
     /// Disposes the vertex buffer and releases all GPU resources.

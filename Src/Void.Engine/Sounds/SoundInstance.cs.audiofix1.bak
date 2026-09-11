@@ -1,0 +1,369 @@
+using System;
+using Void.Engine.Assets.Loaders;
+using Void.Engine.Audio;
+using Void.Engine.Helpers;
+using Void.Engine.Logs;
+
+namespace Void.Engine.Sounds;
+
+public enum SoundStatus
+{
+    Stopped,
+    Paused,
+    Playing,
+}
+
+/// <summary>
+/// Pooled playable sound source backed by Silk.NET/OpenAL.
+/// </summary>
+public sealed class SoundInstance : IDisposable
+{
+    private uint _source;
+    private AudioBuffer _buffer;
+    private bool _isInitialized;
+    private float _playTime;
+    private bool _isDisposed;
+    private string _soundName;
+    private bool _hasNotifiedCompletion;
+    private int _loopCount;
+    private bool _wasPlaying;
+    private bool _wasPaused;
+    private SoundStatus _status;
+
+    private float _rawVolume = 1f;
+    private float _volume = 1f;
+    private float _pitch = 1f;
+    private float _pan;
+    private bool _looping;
+
+    public bool IsDisposed => _isDisposed;
+    public Enum Category { get; internal set; }
+    public SoundStatus Status => _isDisposed || !_isInitialized ? SoundStatus.Stopped : _status;
+
+    public float Volume
+    {
+        get => _volume;
+        set
+        {
+            if (_isDisposed || !_isInitialized)
+                return;
+            if (MathHelper.AlmostEquals(value, _rawVolume, MathHelper.Epsilon))
+                return;
+
+            _rawVolume = Math.Clamp(value, 0f, 1f);
+            ApplyCategoryVolume(Category);
+        }
+    }
+
+    internal void ApplyCategoryVolume(Enum category)
+    {
+        if (_isDisposed || !_isInitialized)
+            return;
+
+        float categoryVolume = 1f;
+        if (category != null)
+        {
+            var method = typeof(SoundHelper).GetMethod(nameof(SoundHelper.GetCategoryVolume));
+            var genericMethod = method?.MakeGenericMethod(category.GetType());
+            if (genericMethod != null)
+                categoryVolume = (float)genericMethod.Invoke(null, new object[] { category });
+        }
+
+        _volume = _rawVolume * categoryVolume * SoundHelper.MasterVolume;
+        AudioRuntime.SetGain(_source, _volume);
+    }
+
+    public float Pitch
+    {
+        get => _pitch;
+        set
+        {
+            if (_isDisposed || !_isInitialized)
+                return;
+            if (MathHelper.AlmostEquals(value, _pitch, MathHelper.Epsilon))
+                return;
+
+            // OpenAL 1.1 guarantees 0.5..2.0. Keep the public API permissive but
+            // clamp the backend value to the portable range.
+            _pitch = Math.Clamp(value, 0.1f, 10f);
+            AudioRuntime.SetPitch(_source, _pitch);
+        }
+    }
+
+    public float Pan
+    {
+        get => _pan;
+        set
+        {
+            if (_isDisposed || !_isInitialized)
+                return;
+
+            _pan = Math.Clamp(value, -1f, 1f);
+            if (MathHelper.AlmostZero(_pan, MathHelper.Epsilon))
+                _pan = 0f;
+            AudioRuntime.SetPan(_source, _pan);
+        }
+    }
+
+    public bool Looping
+    {
+        get => _looping;
+        set
+        {
+            if (_isDisposed)
+                return;
+
+            _looping = value;
+            if (_isInitialized)
+                AudioRuntime.SetLooping(_source, value);
+        }
+    }
+
+    public float PlayTime => _playTime;
+    public float Duration => _buffer?.Duration ?? 0f;
+    public float Progress => Duration > 0f ? Math.Clamp(_playTime / Duration, 0f, 1f) : 0f;
+    public int LoopCount => _loopCount;
+    public bool IsPlaying => Status == SoundStatus.Playing;
+    public bool IsPaused => Status == SoundStatus.Paused;
+    public bool IsStopped => Status == SoundStatus.Stopped;
+    public bool IsComplete => IsStopped && _hasNotifiedCompletion;
+    public bool IsValid => _isInitialized && !_isDisposed;
+    public SoundPriority Priority { get; set; } = SoundPriority.Normal;
+
+    public string SoundName
+    {
+        get => _soundName;
+        internal set => _soundName = value;
+    }
+
+    public event EventHandler<SoundCompletedEventArgs> SoundCompleted;
+    public event EventHandler<SoundStoppedEventArgs> SoundStopped;
+    public event EventHandler<SoundLoopedEventArgs> SoundLooped;
+    public event EventHandler<SoundErrorEventArgs> SoundError;
+
+    internal SoundInstance()
+    {
+        _status = SoundStatus.Stopped;
+    }
+
+    internal void Initialize(AudioBuffer buffer, Enum category = null, SoundPriority priority = SoundPriority.Normal)
+    {
+        if (_isDisposed)
+            throw new ObjectDisposedException(nameof(SoundInstance));
+        if (buffer == null || !buffer.IsValid)
+            throw new ArgumentException("Sound buffer is null or invalid.", nameof(buffer));
+
+        if (_isInitialized)
+            Reset();
+
+        _source = _source == 0 ? AudioRuntime.CreateSource() : _source;
+        _buffer = buffer.AddReference();
+        AudioRuntime.BindBuffer(_source, _buffer.Handle);
+
+        Category = category;
+        Priority = priority;
+        _isInitialized = true;
+        _playTime = 0f;
+        _hasNotifiedCompletion = false;
+        _loopCount = 0;
+        _wasPlaying = false;
+        _wasPaused = false;
+        _looping = false;
+        _rawVolume = 1f;
+        _volume = 1f;
+        _pitch = 1f;
+        _pan = 0f;
+        _status = SoundStatus.Stopped;
+
+        AudioRuntime.SetLooping(_source, false);
+        AudioRuntime.SetPitch(_source, 1f);
+        AudioRuntime.SetPan(_source, 0f);
+        ApplyCategoryVolume(category);
+    }
+
+    internal void Update(float deltaTime)
+    {
+        if (_isDisposed || !_isInitialized)
+            return;
+
+        try
+        {
+            if (_status == SoundStatus.Playing)
+            {
+                float duration = Duration;
+                float effectivePitch = Math.Clamp(_pitch, 0.5f, 2f);
+                _playTime += Math.Max(0f, deltaTime) * effectivePitch;
+
+                if (_looping && duration > 0f)
+                {
+                    while (_playTime >= duration)
+                    {
+                        _playTime -= duration;
+                        _loopCount++;
+                        SoundLooped?.Invoke(this, new SoundLoopedEventArgs(this, _loopCount));
+                    }
+                }
+                else if (!_looping && duration > 0f && _playTime >= duration)
+                {
+                    _playTime = duration;
+                    _status = SoundStatus.Stopped;
+                    AudioRuntime.Stop(_source);
+
+                    if (!_hasNotifiedCompletion)
+                    {
+                        _hasNotifiedCompletion = true;
+                        SoundCompleted?.Invoke(this, new SoundCompletedEventArgs(this, false, _loopCount));
+                    }
+                }
+            }
+            else if (_status == SoundStatus.Stopped && !_hasNotifiedCompletion)
+            {
+                _hasNotifiedCompletion = true;
+                SoundStopped?.Invoke(this, new SoundStoppedEventArgs(this, _wasPlaying, _wasPaused));
+            }
+        }
+        catch (Exception ex)
+        {
+            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Error during sound update."));
+        }
+    }
+
+    public void Play()
+    {
+        if (!_isInitialized)
+            throw new InvalidOperationException("Sound instance not initialized.");
+        if (_isDisposed)
+            throw new ObjectDisposedException(nameof(SoundInstance));
+
+        try
+        {
+            if (_status == SoundStatus.Stopped)
+                _playTime = 0f;
+
+            _hasNotifiedCompletion = false;
+            _wasPlaying = true;
+            _wasPaused = false;
+            AudioRuntime.SetLooping(_source, _looping);
+            AudioRuntime.Play(_source);
+            _status = SoundStatus.Playing;
+        }
+        catch (Exception ex)
+        {
+            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Failed to play sound."));
+            throw;
+        }
+    }
+
+    public void Pause()
+    {
+        if (_isDisposed || _status != SoundStatus.Playing)
+            return;
+
+        try
+        {
+            AudioRuntime.Pause(_source);
+            _wasPaused = true;
+            _wasPlaying = false;
+            _status = SoundStatus.Paused;
+        }
+        catch (Exception ex)
+        {
+            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Failed to pause sound."));
+        }
+    }
+
+    public void Stop()
+    {
+        if (_isDisposed || !_isInitialized)
+            return;
+
+        try
+        {
+            bool wasPlaying = _status == SoundStatus.Playing;
+            bool wasPaused = _status == SoundStatus.Paused;
+
+            AudioRuntime.Stop(_source);
+            _status = SoundStatus.Stopped;
+            _playTime = 0f;
+
+            if (!_hasNotifiedCompletion)
+            {
+                SoundStopped?.Invoke(this, new SoundStoppedEventArgs(this, wasPlaying, wasPaused));
+                _hasNotifiedCompletion = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Failed to stop sound."));
+        }
+    }
+
+    internal void Reset()
+    {
+        try
+        {
+            if (_source != 0)
+            {
+                AudioRuntime.Stop(_source);
+                AudioRuntime.SetLooping(_source, false);
+                AudioRuntime.BindBuffer(_source, 0);
+            }
+        }
+        catch (Exception ex)
+        {
+            SoundError?.Invoke(this, new SoundErrorEventArgs(this, ex, "Failed to reset sound."));
+        }
+        finally
+        {
+            _buffer?.Release();
+            _buffer = null;
+            _isInitialized = false;
+            _playTime = 0f;
+            Priority = SoundPriority.Normal;
+            _hasNotifiedCompletion = false;
+            _loopCount = 0;
+            _wasPlaying = false;
+            _wasPaused = false;
+            _rawVolume = 1f;
+            _volume = 1f;
+            _looping = false;
+            _pitch = 1f;
+            _pan = 0f;
+            _status = SoundStatus.Stopped;
+            Category = null;
+            _isDisposed = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        try
+        {
+            if (_source != 0)
+            {
+                AudioRuntime.Stop(_source);
+                AudioRuntime.BindBuffer(_source, 0);
+                AudioRuntime.DeleteSource(_source);
+                _source = 0;
+            }
+
+            _buffer?.Release();
+            _buffer = null;
+            _isInitialized = false;
+            _status = SoundStatus.Stopped;
+            _isDisposed = true;
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.ErrorWithCategory("Sound",
+                "Error during SoundInstance disposal: {0}", ex.Message);
+        }
+        finally
+        {
+            GC.SuppressFinalize(this);
+        }
+    }
+}

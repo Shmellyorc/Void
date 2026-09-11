@@ -1,3 +1,5 @@
+using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
+
 // ============================================================================
 //  BaseBatcher.cs
 // ============================================================================
@@ -94,9 +96,9 @@ public abstract class BaseBatcher : IBatcher
     protected Camera _currentCamera;
 
     /// <summary>
-    /// The current SFML render states.
+    /// The current backend-neutral render state.
     /// </summary>
-    protected SFRenderStates _renderStates;
+    protected BatchRenderState _renderStates;
 
     /// <summary>
     /// The current texture.
@@ -114,9 +116,9 @@ public abstract class BaseBatcher : IBatcher
     protected string _name;
 
     /// <summary>
-    /// The vertex data array.
+    /// The backend-neutral vertex data array.
     /// </summary>
-    protected SFVertex[] _vertexData;
+    protected RenderVertex[] _vertexData;
 
     /// <summary>
     /// The current shader.
@@ -187,16 +189,14 @@ public abstract class BaseBatcher : IBatcher
 
         int vertexCap = _capacity * VerticesPerCommand;
         _vertexBuffer = new VertexBuffer(vertexCap);
-        _vertexData = new SFVertex[vertexCap];
+        _vertexData = new RenderVertex[vertexCap];
         _vertexBufferSize = vertexCap;
-        _defaultRenderTarget = new TextureRenderTarget(Game.Instance.Window);
+        _defaultRenderTarget = Game.Instance.Window.MainRenderTarget;
         _renderTarget = _defaultRenderTarget;
 
-        _renderStates = new SFRenderStates
+        _renderStates = new BatchRenderState
         {
-            BlendMode = SFBlendMode.Alpha,
-            Transform = SFTransform.Identity,
-            CoordinateType = SFCoordinateType.Pixels,
+            BlendMode = BlendMode.Alpha
         };
 
         _name = GetType().Name;
@@ -243,7 +243,7 @@ public abstract class BaseBatcher : IBatcher
     /// </summary>
     protected virtual void ApplyShader()
     {
-        _renderStates.Shader = (_currentShader as Shader)?.SFShader;
+        _renderStates.Shader = _currentShader;
     }
 
     /// <summary>
@@ -293,7 +293,8 @@ public abstract class BaseBatcher : IBatcher
         _blendMode = blendMode ?? GameSettings.Instance.DefaultBlendMode ?? BlendMode.Alpha;
         _currentCamera = camera;
 
-        _renderStates.BlendMode = ConvertToSFML(_blendMode);
+        _renderStates.BlendMode = _blendMode;
+        _renderStates.ViewProjection = camera?.ViewProjectionMatrix ?? Camera.CreateDefaultViewProjection();
 
         if (camera != null)
             _renderTarget.SetView(camera);
@@ -358,9 +359,7 @@ public abstract class BaseBatcher : IBatcher
 
             SetRenderStateForGroup(groupStart);
 
-            if (_currentShader is Shader shaderAsset)
-                _renderStates.Shader = shaderAsset.SFShader;
-
+            _renderStates.Shader = _currentShader;
             _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
             drawCalls++;
         }
@@ -430,58 +429,6 @@ public abstract class BaseBatcher : IBatcher
     /// </summary>
     /// <param name="commandIndex">The index of the first command in the group.</param>
     protected virtual void SetRenderStateForGroup(int commandIndex) { }
-
-    /// <summary>
-    /// Converts a <see cref="BlendFactor"/> to an SFML blend factor.
-    /// </summary>
-    /// <param name="factor">The blend factor to convert.</param>
-    /// <returns>The corresponding SFML blend factor.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected SFBlendMode.Factor ConvertFactor(BlendFactor factor) => factor switch
-    {
-        BlendFactor.Zero => SFBlendMode.Factor.Zero,
-        BlendFactor.One => SFBlendMode.Factor.One,
-        BlendFactor.SrcColor => SFBlendMode.Factor.SrcColor,
-        BlendFactor.OneMinusSrcColor => SFBlendMode.Factor.OneMinusSrcColor,
-        BlendFactor.DstColor => SFBlendMode.Factor.DstColor,
-        BlendFactor.OneMinusDstColor => SFBlendMode.Factor.OneMinusDstColor,
-        BlendFactor.SrcAlpha => SFBlendMode.Factor.SrcAlpha,
-        BlendFactor.OneMinusSrcAlpha => SFBlendMode.Factor.OneMinusSrcAlpha,
-        BlendFactor.DstAlpha => SFBlendMode.Factor.DstAlpha,
-        BlendFactor.OneMinusDstAlpha => SFBlendMode.Factor.OneMinusDstAlpha,
-        _ => SFBlendMode.Factor.One
-    };
-
-    /// <summary>
-    /// Converts a <see cref="BlendEquation"/> to an SFML blend equation.
-    /// </summary>
-    /// <param name="equation">The blend equation to convert.</param>
-    /// <returns>The corresponding SFML blend equation.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected SFBlendMode.Equation ConvertEquation(BlendEquation equation) => equation switch
-    {
-        BlendEquation.Add => SFBlendMode.Equation.Add,
-        BlendEquation.Subtract => SFBlendMode.Equation.Subtract,
-        BlendEquation.ReverseSubtract => SFBlendMode.Equation.ReverseSubtract,
-        BlendEquation.Min => SFBlendMode.Equation.Min,
-        BlendEquation.Max => SFBlendMode.Equation.Max,
-        _ => SFBlendMode.Equation.Add
-    };
-
-    /// <summary>
-    /// Converts an <see cref="IBlendMode"/> to an SFML blend mode.
-    /// </summary>
-    /// <param name="blendMode">The blend mode to convert.</param>
-    /// <returns>The corresponding SFML blend mode.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected SFBlendMode ConvertToSFML(IBlendMode blendMode) => new SFBlendMode(
-        ConvertFactor(blendMode.ColorSrcFactor),
-        ConvertFactor(blendMode.ColorDstFactor),
-        ConvertEquation(blendMode.ColorEquation),
-        ConvertFactor(blendMode.AlphaSrcFactor),
-        ConvertFactor(blendMode.AlphaDstFactor),
-        ConvertEquation(blendMode.AlphaEquation)
-    );
 
     /// <summary>
     /// Disposes the batcher and releases all resources.

@@ -1,69 +1,20 @@
 // ============================================================================
 //  AtlasManager.cs
 // ============================================================================
-//  Manages texture atlasing with automatic page allocation, texture packing,
-//  LRU eviction, and fragmentation management. Provides a unified interface
-//  for packing textures into atlas pages for efficient batching.
-//
-//  Copyright (c) 2025 Void Engine
-//  Licensed under the MIT License.
+//  Renderer-neutral texture atlas. Pages are CPU-shadowed RGBA8 buffers backed
+//  by IGraphicsTexture resources owned by the active renderer.
 // ============================================================================
+
+using Void.Engine.Assets.Loaders;
+using Void.Engine.Assets.Loaders.Fonts;
+using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Graphics.Atlas;
 
 /// <summary>
-/// Manages texture atlasing with automatic page allocation, texture packing,
-/// LRU eviction, and fragmentation management.
+/// Manages texture atlasing with automatic page allocation, LRU eviction and
+/// incremental defragmentation without depending on a specific graphics API.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="AtlasManager"/> provides a unified system for packing
-/// textures into atlas pages to reduce draw calls and improve rendering
-/// performance. It handles:
-/// <list type="bullet">
-///   <item><description>Automatic page allocation and management</description></item>
-///   <item><description>Texture packing using configurable algorithms (Guillotine, Skyline)</description></item>
-///   <item><description>LRU-based eviction when atlas is full</description></item>
-///   <item><description>Automatic defragmentation when fragmentation exceeds threshold</description></item>
-///   <item><description>Metrics for monitoring atlas usage</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>How It Works:</b>
-/// <list type="number">
-///   <item><description>Textures are packed into atlas pages (default: 2048x2048)</description></item>
-///   <item><description>Each page has a packer that manages free space</description></item>
-///   <item><description>If a page is full, the next page is used</description></item>
-///   <item><description>If all pages are full, LRU eviction frees space</description></item>
-///   <item><description>Fragmentation is monitored and defragmented automatically</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get the singleton instance
-/// var atlas = AtlasManager.Instance;
-/// 
-/// // Pack a texture
-/// if (atlas.TryPack(sfTexture, srcRect, out var packedRect, out var pageId))
-/// {
-///     // Texture was packed at packedRect on page pageId
-///     var pageTexture = atlas.GetPageTexture(pageId);
-/// }
-/// 
-/// // Get atlas metrics
-/// var metrics = atlas.GetMetrics();
-/// Console.WriteLine($"Atlas usage: {metrics.PercentageFull:F1}%");
-/// 
-/// // Clear all atlas data
-/// atlas.Clear();
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be accessed from the main thread.
-/// </para>
-/// </remarks>
 public sealed class AtlasManager
 {
     private struct AtlasSlot
@@ -73,60 +24,63 @@ public sealed class AtlasManager
         public LinkedListNode<(uint, Rect2)> LruNode;
     }
 
+    private readonly struct PendingDefragMove
+    {
+        public int PageId { get; }
+        public Rect2 OldRect { get; }
+        public Rect2 NewRect { get; }
+
+        public PendingDefragMove(int pageId, Rect2 oldRect, Rect2 newRect)
+        {
+            PageId = pageId;
+            OldRect = oldRect;
+            NewRect = newRect;
+        }
+    }
+
     private sealed class AtlasPage
     {
-        public SFRenderTexture RenderTexture;
         public Texture Texture;
+        public IGraphicsTexture GraphicsTexture;
+        public IGraphicsDevice GraphicsDevice;
+        public byte[] Pixels;
         public IAtlasPacker Packer;
         public bool IsActive;
 
-        public AtlasPage(int width, int height, IAtlasPacker packer)
+        public AtlasPage(IAtlasPacker packer)
         {
-            RenderTexture = new SFRenderTexture(new((uint)width, (uint)height));
-            Texture = new Texture(RenderTexture);
             Packer = packer;
-            IsActive = false;
+        }
+
+        public void DisposeGraphics()
+        {
+            Texture?.Dispose();
+            Texture = null;
+
+            GraphicsTexture?.Dispose();
+            GraphicsTexture = null;
+            GraphicsDevice = null;
         }
     }
 
     private static readonly Lazy<AtlasManager> _instance = new(() => new AtlasManager());
-    private readonly Dictionary<(uint NativeHandle, Rect2 SrcRect), AtlasSlot> _packedMap;
-    private readonly List<AtlasPage> _pages;
-    private readonly LinkedList<(uint NativeHandle, Rect2 SrcRect)> _lruList;
-    private readonly Queue<(int PageId, Rect2 OldRect, Rect2 NewRect)> _pendingDefragMoves;
-    private readonly HashSet<int> _pagesWithPendingMoves;
+    private readonly Dictionary<(uint TextureId, Rect2 SrcRect), AtlasSlot> _packedMap = [];
+    private readonly List<AtlasPage> _pages = [];
+    private readonly LinkedList<(uint TextureId, Rect2 SrcRect)> _lruList = [];
+    private readonly Queue<PendingDefragMove> _pendingDefragMoves = [];
+    private readonly HashSet<int> _pagesWithPendingMoves = [];
+
     private int _pageSize;
     private int _pageCount;
     private int _evictionCount;
     private bool _isDefragging;
 
-
-    /// <summary>
-    /// Gets the singleton instance of the atlas manager.
-    /// </summary>
     public static AtlasManager Instance => _instance.Value;
-
-    /// <summary>
-    /// Gets a value indicating whether defragmentation is currently in progress.
-    /// </summary>
     public bool IsDefragging => _isDefragging;
-
-    /// <summary>
-    /// Gets the number of pending defragmentation moves remaining.
-    /// </summary>
     public int PendingDefragMoves => _pendingDefragMoves.Count;
-
 
     private AtlasManager()
     {
-        _packedMap = new Dictionary<(uint, Rect2), AtlasSlot>();
-        _pages = new List<AtlasPage>();
-        _lruList = new LinkedList<(uint, Rect2)>();
-        _pendingDefragMoves = new Queue<(int, Rect2, Rect2)>();
-        _pagesWithPendingMoves = new HashSet<int>();
-        _evictionCount = 0;
-        _isDefragging = false;
-
         Initialize();
     }
 
@@ -136,7 +90,7 @@ public sealed class AtlasManager
         _pageSize = settings.AtlasPageSize;
         _pageCount = settings.AtlasPageCount;
 
-        Logger.Instance.InfoWithCategory("Atlas", "Initializing atlas: {0} pages of {1}x{1}",
+        Logger.Instance.InfoWithCategory("Atlas", "Initializing renderer atlas: {0} pages of {1}x{1}",
             _pageCount, _pageSize);
 
         for (int i = 0; i < _pageCount; i++)
@@ -145,103 +99,116 @@ public sealed class AtlasManager
                 ? (IAtlasPacker)Activator.CreateInstance(settings.AtlasPacker, [_pageSize, _pageSize])
                 : new SkylinePacker(_pageSize, _pageSize);
 
-            _pages.Add(new AtlasPage(_pageSize, _pageSize, pagePacker));
+            _pages.Add(new AtlasPage(pagePacker));
         }
     }
 
-    /// <summary>
-    /// Attempts to pack a texture into the atlas.
-    /// </summary>
-    /// <param name="texture">The SFML texture to pack.</param>
-    /// <param name="srcRect">The source rectangle within the texture to pack.</param>
-    /// <param name="packedRect">When this method returns, contains the packed position and size if successful; otherwise, <see langword="default"/>.</param>
-    /// <param name="pageId">When this method returns, contains the page index if successful; otherwise, -1.</param>
-    /// <returns><see langword="true"/> if the texture was successfully packed; otherwise, <see langword="false"/>.</returns>
-    /// <remarks>
-    /// <para>
-    /// This method attempts to pack the specified texture region into the atlas.
-    /// If the texture is already packed, it returns the existing packed position.
-    /// </para>
-    /// <para>
-    /// The packing process:
-    /// <list type="number">
-    ///   <item><description>Checks if the texture is already packed (cache hit)</description></item>
-    ///   <item><description>Searches for free space in existing pages</description></item>
-    ///   <item><description>Defragments the most fragmented page if no space is found</description></item>
-    ///   <item><description>Evicts least recently used textures if all pages are full</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// If successful, the <paramref name="packedRect"/> contains the position
-    /// (X, Y) and size where the texture should be used in the atlas page.
-    /// </para>
-    /// </remarks>
-    public bool TryPack(SFTexture texture, Rect2 srcRect, out Rect2 packedRect, out int pageId)
+    public bool TryPack(Texture texture, Rect2 srcRect, out Rect2 packedRect, out int pageId)
     {
-        packedRect = default;
-        pageId = -1;
-
-        if (srcRect.Width > _pageSize || srcRect.Height > _pageSize)
+        if (texture == null)
         {
-            Logger.Instance.WarningWithCategory("Atlas",
-                "Texture {0}x{1} exceeds page size {2}x{2}",
-                srcRect.Width, srcRect.Height, _pageSize);
+            packedRect = default;
+            pageId = -1;
             return false;
         }
 
-        if (texture == null || texture.IsInvalid)
+        if (TryGetCached(texture.Id, srcRect, out packedRect, out pageId))
+            return true;
+
+        if (!texture.TryCopyPixelRegion(srcRect, out byte[] pixels, out int width, out int height))
+        {
+            packedRect = default;
+            pageId = -1;
             return false;
+        }
 
-        var key = (texture.NativeHandle, srcRect);
+        return TryPackNew(texture.Id, srcRect, pixels, width, height, out packedRect, out pageId);
+    }
 
-        // Cache hit check
+    internal bool TryPack(Font font, Rect2 srcRect, out Rect2 packedRect, out int pageId)
+    {
+        if (font == null)
+        {
+            packedRect = default;
+            pageId = -1;
+            return false;
+        }
+
+        if (TryGetCached(font.Id, srcRect, out packedRect, out pageId))
+            return true;
+
+        if (!font.TryCopyPixelRegion(srcRect, out byte[] pixels, out int width, out int height))
+        {
+            packedRect = default;
+            pageId = -1;
+            return false;
+        }
+
+        return TryPackNew(font.Id, srcRect, pixels, width, height, out packedRect, out pageId);
+    }
+
+    private bool TryGetCached(uint textureId, Rect2 srcRect, out Rect2 packedRect, out int pageId)
+    {
+        var key = (textureId, srcRect);
         if (_packedMap.TryGetValue(key, out var slot))
         {
-            // If this page has pending defrag moves, don't return the cached
-            // position because the texture data hasn't physically moved yet
             if (_pagesWithPendingMoves.Contains(slot.PageId))
             {
+                packedRect = default;
+                pageId = -1;
                 return false;
             }
 
             packedRect = slot.PackedRect;
             pageId = slot.PageId;
-
             _lruList.Remove(slot.LruNode);
             _lruList.AddFirst(slot.LruNode);
-
             return true;
         }
 
-        int width = (int)srcRect.Width;
-        int height = (int)srcRect.Height;
+        packedRect = default;
+        pageId = -1;
+        return false;
+    }
 
-        // PASS 1: Try to pack in any page that has space
-        for (int i = 0; i < _pages.Count; i++)
+    private bool TryPackNew(
+        uint textureId,
+        Rect2 srcRect,
+        byte[] pixels,
+        int width,
+        int height,
+        out Rect2 packedRect,
+        out int pageId)
+    {
+        packedRect = default;
+        pageId = -1;
+
+        if (width <= 0 || height <= 0 || width > _pageSize || height > _pageSize)
         {
-            var page = _pages[i];
-            if (!page.IsActive)
-            {
-                page.IsActive = true;
-            }
-
-            // Skip pages being defragmented
-            if (_pagesWithPendingMoves.Contains(i))
-                continue;
-
-            if (page.Packer.TryPack(width, height, out var rect))
-            {
-                return PackIntoPage(texture, srcRect, key, i, rect, out packedRect, out pageId);
-            }
+            Logger.Instance.WarningWithCategory("Atlas",
+                "Texture {0}x{1} exceeds page size {2}x{2}", width, height, _pageSize);
+            return false;
         }
 
-        // PASS 2: No page has space. Find the most fragmented page and defrag it
+        var key = (textureId, srcRect);
+
+        for (int i = 0; i < _pages.Count; i++)
+        {
+            if (_pagesWithPendingMoves.Contains(i))
+                continue;
+            if (!EnsurePageResources(i))
+                continue;
+
+            var page = _pages[i];
+            if (page.Packer.TryPack(width, height, out var rect))
+                return PackIntoPage(pixels, width, height, key, i, rect, out packedRect, out pageId);
+        }
+
         int bestPageIndex = -1;
         float highestFragmentation = 0f;
 
         for (int i = 0; i < _pages.Count; i++)
         {
-            // Skip pages being defragmented
             if (_pagesWithPendingMoves.Contains(i))
                 continue;
 
@@ -253,64 +220,76 @@ public sealed class AtlasManager
             }
         }
 
-        // Defrag the most fragmented page if it exceeds threshold
         if (bestPageIndex >= 0 && highestFragmentation > GameSettings.Instance.AtlasDefragThreshold)
         {
             var page = _pages[bestPageIndex];
-
-            // Get all textures on this page before defrag
             var pageTextures = _packedMap
                 .Where(kvp => kvp.Value.PageId == bestPageIndex)
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.PackedRect);
 
-            // Defrag and get move information
             var moves = page.Packer.Defrag();
-
-            // Queue moves for processing over multiple frames
-            QueueDefragMoves(bestPageIndex, moves);
-
-            // Update packed map with new positions immediately
-            foreach (var kvp in pageTextures)
+            if (moves.Count > 0)
             {
-                var move = moves.FirstOrDefault(m => m.OldRect == kvp.Value);
-                if (move != default)
+                PrepareAndQueueDefrag(bestPageIndex, moves);
+
+                foreach (var kvp in pageTextures)
                 {
-                    var existingSlot = _packedMap[kvp.Key];
-                    existingSlot.PackedRect = move.NewRect;
-                    _packedMap[kvp.Key] = existingSlot;
+                    var move = moves.FirstOrDefault(m => m.OldRect == kvp.Value);
+                    if (move != default)
+                    {
+                        var existingSlot = _packedMap[kvp.Key];
+                        existingSlot.PackedRect = move.NewRect;
+                        _packedMap[kvp.Key] = existingSlot;
+                    }
                 }
-            }
 
-            // Try to pack into the defragmented page
-            if (page.Packer.TryPack(width, height, out var rect))
-            {
-                return PackIntoPage(texture, srcRect, key, bestPageIndex, rect, out packedRect, out pageId);
+                // The page is deliberately unavailable until its final layout has
+                // been uploaded over the configured number of frames. The caller
+                // falls back to the source texture for this draw.
+                return false;
             }
         }
 
-        // PASS 3: Try eviction
-        if (EvictAndRepack(key, width, height, out packedRect, out pageId))
+        if (EvictAndRepack(key, pixels, width, height, out packedRect, out pageId))
             return true;
 
         Logger.Instance.WarningWithCategory("Atlas",
-            "Failed to pack texture {0}x{1} - atlas full or too fragmented",
-            width, height);
-
+            "Failed to pack texture {0}x{1} - atlas full or too fragmented", width, height);
         return false;
     }
 
-    /// <summary>
-    /// Packs a texture into a specific atlas page.
-    /// </summary>
-    private bool PackIntoPage(SFTexture texture, Rect2 srcRect, (uint NativeHandle, Rect2 SrcRect) key,
-        int pageIndex, Rect2 rect, out Rect2 packedRect, out int pageId)
+    private bool PackIntoPage(
+        byte[] pixels,
+        int width,
+        int height,
+        (uint TextureId, Rect2 SrcRect) key,
+        int pageIndex,
+        Rect2 rect,
+        out Rect2 packedRect,
+        out int pageId)
     {
         var page = _pages[pageIndex];
+        if (!EnsurePageResources(pageIndex))
+        {
+            page.Packer.Free(rect);
+            packedRect = default;
+            pageId = -1;
+            return false;
+        }
 
-        CopyTo(page.RenderTexture, texture, srcRect, new Vect2(rect.Left, rect.Top));
+        int dstX = (int)rect.X;
+        int dstY = (int)rect.Y;
+        RgbaPixelBuffer.Blit(pixels, width, height, page.Pixels, _pageSize, _pageSize, dstX, dstY);
+        page.GraphicsDevice.UpdateTexture(
+            page.GraphicsTexture,
+            dstX,
+            dstY,
+            width,
+            height,
+            TextureFormat.RGBA8,
+            pixels);
 
         var lruNode = _lruList.AddFirst(key);
-
         _packedMap[key] = new AtlasSlot
         {
             PageId = pageIndex,
@@ -318,31 +297,14 @@ public sealed class AtlasManager
             LruNode = lruNode
         };
 
-        Logger.Instance.DebugWithCategory("Atlas", "Packed {0}x{1} into page {2} (total: {3})",
-            (int)srcRect.Width, (int)srcRect.Height, pageIndex, _packedMap.Count);
+        Logger.Instance.DebugWithCategory("Atlas", "Packed {0}x{1} into renderer page {2} (total: {3})",
+            width, height, pageIndex, _packedMap.Count);
 
         packedRect = rect;
         pageId = pageIndex;
-
         return true;
     }
 
-    /// <summary>
-    /// Processes pending defragmentation moves. Call this once per frame.
-    /// </summary>
-    /// <param name="maxMovesPerFrame">Maximum number of texture moves to process this frame.</param>
-    /// <returns><see langword="true"/> if there are still moves remaining; otherwise, <see langword="false"/>.</returns>
-    /// <remarks>
-    /// <para>
-    /// This method spreads the work of defragmentation across multiple frames
-    /// to avoid frame rate hitches. Each call processes up to
-    /// <paramref name="maxMovesPerFrame"/> texture moves.
-    /// </para>
-    /// <para>
-    /// Call this method once per frame in your main game loop, ideally after
-    /// updating game logic but before rendering.
-    /// </para>
-    /// </remarks>
     public bool ProcessPendingDefragMoves(int maxMovesPerFrame = 5)
     {
         if (_pendingDefragMoves.Count == 0)
@@ -358,7 +320,12 @@ public sealed class AtlasManager
             var move = _pendingDefragMoves.Dequeue();
             var page = _pages[move.PageId];
 
-            MoveSingleTexture(page.RenderTexture, move.OldRect, move.NewRect);
+            if (EnsurePageResources(move.PageId))
+            {
+                UploadRegion(page, move.OldRect);
+                UploadRegion(page, move.NewRect);
+            }
+
             movesProcessed++;
         }
 
@@ -366,145 +333,193 @@ public sealed class AtlasManager
         {
             _isDefragging = false;
             _pagesWithPendingMoves.Clear();
-            Logger.Instance.DebugWithCategory("Atlas", "Defragmentation complete");
+            Logger.Instance.DebugWithCategory("Atlas", "Renderer atlas defragmentation complete");
         }
 
         return _pendingDefragMoves.Count > 0;
     }
 
-    /// <summary>
-    /// Queues defragmentation moves for processing over multiple frames.
-    /// </summary>
-    private void QueueDefragMoves(int pageId, List<(Rect2 OldRect, Rect2 NewRect)> moves)
+    private void PrepareAndQueueDefrag(int pageId, List<(Rect2 OldRect, Rect2 NewRect)> moves)
     {
-        foreach (var (oldRect, newRect) in moves)
+        var page = _pages[pageId];
+        if (!EnsurePageResources(pageId))
+            return;
+
+        byte[] sourceSnapshot = page.Pixels.ToArray();
+        byte[] finalPixels = sourceSnapshot.ToArray();
+
+        // Build the final page from one stable snapshot so overlapping moves are safe.
+        foreach (var move in moves)
+            RgbaPixelBuffer.ClearRegion(finalPixels, _pageSize, _pageSize, move.OldRect);
+
+        foreach (var move in moves)
         {
-            _pendingDefragMoves.Enqueue((pageId, oldRect, newRect));
+            if (RgbaPixelBuffer.TryCopyRegion(
+                    sourceSnapshot,
+                    _pageSize,
+                    _pageSize,
+                    move.OldRect,
+                    out byte[] region,
+                    out int width,
+                    out int height))
+            {
+                RgbaPixelBuffer.Blit(
+                    region,
+                    width,
+                    height,
+                    finalPixels,
+                    _pageSize,
+                    _pageSize,
+                    (int)move.NewRect.X,
+                    (int)move.NewRect.Y);
+            }
+
+            _pendingDefragMoves.Enqueue(new PendingDefragMove(pageId, move.OldRect, move.NewRect));
         }
+
+        page.Pixels = finalPixels;
         _pagesWithPendingMoves.Add(pageId);
         _isDefragging = true;
 
         Logger.Instance.DebugWithCategory("Atlas",
-            "Queued {0} defrag moves for page {1} (total pending: {2})",
+            "Queued {0} renderer atlas defrag moves for page {1} (total pending: {2})",
             moves.Count, pageId, _pendingDefragMoves.Count);
     }
 
-    private void MoveSingleTexture(SFRenderTexture renderTexture, Rect2 oldRect, Rect2 newRect)
-    {
-        if (oldRect == newRect)
-            return;
-
-        renderTexture.Display();
-
-        var tempRenderTexture = new SFRenderTexture(new((uint)oldRect.Width, (uint)oldRect.Height));
-
-        try
-        {
-            var sprite = new SFSprite(renderTexture.Texture)
-            {
-                TextureRect = new SFIntRect(
-                    new((int)oldRect.Left, (int)oldRect.Top),
-                    new((int)oldRect.Width, (int)oldRect.Height)
-                ),
-                Position = new SFVector2f(0, 0)
-            };
-
-            tempRenderTexture.Clear(Color.Transparent);
-            tempRenderTexture.Draw(sprite);
-            tempRenderTexture.Display();
-            sprite.Dispose();
-
-            var clearImage = new SFImage(new((uint)oldRect.Width, (uint)oldRect.Height), Color.Transparent);
-            renderTexture.Texture.Update(clearImage, new((uint)oldRect.Left, (uint)oldRect.Top));
-            clearImage.Dispose();
-
-            renderTexture.Texture.Update(tempRenderTexture.Texture, new((uint)newRect.Left, (uint)newRect.Top));
-        }
-        finally
-        {
-            tempRenderTexture.Dispose();
-        }
-    }
-
-    private bool EvictAndRepack((uint, Rect2) key, int width, int height, out Rect2 packedRect, out int pageId)
+    private bool EvictAndRepack(
+        (uint TextureId, Rect2 SrcRect) key,
+        byte[] pixels,
+        int width,
+        int height,
+        out Rect2 packedRect,
+        out int pageId)
     {
         packedRect = default;
         pageId = -1;
 
-        float totalUsed = GetTotalUsedPercentage();
-        if (totalUsed < 0.8f)
+        if (GetTotalUsedPercentage() < 0.8f || _lruList.Count == 0)
             return false;
 
-        if (_lruList.Count == 0)
-            return false;
-
-        var lruKey = _lruList.Last.Value;
-
-        if (_packedMap.TryGetValue(lruKey, out var slot))
+        LinkedListNode<(uint TextureId, Rect2 SrcRect)> node = _lruList.Last;
+        while (node != null)
         {
-            var page = _pages[slot.PageId];
-
-            ClearAtlasArea(page.RenderTexture, slot.PackedRect);
-
-            page.Packer.Free(slot.PackedRect);
-            _packedMap.Remove(lruKey);
-            _lruList.RemoveLast();
-            _evictionCount++;
-
-            if (page.Packer.TryPack(width, height, out var rect))
+            var previous = node.Previous;
+            if (_packedMap.TryGetValue(node.Value, out var slot) &&
+                !_pagesWithPendingMoves.Contains(slot.PageId))
             {
-                var lruNode = _lruList.AddFirst(key);
+                var page = _pages[slot.PageId];
+                if (!EnsurePageResources(slot.PageId))
+                    return false;
 
-                _packedMap[key] = new AtlasSlot
+                RgbaPixelBuffer.ClearRegion(page.Pixels, _pageSize, _pageSize, slot.PackedRect);
+                UploadRegion(page, slot.PackedRect);
+
+                page.Packer.Free(slot.PackedRect);
+                _packedMap.Remove(node.Value);
+                _lruList.Remove(node);
+                _evictionCount++;
+
+                if (page.Packer.TryPack(width, height, out var rect))
                 {
-                    PageId = slot.PageId,
-                    PackedRect = rect,
-                    LruNode = lruNode
-                };
+                    bool packed = PackIntoPage(
+                        pixels,
+                        width,
+                        height,
+                        key,
+                        slot.PageId,
+                        rect,
+                        out packedRect,
+                        out pageId);
 
-                packedRect = rect;
-                pageId = slot.PageId;
+                    if (packed)
+                    {
+                        Logger.Instance.DebugWithCategory("Atlas",
+                            "Evicted texture from renderer page {0} to make room (total evictions: {1})",
+                            slot.PageId, _evictionCount);
+                    }
 
-                Logger.Instance.DebugWithCategory("Atlas",
-                    "Evicted texture from page {0} to make room (total evictions: {1})",
-                    slot.PageId, _evictionCount);
-                return true;
+                    return packed;
+                }
             }
+
+            node = previous;
         }
 
         return false;
     }
 
-    private void ClearAtlasArea(SFRenderTexture renderTexture, Rect2 rect)
-    {
-        var clearImage = new SFImage(new((uint)rect.Width, (uint)rect.Height), Color.Transparent);
-        renderTexture.Texture.Update(clearImage, new((uint)rect.Left, (uint)rect.Top));
-    }
-
-    /// <summary>
-    /// Gets the texture for a specific atlas page.
-    /// </summary>
-    /// <param name="pageId">The page index.</param>
-    /// <returns>The atlas page texture, or <see langword="null"/> if the page is invalid or inactive.</returns>
-    /// <remarks>
-    /// <para>
-    /// This method returns the texture for the specified atlas page. The texture
-    /// contains all packed textures arranged within the page.
-    /// </para>
-    /// <para>
-    /// This is used by the renderer to draw sprites from the atlas.
-    /// </para>
-    /// </remarks>
-    public SFTexture GetPageTexture(int pageId)
+    public Texture GetPageTexture(int pageId)
     {
         if (pageId < 0 || pageId >= _pages.Count)
             return null;
 
         var page = _pages[pageId];
-        if (!page.IsActive)
+        if (!page.IsActive || _pagesWithPendingMoves.Contains(pageId))
+            return null;
+
+        if (!EnsurePageResources(pageId))
             return null;
 
         return page.Texture;
+    }
+
+    private bool EnsurePageResources(int pageId)
+    {
+        if (pageId < 0 || pageId >= _pages.Count)
+            return false;
+        if (!RendererRuntime.TryGetDevice(out IGraphicsDevice device))
+            return false;
+
+        var page = _pages[pageId];
+
+        if (page.GraphicsTexture != null && !ReferenceEquals(page.GraphicsDevice, device))
+            page.DisposeGraphics();
+
+        page.Pixels ??= new byte[checked(_pageSize * _pageSize * 4)];
+
+        if (page.GraphicsTexture == null)
+        {
+            var description = new TextureDescription(
+                _pageSize,
+                _pageSize,
+                TextureFormat.RGBA8,
+                TextureUsage.Sampled | TextureUsage.TransferDestination,
+                TextureFilter.Nearest,
+                TextureFilter.Nearest,
+                TextureWrap.ClampToEdge,
+                TextureWrap.ClampToEdge);
+
+            page.GraphicsDevice = device;
+            page.GraphicsTexture = device.CreateTexture(description, page.Pixels);
+            page.Texture = new Texture(device, page.GraphicsTexture, AssetType.Atlas);
+        }
+
+        page.IsActive = true;
+        return page.GraphicsTexture.IsValid;
+    }
+
+    private void UploadRegion(AtlasPage page, Rect2 rect)
+    {
+        if (!RgbaPixelBuffer.TryCopyRegion(
+                page.Pixels,
+                _pageSize,
+                _pageSize,
+                rect,
+                out byte[] region,
+                out int width,
+                out int height))
+        {
+            return;
+        }
+
+        page.GraphicsDevice.UpdateTexture(
+            page.GraphicsTexture,
+            (int)rect.X,
+            (int)rect.Y,
+            width,
+            height,
+            TextureFormat.RGBA8,
+            region);
     }
 
     private float GetTotalUsedPercentage()
@@ -521,32 +536,9 @@ public sealed class AtlasManager
             usedSpace += page.Packer.UsedSpace;
         }
 
-        if (totalSpace == 0)
-            return 0f;
-
-        return (float)usedSpace / totalSpace;
+        return totalSpace == 0 ? 0f : (float)usedSpace / totalSpace;
     }
 
-    /// <summary>
-    /// Gets metrics about the current atlas usage.
-    /// </summary>
-    /// <returns>An <see cref="AtlasMetrics"/> structure containing usage statistics.</returns>
-    /// <remarks>
-    /// <para>
-    /// This method provides detailed metrics about the atlas state including:
-    /// <list type="bullet">
-    ///   <item><description>Total and used pages</description></item>
-    ///   <item><description>Total and used space in bytes</description></item>
-    ///   <item><description>Percentage full</description></item>
-    ///   <item><description>Number of packed textures</description></item>
-    ///   <item><description>Number of evictions performed</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// These metrics are useful for monitoring atlas efficiency and
-    /// diagnosing performance issues.
-    /// </para>
-    /// </remarks>
     public AtlasMetrics GetMetrics()
     {
         int totalSpace = 0;
@@ -575,22 +567,9 @@ public sealed class AtlasManager
         };
     }
 
-    /// <summary>
-    /// Clears all atlas pages and resets the atlas manager to its initial state.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This method removes all packed textures, clears all pages, and resets
-    /// the eviction counter. All atlas textures are disposed and will need
-    /// to be repacked when used again.
-    /// </para>
-    /// <para>
-    /// This is useful when reloading assets or switching scenes.
-    /// </para>
-    /// </remarks>
     public void Clear()
     {
-        Logger.Instance.InfoWithCategory("Atlas", "Clearing atlas: {0} textures, {1} pages",
+        Logger.Instance.InfoWithCategory("Atlas", "Clearing renderer atlas: {0} textures, {1} pages",
             _packedMap.Count, _pages.Count);
 
         _packedMap.Clear();
@@ -602,31 +581,11 @@ public sealed class AtlasManager
         foreach (var page in _pages)
         {
             page.Packer.Clear();
-            page.Texture?.Dispose();
-            page.RenderTexture?.Dispose();
+            page.DisposeGraphics();
+            page.Pixels = null;
             page.IsActive = false;
         }
 
         _evictionCount = 0;
-    }
-
-    private void CopyTo(SFRenderTexture target, SFTexture texture, Rect2 srcRect, Vect2 destination)
-    {
-        if (texture == null || texture.IsInvalid || target == null)
-            return;
-
-        var sprite = new SFSprite(texture)
-        {
-            TextureRect = new SFIntRect(
-                new((int)srcRect.Left, (int)srcRect.Top),
-                new((int)srcRect.Width, (int)srcRect.Height)
-            ),
-            Position = new SFVector2f(destination.X, destination.Y)
-        };
-
-        target.Draw(sprite);
-        target.Display();
-
-        sprite.Dispose();
     }
 }

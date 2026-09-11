@@ -1,3 +1,5 @@
+using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
+
 // ============================================================================
 //  SpriteBatcher.cs
 // ============================================================================
@@ -97,7 +99,8 @@ public sealed class SpriteBatcher : BaseBatcher
 {
     private struct DrawCommand
     {
-        public SFTexture Texture;
+        public Texture Texture;
+        public Font Font;
         public float Depth;
         public Rect2 DstRect;
         public Rect2 SrcRect;
@@ -179,9 +182,9 @@ public sealed class SpriteBatcher : BaseBatcher
     /// </summary>
     protected override unsafe void BuildVertices()
     {
-        fixed (SFVertex* vertexPtr = _vertexData)
+        fixed (RenderVertex* vertexPtr = _vertexData)
         {
-            SFVertex* currentPtr = vertexPtr;
+            RenderVertex* currentPtr = vertexPtr;
             for (int i = 0; i < _cmdCount; i++)
             {
                 WriteQuadUnsafe(currentPtr, _cmds[i]);
@@ -194,7 +197,7 @@ public sealed class SpriteBatcher : BaseBatcher
     /// Determines whether two commands can be batched together.
     /// </summary>
     protected override bool CanBatchTogether(int indexA, int indexB)
-        => _cmds[indexA].Texture.NativeHandle == _cmds[indexB].Texture.NativeHandle;
+        => GetTextureKey(_cmds[indexA]) == GetTextureKey(_cmds[indexB]);
 
     /// <summary>
     /// Sets the render state for a group of commands.
@@ -203,11 +206,10 @@ public sealed class SpriteBatcher : BaseBatcher
     {
         base.SetRenderStateForGroup(commandIndex);
 
-        var texture = _cmds[commandIndex].Texture;
-        _renderStates.Texture = texture;
+        var cmd = _cmds[commandIndex];
+        _renderStates.Texture = cmd.Texture;
+        _renderStates.Font = cmd.Font;
 
-        if (_currentShader is Shader shaderAsset)
-            shaderAsset.SetUniform("uTexture", texture);
     }
 
     /// <summary>
@@ -246,7 +248,7 @@ public sealed class SpriteBatcher : BaseBatcher
         if (pageTexture == null)
             return;
 
-        EngineDrawSFMLBypassAtlas(pageTexture, dstRect, new Rect2(Vect2.Zero, pageTexture.Size), Color.White, depth);
+        EngineDrawBypassAtlas(pageTexture, dstRect, new Rect2(Vect2.Zero, pageTexture.Size), Color.White, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
     }
     #endregion
 
@@ -722,8 +724,8 @@ public sealed class SpriteBatcher : BaseBatcher
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int Compare(DrawCommand a, DrawCommand b)
         {
-            bool aValue = a.Texture != null && !a.Texture.IsInvalid;
-            bool bValue = b.Texture != null && !b.Texture.IsInvalid;
+            bool aValue = IsTextureSourceValid(a);
+            bool bValue = IsTextureSourceValid(b);
 
             if (!aValue && !bValue) return 0;
             if (!aValue) return -1;
@@ -740,8 +742,8 @@ public sealed class SpriteBatcher : BaseBatcher
                 if (b.Depth > a.Depth) return 1;
             }
 
-            uint texA = a.Texture.NativeHandle;
-            uint texB = b.Texture.NativeHandle;
+            uint texA = GetTextureKey(a);
+            uint texB = GetTextureKey(b);
             if (texA < texB) return -1;
             if (texA > texB) return 1;
 
@@ -749,29 +751,6 @@ public sealed class SpriteBatcher : BaseBatcher
         }
 
         public void UpdateMode(SortMode sortMode) => _sortMode = sortMode;
-    }
-
-    private void EngineDrawSFMLBypassAtlas(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float depth = 0.999f)
-    {
-        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
-        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
-        if (_cmdCount >= _cmds.Length) ResizeBuffers();
-        if (!IsVisible(dstRect)) return;
-
-        _cmds[_cmdCount] = new DrawCommand
-        {
-            Texture = texture,
-            Depth = depth,
-            DstRect = dstRect,
-            SrcRect = srcRect,
-            Color = color,
-            Rotation = 0f,
-            Scale = Vect2.One,
-            Origin = Vect2.Zero,
-            Effects = TextureEffects.None
-        };
-
-        _cmdCount++;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -839,7 +818,70 @@ public sealed class SpriteBatcher : BaseBatcher
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void EngineDraw(SFTexture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
+    private void EngineDraw(Font font, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
+        Vect2 origin, TextureEffects effects, float depth, bool canPack)
+    {
+        if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
+        if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
+        if (font == null) return;
+
+        if (!font.IsValid)
+            font.Load();
+
+        var scaleWidth = dstRect.Width * scale.X;
+        var scaleHeight = dstRect.Height * scale.Y;
+        var actualPos = new Vect2(dstRect.X - origin.X * scale.X, dstRect.Y - origin.Y * scale.Y);
+        var visibleRect = new Rect2(actualPos, new Vect2(scaleWidth, scaleHeight));
+
+        if (!IsVisible(visibleRect)) return;
+        if (_cmdCount >= _cmds.Length) ResizeBuffers();
+
+        if (canPack && AtlasManager.Instance.TryPack(font, srcRect, out var packedRect, out var pageId))
+        {
+            _cmds[_cmdCount] = new DrawCommand
+            {
+                Texture = AtlasManager.Instance.GetPageTexture(pageId),
+                Font = null,
+                Depth = depth,
+                DstRect = dstRect,
+                SrcRect = packedRect,
+                Color = color,
+                Rotation = rotation,
+                Scale = scale,
+                Origin = origin,
+                Effects = effects
+            };
+        }
+        else
+        {
+            _cmds[_cmdCount] = new DrawCommand
+            {
+                Texture = null,
+                Font = font,
+                Depth = depth,
+                DstRect = dstRect,
+                SrcRect = srcRect,
+                Color = color,
+                Rotation = rotation,
+                Scale = scale,
+                Origin = origin,
+                Effects = effects
+            };
+        }
+
+        _cmdCount++;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint GetTextureKey(in DrawCommand command)
+        => command.Texture?.Id ?? command.Font?.Id ?? 0u;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsTextureSourceValid(in DrawCommand command)
+        => command.Texture?.IsValid ?? command.Font?.IsValid ?? false;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void EngineDraw(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale,
         Vect2 origin, TextureEffects effects, float depth, bool canPack)
     {
         if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
@@ -858,6 +900,7 @@ public sealed class SpriteBatcher : BaseBatcher
             _cmds[_cmdCount] = new DrawCommand
             {
                 Texture = AtlasManager.Instance.GetPageTexture(pageId),
+                Font = null,
                 Depth = depth,
                 DstRect = dstRect,
                 SrcRect = packedRect,
@@ -873,6 +916,7 @@ public sealed class SpriteBatcher : BaseBatcher
             _cmds[_cmdCount] = new DrawCommand
             {
                 Texture = texture,
+                Font = null,
                 Depth = depth,
                 DstRect = dstRect,
                 SrcRect = srcRect,
@@ -905,6 +949,7 @@ public sealed class SpriteBatcher : BaseBatcher
         _cmds[_cmdCount] = new DrawCommand
         {
             Texture = texture,
+            Font = null,
             Depth = depth,
             DstRect = dstRect,
             SrcRect = srcRect,
@@ -918,7 +963,7 @@ public sealed class SpriteBatcher : BaseBatcher
         _cmdCount++;
     }
 
-    private unsafe void WriteQuadUnsafe(SFVertex* ptr, in DrawCommand cmd)
+    private unsafe void WriteQuadUnsafe(RenderVertex* ptr, in DrawCommand cmd)
     {
         Vect2* corners = stackalloc Vect2[4];
         float width = cmd.DstRect.Width * cmd.Scale.X;
@@ -979,12 +1024,12 @@ public sealed class SpriteBatcher : BaseBatcher
 
         var color = cmd.Color;
 
-        ptr[0] = new SFVertex(corners[0], color, new(srcLeft, srcTop));
-        ptr[1] = new SFVertex(corners[1], color, new(srcRight, srcTop));
-        ptr[2] = new SFVertex(corners[2], color, new(srcLeft, srcBottom));
-        ptr[3] = new SFVertex(corners[1], color, new(srcRight, srcTop));
-        ptr[4] = new SFVertex(corners[3], color, new(srcRight, srcBottom));
-        ptr[5] = new SFVertex(corners[2], color, new(srcLeft, srcBottom));
+        ptr[0] = new RenderVertex(corners[0], color, new(srcLeft, srcTop));
+        ptr[1] = new RenderVertex(corners[1], color, new(srcRight, srcTop));
+        ptr[2] = new RenderVertex(corners[2], color, new(srcLeft, srcBottom));
+        ptr[3] = new RenderVertex(corners[1], color, new(srcRight, srcTop));
+        ptr[4] = new RenderVertex(corners[3], color, new(srcRight, srcBottom));
+        ptr[5] = new RenderVertex(corners[2], color, new(srcLeft, srcBottom));
     }
 
     #endregion
