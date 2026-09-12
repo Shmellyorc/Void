@@ -1,9 +1,9 @@
 // ============================================================================
 //  LoopTween.cs
 // ============================================================================
-//  A tween that repeats for a specified number of loops or indefinitely.
+//  Repeating tween with finite or indefinite looping.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,52 +13,13 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A tween that repeats for a specified number of loops or indefinitely.
+/// Repeats interpolation from a starting value to an ending value.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
-/// <para>
-/// The <see cref="LoopTween{T}"/> class extends the standard tween by
-/// adding looping behavior. It can loop a specified number of times or
-/// run indefinitely.
-/// </para>
-/// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a looping tween (infinite)
-/// var tween = new LoopTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     loops: -1
-/// );
-/// 
-/// // Create a looping tween (3 times)
-/// var tween2 = new LoopTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     loops: 3
-/// );
-/// 
-/// // Run the tween
-/// CoroutineManager.Instance.Run(tween);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// Each loop restarts from the beginning after the previous traversal reaches
+/// its duration. A loop count of <c>-1</c> repeats indefinitely. For finite
+/// counts, the count is checked after each completed traversal.
 /// </remarks>
 public sealed class LoopTween<T> : IEnumerator
 {
@@ -72,20 +33,21 @@ public sealed class LoopTween<T> : IEnumerator
     private int _currentLoop;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Loop tweens do not yield a
+    /// value, so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="LoopTween{T}"/> class.
+    /// Initializes a repeating tween.
     /// </summary>
-    /// <param name="from">The starting value.</param>
-    /// <param name="to">The ending value.</param>
-    /// <param name="duration">The duration of each loop in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
-    /// <param name="loops">The number of loops, or -1 for infinite looping.</param>
+    /// <param name="from">The starting value for each traversal.</param>
+    /// <param name="to">The ending value for each traversal.</param>
+    /// <param name="duration">The duration of each traversal in seconds.</param>
+    /// <param name="type">The easing function to apply to normalized progress.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
+    /// <param name="loops">The loop count, or <c>-1</c> to repeat indefinitely.</param>
     public LoopTween(T from, T to, float duration, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate, int loops = -1)
     {
         _from = from;
@@ -98,9 +60,12 @@ public sealed class LoopTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the current traversal using the current frame delta time.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while another traversal remains;
+    /// otherwise, <see langword="false"/> after applying the ending value.
+    /// </returns>
     public bool MoveNext()
     {
         float deltaTime = Game.Instance.FrameTime.DeltaTime;
@@ -128,7 +93,8 @@ public sealed class LoopTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a loop tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

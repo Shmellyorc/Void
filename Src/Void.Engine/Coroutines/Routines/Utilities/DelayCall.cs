@@ -1,9 +1,9 @@
 // ============================================================================
 //  DelayCall.cs
 // ============================================================================
-//  A coroutine that executes a callback after a specified delay.
+//  Coroutine utility that invokes a callback after a scaled-time delay.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,41 +13,12 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Utilities;
 
 /// <summary>
-/// A coroutine that executes a callback after a specified delay.
+/// Waits for a delay, then invokes a callback once.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="DelayCall"/> class waits for the specified duration and then
-/// invokes the provided callback. It is a convenient way to schedule a single
-/// action to occur after a delay.
-/// </para>
-/// <para>
-/// This is useful for:
-/// <list type="bullet">
-///   <item><description>Delayed actions and events</description></item>
-///   <item><description>Timed callbacks</description></item>
-///   <item><description>Simple single-use timers</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Call a method after 2 seconds
-/// CoroutineManager.Instance.Run(new DelayCall(2f, () => Console.WriteLine("Delayed!")));
-/// 
-/// // In a sequence
-/// var sequence = new Sequence(
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new DelayCall(0.5f, () => Console.WriteLine("Half second after tween")),
-///     new Tween&lt;float&gt;(100f, 200f, 1f, EaseType.QuadOut, Lerp, value => x = value)
-/// );
-/// CoroutineManager.Instance.Run(sequence);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// The delay advances with <see cref="FrameTime.DeltaTime"/>, so it is affected
+/// by the game's time scale. A delay less than or equal to zero causes the
+/// callback to run on the first call to <see cref="MoveNext"/>.
 /// </remarks>
 public class DelayCall : IEnumerator
 {
@@ -56,16 +27,18 @@ public class DelayCall : IEnumerator
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the value yielded by this routine, which is always <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DelayCall"/> class.
+    /// Initializes a delayed callback.
     /// </summary>
-    /// <param name="delay">The delay in seconds before the callback is invoked.</param>
-    /// <param name="callback">The action to invoke after the delay.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="callback"/> is null.</exception>
+    /// <param name="delay">The scaled-time delay in seconds.</param>
+    /// <param name="callback">The callback to invoke after the delay.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="callback"/> is <see langword="null"/>.
+    /// </exception>
     public DelayCall(float delay, Action callback)
     {
         _delay = delay;
@@ -74,9 +47,12 @@ public class DelayCall : IEnumerator
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Advances the wait and invokes the callback once the delay has elapsed.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while waiting; otherwise, <see langword="false"/>
+    /// after the callback has been invoked.
+    /// </returns>
     public bool MoveNext()
     {
         if (_elapsed < _delay)
@@ -90,12 +66,13 @@ public class DelayCall : IEnumerator
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases this routine. This implementation performs no work.
     /// </summary>
     public void Dispose() { }
 }

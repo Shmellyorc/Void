@@ -1,9 +1,9 @@
 // ============================================================================
 //  LDtkEntityRef.cs
 // ============================================================================
-//  Represents a reference to an entity instance within an LDtk project.
+//  Entity-instance references parsed from LDtk field values.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -12,72 +12,32 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// Represents a reference to an entity instance within an LDtk project.
+/// Identifies an entity instance and the LDtk containers that own it.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="LDtkEntityRef"/> structure provides a way to reference an
-/// entity instance by its ID, along with the IDs of the containing layer,
-/// level, and world. This is used in LDtk settings that reference other
-/// entities.
-/// </para>
-/// <para>
-/// <b>Properties:</b>
-/// <list type="bullet">
-///   <item><description><see cref="EntityId"/> - The ID of the referenced entity instance</description></item>
-///   <item><description><see cref="LayerId"/> - The ID of the layer containing the entity</description></item>
-///   <item><description><see cref="LevelId"/> - The ID of the level containing the entity</description></item>
-///   <item><description><see cref="WorldId"/> - The ID of the world containing the entity</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get an entity reference from a setting
-/// var entityRef = LDtkSetting.GetEntityRefSetting(settings, "TargetEntity");
-/// 
-/// // Access the entity reference properties
-/// string entityId = entityRef.EntityId;
-/// string layerId = entityRef.LayerId;
-/// string levelId = entityRef.LevelId;
-/// 
-/// // Get the referenced entity from the map
-/// if (map.TryGetEntityById(entityRef.EntityId, out var entity))
-/// {
-///     // Use the entity
-/// }
-/// 
-/// // Check if the entity reference is valid
-/// if (!string.IsNullOrEmpty(entityRef.EntityId))
-/// {
-///     // Entity reference is valid
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This structure is immutable and thread-safe.
-/// </para>
+/// Entity-reference fields can point across layers, levels, and worlds. Use
+/// <see cref="EntityId"/> with <see cref="LDtkMap.GetEntityById(string)"/> when
+/// the referenced entity is part of the loaded map cache.
 /// </remarks>
 public readonly struct LDtkEntityRef
 {
     /// <summary>
-    /// Gets the ID of the referenced entity instance.
+    /// Gets the instance ID of the referenced entity.
     /// </summary>
     public string EntityId { get; }
 
     /// <summary>
-    /// Gets the ID of the layer containing the entity.
+    /// Gets the instance ID of the layer containing the entity.
     /// </summary>
     public string LayerId { get; }
 
     /// <summary>
-    /// Gets the ID of the level containing the entity.
+    /// Gets the instance ID of the level containing the entity.
     /// </summary>
     public string LevelId { get; }
 
     /// <summary>
-    /// Gets the ID of the world containing the entity.
+    /// Gets the instance ID of the world containing the entity.
     /// </summary>
     public string WorldId { get; }
 

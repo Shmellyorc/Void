@@ -1,9 +1,9 @@
 // ============================================================================
 //  PingPongTween.cs
 // ============================================================================
-//  A tween that oscillates back and forth between two values.
+//  Tween that travels forward and then back to its starting value.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,40 +13,13 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A tween that oscillates back and forth between two values.
+/// Interpolates from one value to another, then reverses back to the start.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
-/// <para>
-/// The <see cref="PingPongTween{T}"/> class extends the standard tween by
-/// automatically reversing direction when it reaches the end. This creates
-/// a continuous oscillation between the start and end values.
-/// </para>
-/// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a ping-pong tween
-/// var tween = new PingPongTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value
-/// );
-/// 
-/// // Run the tween (oscillates indefinitely)
-/// CoroutineManager.Instance.Run(tween);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// A <see cref="PingPongTween{T}"/> performs one forward traversal followed by
+/// one reverse traversal. After the reverse traversal completes, the starting
+/// value is applied and the enumerator finishes.
 /// </remarks>
 public sealed class PingPongTween<T> : IEnumerator
 {
@@ -59,19 +32,20 @@ public sealed class PingPongTween<T> : IEnumerator
     private bool _reverse;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Ping-pong tweens do not yield
+    /// a value, so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PingPongTween{T}"/> class.
+    /// Initializes a forward-and-reverse tween.
     /// </summary>
     /// <param name="from">The starting value.</param>
-    /// <param name="to">The ending value.</param>
+    /// <param name="to">The value reached before reversing.</param>
     /// <param name="duration">The duration of each direction in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
+    /// <param name="type">The easing function to apply to normalized progress.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
     public PingPongTween(T from, T to, float duration, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate)
     {
         _from = from;
@@ -83,9 +57,12 @@ public sealed class PingPongTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the current direction using the current frame delta time.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while either direction is active;
+    /// otherwise, <see langword="false"/> after the starting value is restored.
+    /// </returns>
     public bool MoveNext()
     {
         float deltaTime = Game.Instance.FrameTime.DeltaTime;
@@ -115,7 +92,8 @@ public sealed class PingPongTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a ping-pong tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

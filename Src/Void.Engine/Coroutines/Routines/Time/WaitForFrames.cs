@@ -1,9 +1,9 @@
 // ============================================================================
 //  WaitForFrames.cs
 // ============================================================================
-//  A coroutine that waits for a specified number of frames.
+//  A coroutine that waits for a specified number of coroutine updates.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,67 +13,38 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Time;
 
 /// <summary>
-/// A coroutine that waits for a specified number of frames.
+/// Waits for a specified number of coroutine updates.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="WaitForFrames"/> class pauses the coroutine execution for a
-/// specified number of frames. Unlike time-based waits, this is frame-count
-/// based and will complete faster at higher frame rates.
-/// </para>
-/// <para>
-/// This is useful for frame-dependent operations such as:
-/// <list type="bullet">
-///   <item><description>Waiting for a specific number of rendering frames</description></item>
-///   <item><description>Synchronizing with frame-based animations</description></item>
-///   <item><description>Delaying actions that should be measured in frames</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
+/// The counter is reduced by one each time <see cref="MoveNext"/> is called.
+/// Negative values are treated as zero. Fractional values effectively require
+/// enough whole updates for the counter to reach zero or below.
 /// <code>
-/// // Wait for 30 frames (approximately 0.5 seconds at 60 FPS)
 /// yield return new WaitForFrames(30);
-/// 
-/// // Wait for 60 frames (approximately 1 second at 60 FPS)
-/// yield return new WaitForFrames(60);
-/// 
-/// // In a sequence
-/// var sequence = new Sequence(
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new WaitForFrames(15),
-///     new Tween&lt;float&gt;(100f, 200f, 1f, EaseType.QuadOut, Lerp, value => x = value)
-/// );
-/// CoroutineManager.Instance.Run(sequence);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class WaitForFrames : IEnumerator
 {
     private float _framesLeft;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the current yielded value. This routine always yields <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitForFrames"/> class.
+    /// Initializes a frame-count wait.
     /// </summary>
-    /// <param name="frames">The number of frames to wait.</param>
+    /// <param name="frames">The number of coroutine updates to wait. Negative values are treated as zero.</param>
     public WaitForFrames(float frames)
     {
         _framesLeft = Math.Max(0f, frames);
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Decrements the remaining frame count by one.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> while frames remain; otherwise, <see langword="false"/>.</returns>
     public bool MoveNext()
     {
         _framesLeft--;
@@ -81,12 +52,13 @@ public sealed class WaitForFrames : IEnumerator
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases the routine. This implementation has no resources to release.
     /// </summary>
     public void Dispose() { }
 }

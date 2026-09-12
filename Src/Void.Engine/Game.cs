@@ -1,9 +1,7 @@
 // ============================================================================
 //  Game.cs
 // ============================================================================
-//  The core game class. Manages the game loop, window, timing, and application
-//  lifecycle. Create an instance with configured settings and call Run() to 
-//  start.
+//  Owns the main VOID application lifecycle, game loop, window, and frame timing.
 //
 //  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
@@ -14,19 +12,40 @@ using System.Diagnostics;
 namespace Void.Engine;
 
 /// <summary>
-/// The main game class. Create an instance with configured settings and call <see cref="Run"/> to start.
+/// Provides the main VOID game lifecycle and application loop.
 /// </summary>
 /// <remarks>
-/// Example:
+/// <para>
+/// Create one game instance from finalized <see cref="GameSettings"/>, then call
+/// <see cref="Run"/> to start the application. Derive from <see cref="Game"/> and
+/// override the protected lifecycle methods to provide game-specific behavior.
+/// </para>
+/// <example>
 /// <code>
+/// public sealed class MyGame : Game
+/// {
+///     public MyGame(GameSettings settings) : base(settings) { }
+///
+///     protected override void OnUpdate(FrameTime frameTime)
+///     {
+///         // Update game logic.
+///     }
+///
+///     protected override void OnDraw(FrameTime frameTime)
+///     {
+///         // Submit rendering work.
+///     }
+/// }
+///
 /// var settings = GameSettings.Instance
 ///     .SetAppCompany("MyStudio")
 ///     .SetAppName("MyGame")
 ///     .Build();
-/// 
-/// using var game = new Game(settings);
+///
+/// using var game = new MyGame(settings);
 /// game.Run();
 /// </code>
+/// </example>
 /// </remarks>
 public class Game : IDisposable
 {
@@ -42,58 +61,63 @@ public class Game : IDisposable
     internal int _scrollWheel;
 
     /// <summary>
-    /// Gets the singleton instance. Set automatically on first construction.
+    /// Gets the first game instance created in the current process.
     /// </summary>
     public static Game Instance { get; private set; }
 
     /// <summary>
-    /// Returns true if the game window has focus.
+    /// Gets whether the game window currently has input focus.
     /// </summary>
     public bool IsActive => _window.IsFocused;
 
     /// <summary>
-    /// Gets timing information for the current frame (delta time, fixed timestep, etc.).
+    /// Gets timing information for the current frame.
     /// </summary>
     public FrameTime FrameTime => _timing;
 
     /// <summary>
-    /// Gets the underlying window instance.
+    /// Gets the game window.
     /// </summary>
     public Window Window => _window;
 
     /// <summary>
-    /// Full path to the log folder. Created during initialization.
+    /// Gets the full path to the application's log directory.
     /// </summary>
     public string ApplicationLogFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppLogFolder);
 
     /// <summary>
-    /// Full path to the save data folder. Created during initialization.
+    /// Gets the full path to the application's save-data directory.
     /// </summary>
     public string ApplicationSaveFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppSaveFolder);
 
     /// <summary>
-    /// Full path to the config folder. Created during initialization.
+    /// Gets the full path to the application's configuration directory.
     /// </summary>
     public string ApplicationConfigFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppConfigFolder);
 
     /// <summary>
-    /// Full path to the temp folder. Created during initialization.
+    /// Gets the full path to the application's temporary-data directory.
     /// </summary>
     public string ApplicationTempFolder => Path.Combine(ApplicationFolder, GameSettings.Instance.AppTempFolder);
 
     /// <summary>
-    /// Gets the assembly version.
+    /// Gets the version of the running VOID Engine assembly.
     /// </summary>
     public string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
 
     /// <summary>
-    /// Gets a hash of the version string, useful for build verification.
+    /// Gets a stable hexadecimal hash derived from <see cref="Version"/>.
     /// </summary>
     public string VersionHash => $"{HashHelper.Cache64(Version):X8}";
 
     /// <summary>
-    /// Gets the root application folder. Uses system app data or local directory based on settings.
+    /// Gets the root directory used for application-specific data.
     /// </summary>
+    /// <remarks>
+    /// When <see cref="GameSettings.UseApplicationData"/> is enabled, VOID uses the
+    /// platform application-data location. Otherwise, a directory beside the game
+    /// executable is used.
+    /// </remarks>
     public string ApplicationFolder
     {
         get
@@ -111,26 +135,20 @@ public class Game : IDisposable
     }
 
     /// <summary>
-    /// Gets the default engine font.
+    /// Gets VOID's built-in sprite font for simple text and debugging.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// This font is loaded from embedded resources and cached in the AssetManager
-    /// under the internal tag "Void.Engine.Internal.DefaultFont". It is always
-    /// available and will not be evicted from the cache because each access
-    /// updates its last access time.
+    /// The font is loaded from embedded engine resources and cached by the asset
+    /// manager. Games can use their own fonts whenever a custom typeface is needed.
     /// </para>
-    /// <para>
-    /// Use this font for UI elements, debug text, and any text rendering where
-    /// a custom font is not required.
-    /// </para>
-    /// <para>
-    /// Example usage:
     /// <code>
-    /// var font = Game.Instance.Font;
-    /// batcher.DrawText(font, "Hello World!", position, Color.White);
+    /// spriteBatch.DrawText(
+    ///     Game.Instance.Font,
+    ///     "Hello VOID",
+    ///     new Vect2(8, 8),
+    ///     Color.White);
     /// </code>
-    /// </para>
     /// </remarks>
     public SpriteFont Font
     {
@@ -139,30 +157,22 @@ public class Game : IDisposable
             if (AssetManager.Instance.TryGetAsset<SpriteFont>(DefaultFontTag, out var font))
                 return font;
 
-            // Should never happen, but just in case
             LoadDefaultFont();
             return AssetManager.Instance.TryGetAsset<SpriteFont>(DefaultFontTag, out var f) ? f : null;
         }
     }
 
     /// <summary>
-    /// Creates a new game instance.
+    /// Initializes a game using finalized engine settings.
     /// </summary>
-    /// <param name="settings">Configured settings from <see cref="GameSettings.Build"/>.</param>
-    /// <exception cref="ArgumentNullException">Thrown when settings is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when settings hasn't been built.</exception>
-    /// <remarks>
-    /// Example:
-    /// <code>
-    /// var settings = GameSettings.Instance
-    ///     .SetAppCompany("MyStudio")
-    ///     .SetAppName("MyGame")
-    ///     .Build();
-    /// 
-    /// using var game = new Game(settings);
-    /// game.Run();
-    /// </code>
-    /// </remarks>
+    /// <param name="settings">The settings returned by <see cref="GameSettings.Build"/>.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="settings"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when <paramref name="settings"/> has not been finalized with
+    /// <see cref="GameSettings.Build"/>.
+    /// </exception>
     public Game(GameSettings settings)
     {
         if (settings == null)
@@ -200,8 +210,8 @@ public class Game : IDisposable
             OnMouseWheelScrolled = delta => _scrollWheel += delta
         };
 
-        // Renderer is active before font loading so SpriteFont builds only the
-        // renderer-neutral atlas instead of a duplicate SFML GPU texture.
+        // The renderer is initialized before the default font so the font can
+        // create any renderer-owned resources through VOID's graphics contracts.
         LoadDefaultFont();
 
         _clock = new Stopwatch();
@@ -236,15 +246,23 @@ public class Game : IDisposable
     }
 
     /// <summary>
-    /// Finalizer that ensures resources are cleaned up if <see cref="Dispose"/> wasn't called.
+    /// Releases game resources if the instance was not disposed explicitly.
     /// </summary>
     ~Game() => Dispose();
 
     /// <summary>
-    /// Starts the game loop. Blocks until the window closes.
+    /// Runs the game loop until the window closes.
     /// </summary>
     /// <remarks>
-    /// Supports both fixed and variable timestep modes. Override <see cref="OnUpdate"/> and <see cref="OnDraw"/> for game logic.
+    /// <para>
+    /// <see cref="OnEnter"/> is called once before the loop. Depending on the
+    /// configured timing mode, <see cref="OnUpdate"/> runs at the fixed update rate
+    /// or once per rendered frame. <see cref="OnDraw"/> runs once for each frame
+    /// that is presented.
+    /// </para>
+    /// <para>
+    /// This method blocks the calling thread until the game exits.
+    /// </para>
     /// </remarks>
     public void Run()
     {
@@ -289,14 +307,11 @@ public class Game : IDisposable
     }
 
     /// <summary>
-    /// Requests the game to exit gracefully.
+    /// Requests a graceful exit from the game loop.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// This method closes the game window, which causes the main loop in
-    /// <see cref="Run"/> to exit. Cleanup is handled automatically by
-    /// <see cref="Dispose"/>.
-    /// </para>
+    /// Closing the window causes <see cref="Run"/> to finish. Resource cleanup
+    /// occurs when the game is disposed.
     /// </remarks>
     public void Quit()
     {
@@ -306,28 +321,30 @@ public class Game : IDisposable
     }
 
     /// <summary>
-    /// Override to add your update logic. Called once per frame.
+    /// Called for game logic updates.
     /// </summary>
-    /// <param name="frameTime">Timing info for this frame.</param>
+    /// <param name="frameTime">Timing information for the current update.</param>
+    /// <remarks>
+    /// In fixed-timestep mode this method can run multiple times before a rendered
+    /// frame when the game needs to catch up.
+    /// </remarks>
     protected virtual void OnUpdate(FrameTime frameTime) { }
 
     /// <summary>
-    /// Override to add your rendering logic. Called once per frame.
+    /// Called once for each rendered frame.
     /// </summary>
-    /// <param name="frameTime">Timing info for this frame.</param>
+    /// <param name="frameTime">Timing information for the current frame.</param>
     protected virtual void OnDraw(FrameTime frameTime) { }
 
     /// <summary>
-    /// Override for initialization logic before the game loop starts.
+    /// Called once immediately before the game loop begins.
     /// </summary>
     protected virtual void OnEnter() { }
 
     /// <summary>
-    /// Override for cleanup logic when the game exits.
+    /// Called during disposal before engine-owned runtime systems are cleared.
     /// </summary>
     protected virtual void OnExit() { }
-
-
 
     private void LoadDefaultFont()
     {
@@ -349,11 +366,14 @@ public class Game : IDisposable
         }
     }
 
-
-
     /// <summary>
-    /// Cleans up all resources. Called automatically when disposed.
+    /// Releases the game window and engine-owned runtime resources.
     /// </summary>
+    /// <remarks>
+    /// Disposal is idempotent. <see cref="OnExit"/> is called before the engine
+    /// clears coroutines, beacons, assets, atlas resources, input devices, and the
+    /// window.
+    /// </remarks>
     public void Dispose()
     {
         if (_isDisposed)

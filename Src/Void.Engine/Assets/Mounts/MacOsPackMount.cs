@@ -1,9 +1,9 @@
 // ============================================================================
 //  MacOsPackMount.cs
 // ============================================================================
-//  macOS-specific mount for loading asset packs from the application bundle.
+//  Pack mount that resolves its archive from macOS application resources.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,53 +15,19 @@ using System.Runtime.InteropServices;
 namespace Void.Engine.Assets.Mounts;
 
 /// <summary>
-/// A macOS-specific mount for loading asset packs from the application bundle's Resources folder.
+/// Provides access to a VOID asset pack stored with a macOS application.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="MacOsPackMount"/> class combines macOS bundle resource loading
-/// with pack archive functionality. It automatically locates the pack file
-/// within the bundle's Resources directory and creates a <see cref="PackMount"/>
-/// for asset access.
+/// The pack path is resolved from the application resource directory when a
+/// bundle is detected, or from <see cref="GameSettings.AppContentRoot"/> when
+/// running outside a bundle. Pack operations are delegated to an internal
+/// <see cref="PackMount"/>.
 /// </para>
 /// <para>
-/// This mount is useful for distributing encrypted or compressed assets in a
-/// macOS application bundle.
-/// </para>
-/// <para>
-/// <b>Bundle Detection:</b>
-/// <list type="bullet">
-///   <item><description><b>Bundled:</b> Pack is loaded from the .app/Contents/Resources directory</description></item>
-///   <item><description><b>Development:</b> Pack is loaded from the configured content root</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Load a pack from the macOS bundle
-/// var packMount = new MacOsPackMount("game_data.pack");
-/// AssetManager.Instance.AddMountToEnd(packMount);
-/// 
-/// // Load with encryption key
-/// var encryptedPack = new MacOsPackMount("secure.pack", encryptionKey);
-/// AssetManager.Instance.AddMountToStart(encryptedPack);
-/// 
-/// // Verify pack integrity
-/// if (packMount.VerifyIntegrity())
-/// {
-///     // Pack is valid
-/// }
-/// 
-/// // List all files in the pack
-/// foreach (var file in packMount.ListFiles())
-/// {
-///     Console.WriteLine(file);
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class delegates to <see cref="PackMount"/> which is thread-safe.
+/// When no key is supplied, the constructor looks for a <c>.key</c> file next
+/// to the pack using the same base file name. Creating this mount does not add
+/// it to <see cref="AssetManager"/> automatically.
 /// </para>
 /// </remarks>
 public sealed class MacOsPackMount : IMount, IDisposable
@@ -71,17 +37,24 @@ public sealed class MacOsPackMount : IMount, IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// Gets the name of the mount.
+    /// Gets the display name of the underlying pack mount.
     /// </summary>
     public string Name => _packMount?.Name ?? "MacOs Pack Mount";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MacOsPackMount"/> class.
+    /// Initializes a mount for a pack stored with a macOS application.
     /// </summary>
-    /// <param name="packFileName">The name of the pack file within the bundle's Resources folder.</param>
-    /// <param name="key">The optional encryption key for the pack.</param>
-    /// <exception cref="PlatformNotSupportedException">Thrown when the current platform is not macOS.</exception>
-    /// <exception cref="FileNotFoundException">Thrown when the pack file is not found.</exception>
+    /// <param name="packFileName">The pack file name relative to the resource directory.</param>
+    /// <param name="key">
+    /// The optional pack key. When omitted, a sibling <c>.key</c> file is used
+    /// when one exists.
+    /// </param>
+    /// <exception cref="PlatformNotSupportedException">
+    /// The current platform is not macOS.
+    /// </exception>
+    /// <exception cref="FileNotFoundException">
+    /// The resolved pack file does not exist.
+    /// </exception>
     public MacOsPackMount(string packFileName, byte[] key = null)
     {
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
@@ -90,9 +63,9 @@ public sealed class MacOsPackMount : IMount, IDisposable
         string bundlePath = AppDomain.CurrentDomain.BaseDirectory;
 
         string resourcePath;
-        if (bundlePath.Contains(".app/Contents/MacOs"))
+        if (bundlePath.Contains("Contents/MacOS"))
         {
-            resourcePath = bundlePath.Replace("MacOs", "Resources");
+            resourcePath = bundlePath.Replace("MacOS", "Resources");
         }
         else
         {
@@ -122,33 +95,43 @@ public sealed class MacOsPackMount : IMount, IDisposable
     }
 
     /// <summary>
-    /// Determines whether a file exists in the pack.
+    /// Determines whether the pack contains the specified virtual path.
     /// </summary>
+    /// <param name="virtualPath">The virtual asset path to test.</param>
+    /// <returns>
+    /// <see langword="true"/> when the file exists in the pack; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
     public bool HasFile(string virtualPath)
         => _packMount.HasFile(virtualPath);
 
     /// <summary>
     /// Reads a file from the pack.
     /// </summary>
+    /// <param name="virtualPath">The virtual asset path to read.</param>
+    /// <returns>The file contents.</returns>
     public byte[] ReadFile(string virtualPath)
         => _packMount.ReadFile(virtualPath);
 
     /// <summary>
-    /// Verifies the integrity of the pack.
+    /// Verifies the integrity information stored by the pack format.
     /// </summary>
-    /// <returns><see langword="true"/> if the pack integrity is valid; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> when verification succeeds; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
     public bool VerifyIntegrity()
         => _packMount.VerifyIntegrity();
 
     /// <summary>
-    /// Lists all files contained in the pack.
+    /// Enumerates the virtual file paths stored in the pack.
     /// </summary>
-    /// <returns>An enumerable of file paths.</returns>
+    /// <returns>The file paths reported by the pack reader.</returns>
     public IEnumerable<string> ListFiles()
         => _packMount.ListFiles();
 
     /// <summary>
-    /// Disposes the pack mount and releases resources.
+    /// Releases the underlying pack reader.
     /// </summary>
     public void Dispose()
     {
@@ -157,6 +140,7 @@ public sealed class MacOsPackMount : IMount, IDisposable
             _packMount?.Dispose();
             _disposed = true;
         }
+
         GC.SuppressFinalize(this);
     }
 }

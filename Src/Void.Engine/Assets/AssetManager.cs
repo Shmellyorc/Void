@@ -1,81 +1,44 @@
 // ============================================================================
 //  AssetManager.cs
 // ============================================================================
-//  Core asset management system with caching, mounting, pack loading,
-//  and custom asset type registration.
+//  Manages asset loading, caching, mount search order, pack files, and custom
+//  asset type registration.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Assets;
 
 /// <summary>
-/// Core asset management system with caching, mounting, pack loading,
-/// and custom asset type registration.
+/// Manages assets loaded through VOID's virtual content system.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="AssetManager"/> provides a unified system for loading,
-/// caching, and managing assets of various types. It supports:
-/// <list type="bullet">
-///   <item><description>Automatic asset caching with time-based LRU eviction</description></item>
-///   <item><description>Multiple mount points for flexible asset sources</description></item>
-///   <item><description>Pack loading for encrypted/compressed asset archives</description></item>
-///   <item><description>Custom asset type registration</description></item>
-///   <item><description>Thread-safe concurrent caching</description></item>
-/// </list>
+/// <see cref="AssetManager"/> is a singleton that loads assets through an ordered
+/// collection of mounts and caches the resulting <see cref="IAsset"/> instances.
+/// Repeated requests for the same cached path return the existing asset and reload
+/// it when necessary.
 /// </para>
 /// <para>
-/// <b>Asset Loading Flow:</b>
-/// <list type="number">
-///   <item><description>Request an asset via <see cref="Load{T}"/> with a virtual path</description></item>
-///   <item><description>AssetManager checks the cache by path hash</description></item>
-///   <item><description>If found, it returns the cached asset (auto-reloads if unloaded)</description></item>
-///   <item><description>If not found, it searches mounts in priority order</description></item>
-///   <item><description>The first mount that has the file reads the data</description></item>
-///   <item><description>A new asset instance is created using the appropriate loader</description></item>
-///   <item><description>The asset is cached and returned</description></item>
-/// </list>
+/// Mounts are searched from first to last. Use <see cref="AddMountToStart"/> for
+/// sources that should override lower-priority content and <see cref="AddMountToEnd"/>
+/// for fallback sources.
 /// </para>
 /// <para>
-/// <b>Mount System:</b>
-/// Mounts are virtual file systems that provide access to assets. Mounts are
-/// searched in the order they were added (or inserted), with the first mount
-/// that contains the file providing the asset data. The following built-in
-/// mount types are available:
-/// <list type="bullet">
-///   <item><description><see cref="VirtualFileSystemMount"/> - Direct file system access to the content root</description></item>
-///   <item><description><see cref="MacOsMount"/> - macOS application bundle resource access</description></item>
-///   <item><description><see cref="PackMount"/> - Encrypted and/or compressed asset pack archives</description></item>
-///   <item><description><see cref="MacOsPackMount"/> - macOS-specific pack mount for bundle resources</description></item>
-/// </list>
+/// Custom asset types can be added with <see cref="RegisterAssetType{T}"/>. Pack
+/// files can be opened with <see cref="LoadPack(string,string)"/> or
+/// <see cref="LoadPack(string,string,string)"/> and then added to the mount order.
 /// </para>
-/// <para>
-/// <b>Pack System:</b>
-/// Packs are encrypted and/or compressed archives that contain assets. They
-/// can be loaded with an optional key file for encryption. Packs act as
-/// read-only mounts that provide fast, secure asset delivery.
-/// </para>
-/// <para>
-/// <b>Asset Eviction:</b>
-/// Assets are automatically unloaded after a configurable idle time
-/// (<see cref="GameSettings.AssetEvictionMinutes"/>). This helps manage memory
-/// usage by removing assets that haven't been accessed recently. When an asset
-/// is evicted, its GPU resources are freed but the raw data remains cached for
-/// fast reloading. The asset will be automatically reloaded the next time it
-/// is accessed.
-/// </para>
-/// <para>
-/// <b>Custom Asset Types:</b>
-/// New asset types can be registered using <see cref="RegisterAssetType{T}"/>
-/// with their supported file extensions and a factory function. This allows
-/// the engine to be extended with custom asset types.
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe and uses concurrent collections for cache management.
-/// </para>
+/// <code>
+/// var assets = AssetManager.Instance;
+///
+/// Texture player = assets.Load&lt;Texture&gt;("Sprites/player.png");
+/// Sound pickup = assets.LoadSound("Audio/pickup.ogg");
+///
+/// var pack = assets.LoadPack("Packs/game.pack");
+/// assets.AddMountToStart(pack);
+/// </code>
 /// </remarks>
 public sealed class AssetManager
 {
@@ -126,12 +89,12 @@ public sealed class AssetManager
     #region Properties
 
     /// <summary>
-    /// Gets the singleton instance of the asset manager.
+    /// Gets the shared asset manager instance.
     /// </summary>
     public static AssetManager Instance => _instance.Value;
 
     /// <summary>
-    /// Gets the list of active mounts in priority order.
+    /// Gets the active mounts in their current search order.
     /// </summary>
     public IReadOnlyList<IMount> Mounts => _mounts;
     #endregion
@@ -150,27 +113,32 @@ public sealed class AssetManager
 
     #region Mounts
     /// <summary>
-    /// Adds a mount to the beginning of the search order (highest priority).
+    /// Adds a mount at the highest-priority position in the search order.
     /// </summary>
+    /// <param name="mount">The mount to add.</param>
     public void AddMountToStart(IMount mount) => _mounts.Insert(0, mount);
 
     /// <summary>
-    /// Adds a mount to the end of the search order (lowest priority).
+    /// Adds a mount at the lowest-priority position in the search order.
     /// </summary>
+    /// <param name="mount">The mount to add.</param>
     public void AddMountToEnd(IMount mount) => _mounts.Add(mount);
 
     /// <summary>
-    /// Inserts a mount at the specified index in the search order.
+    /// Inserts a mount at a specific position in the search order.
     /// </summary>
+    /// <param name="index">The zero-based insertion index.</param>
+    /// <param name="mount">The mount to insert.</param>
     public void InsertMount(int index, IMount mount) => _mounts.Insert(index, mount);
 
     /// <summary>
     /// Removes a mount from the search order.
     /// </summary>
+    /// <param name="mount">The mount to remove.</param>
     public void RemoveMount(IMount mount) => _mounts.Remove(mount);
 
     /// <summary>
-    /// Clears all mounts and re-adds the default mounts.
+    /// Removes all current mounts and restores VOID's default mount configuration.
     /// </summary>
     public void ClearMounts()
     {
@@ -185,21 +153,34 @@ public sealed class AssetManager
 
     #region Pack Mounts
     /// <summary>
-    /// Loads a pack file as a mount.
+    /// Opens a pack file and creates a mount for it.
     /// </summary>
-    /// <param name="packPath">The virtual path to the pack file.</param>
-    /// <param name="mountName">The name of the mount (optional).</param>
-    /// <returns>The loaded pack mount.</returns>
+    /// <param name="packPath">The pack path relative to the configured content root.</param>
+    /// <param name="mountName">An optional display name for the mount.</param>
+    /// <returns>The created pack mount.</returns>
+    /// <remarks>
+    /// The returned mount is not added to the asset search order automatically.
+    /// Add it with <see cref="AddMountToStart"/>, <see cref="AddMountToEnd"/>, or
+    /// <see cref="InsertMount"/>. If a companion <c>.key</c> file exists beside
+    /// the pack, it is loaded automatically.
+    /// </remarks>
     public PackMount LoadPack(string packPath, string mountName = null)
         => LoadPack(packPath, null, mountName);
 
     /// <summary>
-    /// Loads a pack file as a mount with a key file for encryption.
+    /// Opens a pack file with an optional key file and creates a mount for it.
     /// </summary>
-    /// <param name="packPath">The virtual path to the pack file.</param>
-    /// <param name="keyPath">The virtual path to the key file.</param>
-    /// <param name="mountName">The name of the mount (optional).</param>
-    /// <returns>The loaded pack mount.</returns>
+    /// <param name="packPath">The pack path relative to the configured content root.</param>
+    /// <param name="keyPath">The key path relative to the configured content root, or <see langword="null"/> to use automatic key discovery.</param>
+    /// <param name="mountName">An optional display name for the mount.</param>
+    /// <returns>The created pack mount.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="packPath"/> is null or empty.</exception>
+    /// <exception cref="FileNotFoundException">Thrown when the pack or explicitly requested key file cannot be found.</exception>
+    /// <remarks>
+    /// The returned mount is not added to the asset search order automatically.
+    /// When <paramref name="keyPath"/> is null or empty, VOID looks for a key file
+    /// beside the pack with the same base name and a <c>.key</c> extension.
+    /// </remarks>
     public PackMount LoadPack(string packPath, string keyPath, string mountName = null)
     {
         if (string.IsNullOrEmpty(packPath))
@@ -236,10 +217,17 @@ public sealed class AssetManager
     }
 
     /// <summary>
-    /// Loads all pack files found in a directory.
+    /// Opens every <c>.pack</c> file in the top level of a content directory.
     /// </summary>
-    /// <param name="directoryPath">The virtual path to the directory.</param>
-    /// <returns>A list of loaded pack mounts.</returns>
+    /// <param name="directoryPath">The directory path relative to the configured content root.</param>
+    /// <returns>The pack mounts that were opened successfully.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="directoryPath"/> is null or empty.</exception>
+    /// <exception cref="DirectoryNotFoundException">Thrown when the directory does not exist.</exception>
+    /// <remarks>
+    /// A companion <c>.key</c> file is used when present. Individual pack failures
+    /// are logged and skipped. Returned mounts are not added to the asset search
+    /// order automatically.
+    /// </remarks>
     public List<PackMount> LoadAllPacks(string directoryPath)
     {
         if (string.IsNullOrEmpty(directoryPath))
@@ -279,8 +267,9 @@ public sealed class AssetManager
     }
 
     /// <summary>
-    /// Unloads a pack mount and removes it from the search order.
+    /// Removes a pack mount from the search order and disposes it.
     /// </summary>
+    /// <param name="mount">The pack mount to unload. A null value is ignored.</param>
     public void UnloadPack(PackMount mount)
     {
         if (mount == null)
@@ -292,7 +281,7 @@ public sealed class AssetManager
     }
 
     /// <summary>
-    /// Unloads all pack mounts.
+    /// Removes and disposes every active <see cref="PackMount"/>.
     /// </summary>
     public void UnloadAllPacks()
     {
@@ -308,20 +297,24 @@ public sealed class AssetManager
 
     #region GetOrLoad
     /// <summary>
-    /// Loads an asset of the specified type from the virtual path.
+    /// Loads or retrieves a cached asset from the virtual content system.
     /// </summary>
-    /// <typeparam name="T">The asset type to load.</typeparam>
-    /// <param name="path">The virtual path to the asset.</param>
-    /// <returns>The loaded asset.</returns>
+    /// <typeparam name="T">The registered asset type to load.</typeparam>
+    /// <param name="path">The virtual asset path.</param>
+    /// <returns>The loaded or cached asset.</returns>
     public T Load<T>(string path) where T : IAsset => GetOrLoadInternal<T>(path, null);
 
     /// <summary>
-    /// Attempts to load an asset of the specified type from the virtual path.
+    /// Attempts to load or retrieve a cached asset without propagating load errors.
     /// </summary>
-    /// <typeparam name="T">The asset type to load.</typeparam>
-    /// <param name="path">The virtual path to the asset.</param>
-    /// <param name="asset">When this method returns, contains the loaded asset, or default if loading failed.</param>
-    /// <returns><see langword="true"/> if the asset was loaded successfully; otherwise, <see langword="false"/>.</returns>
+    /// <typeparam name="T">The registered asset type to load.</typeparam>
+    /// <param name="path">The virtual asset path.</param>
+    /// <param name="asset">Receives the loaded asset when the operation succeeds.</param>
+    /// <returns><see langword="true"/> when an asset was returned; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Load failures are written to the engine log and returned as
+    /// <see langword="false"/> instead of being thrown to the caller.
+    /// </remarks>
     public bool TryLoad<T>(string path, out T asset) where T : IAsset
     {
         try
@@ -339,26 +332,44 @@ public sealed class AssetManager
     }
 
     /// <summary>
-    /// Loads a texture with specific repeat and smoothing settings.
+    /// Loads or retrieves a cached texture with the requested sampling behavior.
     /// </summary>
+    /// <param name="path">The virtual texture path.</param>
+    /// <param name="repeat">Whether texture coordinates outside the texture bounds should repeat.</param>
+    /// <param name="smoothing">Whether texture filtering should use smoothing.</param>
+    /// <returns>The loaded or cached texture.</returns>
     public Texture LoadTexture(string path, bool repeat, bool smoothing)
         => GetOrLoadInternal(path, (id, data, tag) => new Texture(id, data, tag, repeat, smoothing));
 
     /// <summary>
-    /// Loads a sprite font with optional character set, spacing, and line spacing.
+    /// Loads or retrieves a cached sprite font with the requested font settings.
     /// </summary>
+    /// <param name="path">The virtual font image path.</param>
+    /// <param name="spacing">Additional horizontal glyph spacing.</param>
+    /// <param name="lineSpacing">Additional vertical spacing between lines.</param>
+    /// <param name="charset">The character sequence represented by the font image.</param>
+    /// <returns>The loaded or cached sprite font.</returns>
     public SpriteFont LoadSpriteFont(string path, float spacing = 0f, float lineSpacing = 0f, string charset = SpriteFont.CharsetFull)
         => GetOrLoadInternal(path, (id, data, tag) => new SpriteFont(id, data, tag, charset, lineSpacing, spacing));
 
     /// <summary>
-    /// Loads a sound with the specified priority.
+    /// Loads or retrieves a cached sound with the requested playback priority.
     /// </summary>
+    /// <param name="path">The virtual sound path.</param>
+    /// <param name="priority">The priority assigned to the sound.</param>
+    /// <returns>The loaded or cached sound.</returns>
     public Sound LoadSound(string path, SoundPriority priority = SoundPriority.Normal)
         => GetOrLoadInternal(path, (id, data, tag) => new Sound(id, data, tag, priority));
 
     /// <summary>
-    /// Loads a tileset texture from an LDtk map.
+    /// Loads the texture referenced by an LDtk tileset.
     /// </summary>
+    /// <param name="map">The LDtk map that owns the tileset definition.</param>
+    /// <param name="tilesetId">The LDtk tileset identifier.</param>
+    /// <returns>The loaded tileset texture.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="map"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when <paramref name="tilesetId"/> represents no assigned tileset.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when the map does not contain the requested tileset.</exception>
     public Texture LoadTilesetTexture(LDtkMap map, uint tilesetId)
     {
         if (map == null)
@@ -375,8 +386,12 @@ public sealed class AssetManager
     }
 
     /// <summary>
-    /// Attempts to load a tileset texture from an LDtk map.
+    /// Attempts to load the texture referenced by an LDtk tileset.
     /// </summary>
+    /// <param name="map">The LDtk map that owns the tileset definition.</param>
+    /// <param name="tilesetId">The LDtk tileset identifier.</param>
+    /// <param name="texture">Receives the loaded texture when the operation succeeds.</param>
+    /// <returns><see langword="true"/> when the tileset texture was loaded; otherwise, <see langword="false"/>.</returns>
     public bool TryLoadTilesetTexture(LDtkMap map, uint tilesetId, out Texture texture)
     {
         try
@@ -397,11 +412,18 @@ public sealed class AssetManager
 
     #region Register Custom Assets
     /// <summary>
-    /// Registers a custom asset type with its supported extensions and factory.
+    /// Registers a custom asset type and the file extensions used to load it.
     /// </summary>
     /// <typeparam name="T">The asset type to register.</typeparam>
-    /// <param name="extensions">The supported file extensions.</param>
-    /// <param name="factory">The factory function that creates the asset.</param>
+    /// <param name="extensions">Supported extensions, including the leading period, such as <c>.map</c>.</param>
+    /// <param name="factory">A factory that creates the asset from its assigned ID, source bytes, and normalized tag.</param>
+    /// <exception cref="ArgumentException">Thrown when no extensions are supplied.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="factory"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the asset type is already registered.</exception>
+    /// <remarks>
+    /// Registration applies to subsequent generic <see cref="Load{T}"/> requests
+    /// for the custom type.
+    /// </remarks>
     public void RegisterAssetType<T>(string[] extensions, Func<uint, byte[], string, T> factory) where T : IAsset
     {
         if (extensions == null || extensions.Length == 0)
@@ -422,15 +444,18 @@ public sealed class AssetManager
     }
 
     /// <summary>
-    /// Determines whether an asset type is registered.
+    /// Determines whether an asset type has a registered loader and extension set.
     /// </summary>
+    /// <typeparam name="T">The asset type to check.</typeparam>
+    /// <returns><see langword="true"/> when the type is registered; otherwise, <see langword="false"/>.</returns>
     public bool IsAssetTypeRegistered<T>()
         => SupportedExtensions.ContainsKey(typeof(T));
 
     /// <summary>
-    /// Unregisters a custom asset type.
+    /// Removes a previously registered custom asset type.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown when trying to unregister an engine asset type or a type that is not registered.</exception>
+    /// <typeparam name="T">The custom asset type to unregister.</typeparam>
+    /// <exception cref="InvalidOperationException">Thrown when the type is built into VOID or is not currently registered.</exception>
     public void UnregisterAssetType<T>()
     {
         var type = typeof(T);

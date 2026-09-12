@@ -2,92 +2,98 @@
 //  AtlasMetrics.cs
 // ============================================================================
 //  Contains metrics and statistics about atlas usage, including page counts,
-//  space utilization, texture count, and eviction history.
+//  pixel-area utilization, texture count, and eviction history.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics.Atlas;
 
 /// <summary>
-/// Contains metrics and statistics about atlas usage.
+/// Contains a snapshot of texture atlas usage statistics.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="AtlasMetrics"/> structure provides detailed information
-/// about the current state of the atlas system. These metrics are useful
-/// for monitoring atlas efficiency, diagnosing performance issues, and
-/// optimizing texture packing.
+/// Metrics are obtained from <see cref="AtlasManager.GetMetrics"/>. Space values
+/// describe two-dimensional pixel area, not memory usage in bytes.
 /// </para>
-/// <para>
-/// Metrics are obtained by calling <see cref="AtlasManager.GetMetrics"/>.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// var metrics = AtlasManager.Instance.GetMetrics();
-/// 
+/// AtlasMetrics metrics = AtlasManager.Instance.GetMetrics();
+///
 /// Console.WriteLine($"Atlas usage: {metrics.PercentageFull:F1}%");
-/// Console.WriteLine($"Textures packed: {metrics.TextureCount}");
+/// Console.WriteLine($"Pixel area: {metrics.UsedPixelArea}/{metrics.TotalPixelArea}");
 /// Console.WriteLine($"Pages used: {metrics.UsedPages}/{metrics.TotalPages}");
 /// Console.WriteLine($"Evictions: {metrics.EvictionCount}");
-/// 
-/// if (metrics.PercentageFull > 90f)
-/// {
-///     // Atlas is nearly full, consider increasing page count
-/// }
 /// </code>
-/// </para>
 /// </remarks>
 public struct AtlasMetrics
 {
     /// <summary>
-    /// Gets the total number of atlas pages allocated.
+    /// Gets the total number of atlas pages configured for the manager.
     /// </summary>
-    /// <value>The total page count configured for the atlas.</value>
     public int TotalPages { get; internal set; }
 
     /// <summary>
-    /// Gets the number of atlas pages currently in use.
+    /// Gets the number of atlas pages that currently contain at least one packed region.
     /// </summary>
-    /// <value>The number of pages that contain at least one packed texture.</value>
     public int UsedPages { get; internal set; }
 
     /// <summary>
-    /// Gets the total available space across all atlas pages.
+    /// Gets the total two-dimensional pixel area available across all configured atlas pages.
     /// </summary>
-    /// <value>The total space in pixels (width × height × page count).</value>
-    public int TotalSpaceBytes { get; internal set; }
+    /// <remarks>
+    /// For square pages this is the sum of <c>pageSize * pageSize</c> for every
+    /// configured page, including pages whose graphics resources have not yet been created.
+    /// </remarks>
+    public int TotalPixelArea { get; internal set; }
 
     /// <summary>
-    /// Gets the amount of space currently used by packed textures.
+    /// Gets the two-dimensional pixel area occupied by live packed regions.
     /// </summary>
-    /// <value>The used space in pixels.</value>
-    public int UsedSpaceBytes { get; internal set; }
+    public int UsedPixelArea { get; internal set; }
 
     /// <summary>
-    /// Gets the percentage of atlas space currently occupied by packed textures.
+    /// Gets the total atlas pixel area.
     /// </summary>
-    /// <value>A value between 0 and 100 representing the fullness percentage.</value>
+    /// <remarks>
+    /// This compatibility property retains the original public name. Despite the
+    /// <c>Bytes</c> suffix, the value is pixel area and is identical to
+    /// <see cref="TotalPixelArea"/>. New code should prefer <see cref="TotalPixelArea"/>.
+    /// </remarks>
+    public int TotalSpaceBytes
+    {
+        get => TotalPixelArea;
+        internal set => TotalPixelArea = value;
+    }
+
+    /// <summary>
+    /// Gets the pixel area occupied by live packed regions.
+    /// </summary>
+    /// <remarks>
+    /// This compatibility property retains the original public name. Despite the
+    /// <c>Bytes</c> suffix, the value is pixel area and is identical to
+    /// <see cref="UsedPixelArea"/>. New code should prefer <see cref="UsedPixelArea"/>.
+    /// </remarks>
+    public int UsedSpaceBytes
+    {
+        get => UsedPixelArea;
+        internal set => UsedPixelArea = value;
+    }
+
+    /// <summary>
+    /// Gets the percentage of the configured atlas pixel area occupied by live packed regions.
+    /// </summary>
+    /// <value>A value from 0 through 100.</value>
     public float PercentageFull { get; internal set; }
 
     /// <summary>
-    /// Gets the number of textures currently packed in the atlas.
+    /// Gets the number of live texture-region entries currently cached in the atlas.
     /// </summary>
-    /// <value>The total number of packed texture entries.</value>
     public int TextureCount { get; internal set; }
 
     /// <summary>
-    /// Gets the number of evictions performed by the atlas manager.
+    /// Gets the number of atlas entries evicted since the manager was initialized or cleared.
     /// </summary>
-    /// <value>
-    /// The total number of textures evicted from the atlas to make room
-    /// for new textures.
-    /// </value>
-    /// <remarks>
-    /// A high eviction count may indicate that the atlas is too small or
-    /// that textures are being used inefficiently.
-    /// </remarks>
     public int EvictionCount { get; internal set; }
 }

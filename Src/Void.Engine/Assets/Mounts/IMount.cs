@@ -1,9 +1,9 @@
 // ============================================================================
 //  IMount.cs
 // ============================================================================
-//  Interface for virtual file system mounts that provide asset access.
+//  Interface for virtual asset sources used by the asset manager.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -12,59 +12,50 @@ using System;
 namespace Void.Engine.Assets.Mounts;
 
 /// <summary>
-/// Defines the contract for virtual file system mounts that provide asset access.
+/// Defines a virtual asset source that can locate and read files by path.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="IMount"/> interface represents a virtual file system that
-/// can be searched by the <see cref="AssetManager"/> to locate and load assets.
-/// Mounts are searched in priority order (first added = highest priority).
+/// <see cref="AssetManager"/> searches its mounts in order and uses the first
+/// mount that reports a requested path through <see cref="HasFile"/>.
+/// Implementations can provide assets from files, archives, memory, remote
+/// storage, or another source without changing the asset loading API.
 /// </para>
 /// <para>
-/// <b>Built-in Mount Implementations:</b>
-/// <list type="bullet">
-///   <item><description><see cref="VirtualFileSystemMount"/> - Direct file system access to the content root</description></item>
-///   <item><description><see cref="MacOsMount"/> - macOS application bundle resource access</description></item>
-///   <item><description><see cref="PackMount"/> - Encrypted and/or compressed asset pack archives</description></item>
-///   <item><description><see cref="MacOsPackMount"/> - macOS-specific pack mount for bundle resources</description></item>
-/// </list>
+/// Add higher-priority mounts with <see cref="AssetManager.AddMountToStart"/>
+/// and fallback mounts with <see cref="AssetManager.AddMountToEnd"/>.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Create and add a custom mount
-/// var mount = new MyCustomMount();
+/// IMount mount = new MyMount();
 /// AssetManager.Instance.AddMountToStart(mount);
-/// 
-/// // Or add to the end of the search order
-/// AssetManager.Instance.AddMountToEnd(mount);
+///
+/// Texture texture = AssetManager.Instance.Load&lt;Texture&gt;("ui/icon.png");
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// Implementations should be thread-safe as they may be accessed concurrently
-/// by the asset manager.
-/// </para>
 /// </remarks>
 public interface IMount
 {
     /// <summary>
-    /// Gets the name of the mount for identification and logging purposes.
+    /// Gets the display name used to identify the mount.
     /// </summary>
     string Name { get; }
 
     /// <summary>
-    /// Determines whether a file exists at the specified virtual path.
+    /// Determines whether the mount contains a file at the specified virtual path.
     /// </summary>
-    /// <param name="virtualPath">The virtual path to the file.</param>
-    /// <returns><see langword="true"/> if the file exists; otherwise, <see langword="false"/>.</returns>
+    /// <param name="virtualPath">The virtual asset path to test.</param>
+    /// <returns>
+    /// <see langword="true"/> when the path can be read from this mount;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     bool HasFile(string virtualPath);
 
     /// <summary>
-    /// Reads the file at the specified virtual path and returns its contents as a byte array.
+    /// Reads the complete contents of a file from the mount.
     /// </summary>
-    /// <param name="virtualPath">The virtual path to the file.</param>
-    /// <returns>The file contents as a byte array.</returns>
-    /// <exception cref="FileNotFoundException">Thrown when the file does not exist in the mount.</exception>
+    /// <param name="virtualPath">The virtual asset path to read.</param>
+    /// <returns>The file contents.</returns>
+    /// <exception cref="FileNotFoundException">
+    /// The requested path does not exist in the mount.
+    /// </exception>
     byte[] ReadFile(string virtualPath);
 }

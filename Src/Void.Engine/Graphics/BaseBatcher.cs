@@ -3,30 +3,28 @@ using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
 // ============================================================================
 //  BaseBatcher.cs
 // ============================================================================
-//  Abstract base class for batch rendering implementations. Provides core
-//  batching functionality including command sorting, vertex buffer management,
-//  render state handling, and performance statistics collection.
+//  Shared batch lifecycle, render state, geometry upload, and statistics for
+//  VOID batcher implementations.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics;
 
 /// <summary>
-/// Abstract base class for batch rendering implementations.
+/// Provides the shared lifecycle and submission pipeline for batched rendering.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="BaseBatcher"/> class provides core batching functionality
-/// for rendering large numbers of primitives with minimal draw calls.
+/// Derive from <see cref="BaseBatcher"/> when a custom batcher can use VOID's
+/// renderer-neutral vertex buffer and grouped submission model. Derived classes
+/// provide command storage, sorting, vertex generation, and grouping rules.
 /// </para>
 /// <para>
-/// Derived batchers should use the protected PascalCase extension surface
-/// rather than relying on VOID's internal backing state.
-/// </para>
-/// <para>
-/// This class is not thread-safe and should be accessed from the main thread.
+/// A batch begins with <see cref="Begin"/>, accepts commands through the derived
+/// type, and is submitted by <see cref="Flush"/> or <see cref="End"/>. Shader and
+/// render-target selection are batcher-wide state at flush time, not per-command state.
 /// </para>
 /// </remarks>
 public abstract class BaseBatcher : IBatcher
@@ -36,14 +34,8 @@ public abstract class BaseBatcher : IBatcher
 
     private readonly IRenderTarget _defaultRenderTarget;
 
-    // ------------------------------------------------------------------------
-    // Built-in batcher backing state.
-    // ------------------------------------------------------------------------
-    // These remain internal so VOID's existing SpriteBatcher and
-    // PrimitiveBatcher do not need a mechanical rename-only rewrite.
-    // External batcher implementations should use the protected PascalCase
-    // surface below instead.
-
+    // Built-in batchers retain this backing state for compatibility. External
+    // derived batchers should use the protected PascalCase surface below.
     internal bool _isDisposed;
     internal bool _isDrawing;
     internal int _cmdCount;
@@ -58,15 +50,7 @@ public abstract class BaseBatcher : IBatcher
     internal int _vertexBufferSize;
     internal IRenderTarget _renderTarget;
     internal IVertexBuffer _vertexBuffer;
-
-    // Temporary compatibility state used by the current built-in
-    // SpriteBatcher. It will be removed when SpriteBatcher moves to the
-    // indexed-quad path in the next step.
     internal Texture _currentTexture;
-
-    // ------------------------------------------------------------------------
-    // Protected extension surface.
-    // ------------------------------------------------------------------------
 
     /// <summary>Gets whether this batcher has been disposed.</summary>
     protected bool IsDisposed => _isDisposed;
@@ -74,50 +58,50 @@ public abstract class BaseBatcher : IBatcher
     /// <summary>Gets whether a batch is currently active.</summary>
     protected bool IsBatchActive => _isDrawing;
 
-    /// <summary>Gets or sets the number of queued draw commands.</summary>
+    /// <summary>Gets or sets the number of queued commands.</summary>
     protected int QueuedCommandCount
     {
         get => _cmdCount;
         set => _cmdCount = value;
     }
 
-    /// <summary>Gets or sets the current command capacity.</summary>
+    /// <summary>Gets or sets the command capacity, clamped to the supported range.</summary>
     protected int Capacity
     {
         get => _capacity;
         set => _capacity = Math.Clamp(value, 1, MaxCapacity);
     }
 
-    /// <summary>Gets the active sort mode.</summary>
+    /// <summary>Gets the sort mode selected for the active batch.</summary>
     protected SortMode CurrentSortMode => _sortMode;
 
-    /// <summary>Gets the active blend mode.</summary>
+    /// <summary>Gets the blend mode selected for the active batch.</summary>
     protected IBlendMode CurrentBlendMode => _blendMode;
 
-    /// <summary>Gets the camera used by the current batch.</summary>
+    /// <summary>Gets the camera selected for the active batch, if any.</summary>
     protected Camera CurrentCamera => _currentCamera;
 
-    /// <summary>Gets the current backend-neutral render state.</summary>
+    /// <summary>Gets the renderer-neutral state used for draw submission.</summary>
     protected BatchRenderState RenderStates => _renderStates;
 
-    /// <summary>Gets or sets the current batch statistics.</summary>
+    /// <summary>Gets or sets the statistics reported by the batcher.</summary>
     protected BatchStats Statistics
     {
         get => _stats;
         set => _stats = value;
     }
 
-    /// <summary>Gets or sets the CPU-side vertex data used by the batcher.</summary>
+    /// <summary>Gets or sets the CPU-side vertex array used for uploads.</summary>
     protected RenderVertex[] VertexData
     {
         get => _vertexData;
         set => _vertexData = value;
     }
 
-    /// <summary>Gets the shader selected for the current batch.</summary>
+    /// <summary>Gets the shader currently selected for the batcher.</summary>
     protected IShader CurrentShader => _currentShader;
 
-    /// <summary>Gets or sets the vertex buffer capacity in vertices.</summary>
+    /// <summary>Gets or sets the vertex-buffer capacity measured in vertices.</summary>
     protected int VertexBufferSize
     {
         get => _vertexBufferSize;
@@ -131,38 +115,43 @@ public abstract class BaseBatcher : IBatcher
         set => _renderTarget = value ?? _defaultRenderTarget;
     }
 
-    /// <summary>Gets or sets the vertex buffer used by this batcher.</summary>
+    /// <summary>Gets or sets the vertex buffer used for submissions.</summary>
     protected IVertexBuffer VertexBuffer
     {
         get => _vertexBuffer;
         set => _vertexBuffer = value;
     }
 
-    /// <summary>Gets the name of the batcher.</summary>
+    /// <summary>Gets the display name of the concrete batcher.</summary>
     public abstract string Name { get; }
 
-    /// <summary>Gets whether a batch is currently active.</summary>
+    /// <summary>Gets whether <see cref="Begin"/> has been called without a matching <see cref="End"/>.</summary>
     public bool IsDrawing => _isDrawing;
 
-    /// <summary>Gets the performance statistics for the current batch.</summary>
+    /// <summary>
+    /// Gets statistics for the most recent flush since the current <see cref="Begin"/>.
+    /// </summary>
     public BatchStats Stats => _stats;
 
-    /// <summary>Gets the number of draw calls issued in the current batch.</summary>
+    /// <summary>Gets the draw-call count reported by <see cref="Stats"/>.</summary>
     public int DrawCallCount => _stats.DrawCalls;
 
-    /// <summary>Gets the number of vertices processed in the current batch.</summary>
+    /// <summary>Gets the vertex count reported by <see cref="Stats"/>.</summary>
     public int VertexCount => _stats.Vertices;
 
-    /// <summary>Gets the number of queued commands.</summary>
+    /// <summary>Gets the number of commands currently queued and not yet flushed.</summary>
     public int CommandCount => _cmdCount;
 
-    /// <summary>Gets the number of vertices produced per command.</summary>
+    /// <summary>Gets the number of vertices reserved for each queued command.</summary>
     protected abstract int VerticesPerCommand { get; }
 
     /// <summary>
-    /// Initializes a new batcher.
+    /// Initializes a batcher with the requested command capacity.
     /// </summary>
-    /// <param name="capacity">Initial command capacity, or zero for the batcher default.</param>
+    /// <param name="capacity">
+    /// Initial command capacity. A value less than or equal to zero uses
+    /// <see cref="GetDefaultCapacity"/>.
+    /// </param>
     protected BaseBatcher(int capacity = 0)
     {
         _capacity = capacity > 0
@@ -189,7 +178,10 @@ public abstract class BaseBatcher : IBatcher
         };
     }
 
-    /// <summary>Sets the render target used by subsequent batches.</summary>
+    /// <summary>
+    /// Selects the render target used by subsequent submissions.
+    /// </summary>
+    /// <param name="target">The target to select. A null value is ignored.</param>
     public void SetRenderTarget(IRenderTarget target)
     {
         if (target != null)
@@ -202,33 +194,54 @@ public abstract class BaseBatcher : IBatcher
         _renderTarget = _defaultRenderTarget;
     }
 
-    /// <summary>Gets whether the current target is the default game target.</summary>
+    /// <summary>Gets whether the selected target is the game's main render target.</summary>
     public bool IsUsingDefaultRenderTarget
         => ReferenceEquals(_renderTarget, _defaultRenderTarget);
 
     /// <summary>Gets the currently selected render target.</summary>
+    /// <returns>The render target that will receive the next submission.</returns>
     public IRenderTarget GetRenderTarget()
         => _renderTarget;
 
-    /// <summary>Copies the selected shader into the current render state.</summary>
+    /// <summary>
+    /// Copies the selected shader into <see cref="RenderStates"/>.
+    /// </summary>
+    /// <remarks>Derived batchers may override this to prepare additional shader state.</remarks>
     protected virtual void ApplyShader()
     {
         _renderStates.Shader = _currentShader;
     }
 
-    /// <summary>Selects a shader for subsequent submissions.</summary>
+    /// <summary>
+    /// Selects the shader used when queued geometry is next flushed.
+    /// </summary>
+    /// <param name="shader">The shader to select.</param>
+    /// <remarks>
+    /// Shader selection is not stored per command. Changing it before a flush affects
+    /// the queued groups submitted by that flush.
+    /// </remarks>
     public void SetShader(IShader shader)
     {
         _currentShader = shader;
     }
 
-    /// <summary>Clears the selected custom shader.</summary>
+    /// <summary>
+    /// Clears the selected custom shader for the next flush.
+    /// </summary>
     public void ClearShader()
     {
         _currentShader = null;
     }
 
-    /// <summary>Begins a new batch.</summary>
+    /// <summary>
+    /// Begins a batch and initializes its render state.
+    /// </summary>
+    /// <param name="sortMode">Sort mode, or null to use <see cref="GameSettings.DefaultSortMode"/>.</param>
+    /// <param name="blendMode">Blend mode, or null to use the configured default.</param>
+    /// <param name="camera">Optional camera used for view state and the view-projection matrix.</param>
+    /// <param name="renderTarget">Optional target to select for this and later submissions.</param>
+    /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when a batch is already active.</exception>
     public virtual void Begin(
         SortMode? sortMode = null,
         IBlendMode blendMode = null,
@@ -270,7 +283,11 @@ public abstract class BaseBatcher : IBatcher
         OnBegin();
     }
 
-    /// <summary>Flushes the batch and ends drawing.</summary>
+    /// <summary>
+    /// Flushes queued commands and ends the active batch.
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when no batch is active.</exception>
     public virtual void End()
     {
         if (_isDisposed)
@@ -290,7 +307,10 @@ public abstract class BaseBatcher : IBatcher
         OnEnd();
     }
 
-    /// <summary>Flushes queued commands without ending the batch.</summary>
+    /// <summary>
+    /// Sorts when required, builds geometry, submits compatible command groups,
+    /// records statistics, and clears the queued command count.
+    /// </summary>
     public virtual void Flush()
     {
         if (_cmdCount == 0)
@@ -338,15 +358,19 @@ public abstract class BaseBatcher : IBatcher
         OnFlush();
     }
 
-    /// <summary>Gets the total number of vertices to upload for this flush.</summary>
+    /// <summary>Gets the number of vertices uploaded by the next flush.</summary>
+    /// <returns>The number of vertices to upload.</returns>
     protected virtual int GetTotalVertexCount()
         => _cmdCount * VerticesPerCommand;
 
-    /// <summary>Gets the triangle count reported for this flush.</summary>
+    /// <summary>Gets the triangle count reported for the supplied vertex count.</summary>
+    /// <param name="totalVertices">The number of uploaded vertices.</param>
+    /// <returns>The triangle count to place in <see cref="BatchStats"/>.</returns>
     protected virtual int GetTriangleCount(int totalVertices)
         => totalVertices / 3;
 
-    /// <summary>Uploads geometry for the current flush.</summary>
+    /// <summary>Uploads the generated vertex data.</summary>
+    /// <param name="vertexCount">The number of vertices to upload.</param>
     protected virtual void UploadGeometry(int vertexCount)
     {
         _vertexBuffer.Update(
@@ -355,7 +379,9 @@ public abstract class BaseBatcher : IBatcher
             0);
     }
 
-    /// <summary>Submits one compatible group of commands.</summary>
+    /// <summary>Submits one contiguous group of compatible commands.</summary>
+    /// <param name="commandStart">Index of the first command in the group.</param>
+    /// <param name="commandCount">Number of commands in the group.</param>
     protected virtual void SubmitGroup(int commandStart, int commandCount)
     {
         int vertexStart = commandStart * VerticesPerCommand;
@@ -368,36 +394,41 @@ public abstract class BaseBatcher : IBatcher
             _renderStates);
     }
 
-    /// <summary>Sorts queued commands for the active sort mode.</summary>
+    /// <summary>Sorts queued commands according to the active sort mode.</summary>
     protected abstract void SortCommands();
 
-    /// <summary>Builds vertex data for queued commands.</summary>
+    /// <summary>Builds CPU-side vertex data for queued commands.</summary>
     protected abstract void BuildVertices();
 
-    /// <summary>Resizes the batcher's command/geometry storage.</summary>
+    /// <summary>Expands command and geometry storage when capacity is exhausted.</summary>
     protected abstract void ResizeBuffers();
 
-    /// <summary>Gets the default command capacity for the concrete batcher.</summary>
+    /// <summary>Gets the concrete batcher's default command capacity.</summary>
+    /// <returns>The default command capacity.</returns>
     protected virtual int GetDefaultCapacity()
         => InitialCapacity;
 
-    /// <summary>Called after a batch begins.</summary>
+    /// <summary>Called after <see cref="Begin"/> has initialized the batch.</summary>
     protected virtual void OnBegin() { }
 
-    /// <summary>Called after a batch ends.</summary>
+    /// <summary>Called after <see cref="End"/> has ended the batch.</summary>
     protected virtual void OnEnd() { }
 
-    /// <summary>Called after queued commands are flushed.</summary>
+    /// <summary>Called after a non-empty <see cref="Flush"/> completes.</summary>
     protected virtual void OnFlush() { }
 
-    /// <summary>Called while the batcher is being disposed.</summary>
+    /// <summary>Called while resources owned by the batcher are being disposed.</summary>
     protected virtual void OnDispose() { }
 
-    /// <summary>Returns whether two queued commands can share one submission.</summary>
+    /// <summary>Determines whether two queued commands can share one submission.</summary>
+    /// <param name="indexA">Index of the first command in the candidate group.</param>
+    /// <param name="indexB">Index of the command being tested.</param>
+    /// <returns>True when both commands can be submitted together.</returns>
     protected virtual bool CanBatchTogether(int indexA, int indexB)
         => true;
 
-    /// <summary>Applies render state for a compatible command group.</summary>
+    /// <summary>Applies renderer-neutral state for the command group being submitted.</summary>
+    /// <param name="commandIndex">Index of the first command in the group.</param>
     protected virtual void SetRenderStateForGroup(int commandIndex) { }
 
     /// <summary>Releases resources owned by the batcher.</summary>

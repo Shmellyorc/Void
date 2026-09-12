@@ -1,7 +1,10 @@
 // ============================================================================
 //  BatchRenderState.cs
 // ============================================================================
-//  Backend-neutral render state used by VOID batchers.
+//  Renderer-neutral state passed from VOID batchers to graphics backends.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 using System.Numerics;
@@ -10,25 +13,32 @@ using Void.Engine.Graphics.Rendering;
 namespace Void.Engine.Graphics;
 
 /// <summary>
-/// Describes the high-level state applied when a batch issues a draw.
+/// Describes the renderer-neutral state applied when a batch submits geometry.
 /// </summary>
+/// <remarks>
+/// Graphics backends consume this state without exposing backend-owned resources
+/// through VOID's game-facing <see cref="Texture"/>, <see cref="Font"/>, or shader APIs.
+/// </remarks>
 public sealed class BatchRenderState
 {
+    /// <summary>Gets or sets the blend mode used for the submission.</summary>
     public IBlendMode BlendMode { get; set; } = Graphics.BlendMode.Alpha;
+
+    /// <summary>Gets or sets the game-facing texture used for the submission.</summary>
     public Texture Texture { get; set; }
+
+    /// <summary>Gets or sets the shader used for the submission.</summary>
     public IShader Shader { get; set; }
 
-    /// <summary>World-to-clip transform used by the built-in 2D shader.</summary>
+    /// <summary>Gets or sets the world-to-clip transform used by the built-in 2D pipeline.</summary>
     public Matrix4x4 ViewProjection { get; set; } = Matrix4x4.Identity;
 
     // Font remains distinct from game Texture so DrawText(Font ...) stays fully
     // extensible for custom font implementations.
     internal Font Font { get; set; }
 
-    /// <summary>
-    /// Resolves the renderer-owned texture without exposing backend objects to
-    /// game-facing Texture or Font APIs.
-    /// </summary>
+    // Resolves the backend-owned texture while keeping renderer resources out of
+    // the game-facing Texture and Font APIs.
     internal bool TryGetGraphicsTexture(out IGraphicsTexture texture)
     {
         if (Texture != null)

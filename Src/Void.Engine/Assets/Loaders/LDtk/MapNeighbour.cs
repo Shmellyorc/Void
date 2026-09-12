@@ -1,9 +1,9 @@
 // ============================================================================
 //  MapNeighbour.cs
 // ============================================================================
-//  Represents the neighboring levels of an LDtk level in the world map.
+//  Neighbouring-level references parsed from LDtk world data.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -14,149 +14,108 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// Represents the possible directions for neighboring levels in the LDtk world map.
+/// Identifies the direction of a neighbouring LDtk level.
 /// </summary>
 public enum LDtkNeighbourDirection
 {
     /// <summary>
-    /// No direction; used when there is no neighboring level.
+    /// No recognized direction.
     /// </summary>
     None,
 
     /// <summary>
-    /// The level directly to the north (up).
+    /// North.
     /// </summary>
     North,
 
     /// <summary>
-    /// The level to the northeast (up and right).
+    /// Northeast.
     /// </summary>
     NorthEast,
 
     /// <summary>
-    /// The level directly to the east (right).
+    /// East.
     /// </summary>
     East,
 
     /// <summary>
-    /// The level to the southeast (down and right).
+    /// Southeast.
     /// </summary>
     SouthEast,
 
     /// <summary>
-    /// The level directly to the south (down).
+    /// South.
     /// </summary>
     South,
 
     /// <summary>
-    /// The level to the southwest (down and left).
+    /// Southwest.
     /// </summary>
     SouthWest,
 
     /// <summary>
-    /// The level directly to the west (left).
+    /// West.
     /// </summary>
     West,
 
     /// <summary>
-    /// The level to the northwest (up and left).
+    /// Northwest.
     /// </summary>
     NorthWest
 }
 
 /// <summary>
-/// Represents the neighboring levels of an LDtk level in the world map.
+/// Provides the neighbouring level instance IDs reported by LDtk.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="MapNeighbour"/> class provides access to the IDs of
-/// neighboring levels in each of the eight cardinal and intercardinal directions.
-/// This is used to navigate between connected levels in the LDtk world map.
-/// </para>
-/// <para>
-/// <b>Properties:</b>
-/// <list type="bullet">
-///   <item><description><see cref="North"/> - ID of the level to the north</description></item>
-///   <item><description><see cref="NorthEast"/> - ID of the level to the northeast</description></item>
-///   <item><description><see cref="East"/> - ID of the level to the east</description></item>
-///   <item><description><see cref="SouthEast"/> - ID of the level to the southeast</description></item>
-///   <item><description><see cref="South"/> - ID of the level to the south</description></item>
-///   <item><description><see cref="SouthWest"/> - ID of the level to the southwest</description></item>
-///   <item><description><see cref="West"/> - ID of the level to the west</description></item>
-///   <item><description><see cref="NorthWest"/> - ID of the level to the northwest</description></item>
-///   <item><description><see cref="Neighbours"/> - Dictionary of all neighboring levels by direction hash</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get the neighbours for a level
-/// var neighbours = level.Neighbours;
-/// 
-/// // Check for a specific neighbour
-/// if (!string.IsNullOrEmpty(neighbours.North))
-/// {
-///     // Get the level to the north
-///     var northLevel = map.GetLevelById(neighbours.North);
-/// }
-/// 
-/// // Iterate over all neighbours
-/// foreach (var (directionHash, levelId) in neighbours.Neighbours)
-/// {
-///     // Convert hash back to direction if needed
-///     Console.WriteLine($"Level {levelId} is in direction {directionHash}");
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is immutable and thread-safe.
-/// </para>
+/// Direction properties return an empty string when no neighbour exists in that
+/// direction. <see cref="Neighbours"/> exposes the same data keyed by VOID's
+/// hash of <see cref="LDtkNeighbourDirection"/>.
 /// </remarks>
 public sealed class MapNeighbour
 {
     /// <summary>
-    /// Gets the ID of the level to the north.
+    /// Gets the level instance ID to the north, or an empty string when absent.
     /// </summary>
     public string North => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.North), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the northeast.
+    /// Gets the level instance ID to the northeast, or an empty string when absent.
     /// </summary>
     public string NorthEast => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.NorthEast), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the east.
+    /// Gets the level instance ID to the east, or an empty string when absent.
     /// </summary>
     public string East => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.East), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the southeast.
+    /// Gets the level instance ID to the southeast, or an empty string when absent.
     /// </summary>
     public string SouthEast => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.SouthEast), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the south.
+    /// Gets the level instance ID to the south, or an empty string when absent.
     /// </summary>
     public string South => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.South), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the southwest.
+    /// Gets the level instance ID to the southwest, or an empty string when absent.
     /// </summary>
     public string SouthWest => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.SouthWest), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the west.
+    /// Gets the level instance ID to the west, or an empty string when absent.
     /// </summary>
     public string West => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.West), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets the ID of the level to the northwest.
+    /// Gets the level instance ID to the northwest, or an empty string when absent.
     /// </summary>
     public string NorthWest => Neighbours.TryGetValue(HashHelper.Cache32(LDtkNeighbourDirection.NorthWest), out var v) ? v : string.Empty;
 
     /// <summary>
-    /// Gets a dictionary of all neighboring levels keyed by direction hash.
+    /// Gets all neighbouring level IDs keyed by hashed direction.
     /// </summary>
     public IReadOnlyDictionary<uint, string> Neighbours { get; }
 

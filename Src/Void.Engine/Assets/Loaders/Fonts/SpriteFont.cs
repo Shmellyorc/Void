@@ -1,23 +1,79 @@
 // ============================================================================
 //  SpriteFont.cs
 // ============================================================================
-//  Built-in bitmap font. Glyph extraction and GPU backing are fully renderer-neutral.
+//  Built-in bitmap font backed by a renderer-neutral RGBA glyph atlas.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Assets.Loaders.Fonts;
 
+/// <summary>
+/// Provides VOID's bitmap sprite-font implementation.
+/// </summary>
+/// <remarks>
+/// <para>
+/// A sprite font treats the color of the source image's top-left pixel as the
+/// background color. Connected non-background regions are discovered as glyphs
+/// and mapped to characters in charset order.
+/// </para>
+/// <para>
+/// Use <see cref="AssetManager.LoadSpriteFont"/> when custom character sets,
+/// glyph spacing, or line spacing are required.
+/// </para>
+/// <code>
+/// SpriteFont font = AssetManager.Instance.LoadSpriteFont(
+///     "Fonts/ui.png",
+///     spacing: 1f,
+///     lineSpacing: 2f,
+///     charset: SpriteFont.CharsetFull);
+///
+/// Vect2 size = font.Measure("Score: 100");
+/// </code>
+/// </remarks>
 public sealed class SpriteFont : Font, IAsset
 {
+    /// <summary>
+    /// Contains printable ASCII characters from space through tilde.
+    /// </summary>
     public const string CharsetFull = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+
+    /// <summary>
+    /// Contains the decimal digits 0 through 9.
+    /// </summary>
     public const string CharsetNumbers = "0123456789";
+
+    /// <summary>
+    /// Contains uppercase English letters A through Z.
+    /// </summary>
     public const string CharsetUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    /// <summary>
+    /// Contains lowercase English letters a through z.
+    /// </summary>
     public const string CharsetLowercase = "abcdefghijklmnopqrstuvwxyz";
+
+    /// <summary>
+    /// Contains uppercase followed by lowercase English letters.
+    /// </summary>
     public const string CharsetLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    /// <summary>
+    /// Contains decimal digits followed by uppercase and lowercase English letters.
+    /// </summary>
     public const string CharsetAlphanumeric = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    /// <summary>
+    /// Contains uppercase hexadecimal characters 0 through 9 and A through F.
+    /// </summary>
     public const string CharsetHex = "0123456789ABCDEF";
 
     private readonly string _charset;
 
+    /// <summary>
+    /// Gets the height of the tallest extracted glyph, or the atlas height when no glyph height is available.
+    /// </summary>
     public override float LineHeight => GetActualLineHeight();
 
     internal SpriteFont(uint id, byte[] data, string tag, string charset = null, float lineSpacing = 0f, float spacing = 0f)
@@ -28,6 +84,12 @@ public sealed class SpriteFont : Font, IAsset
         Spacing = spacing;
     }
 
+    /// <summary>
+    /// Loads the bitmap atlas and extracts glyph regions when needed.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the number of discovered glyph regions does not match the configured charset.
+    /// </exception>
     public override void Load()
     {
         if (IsValid)
@@ -51,6 +113,9 @@ public sealed class SpriteFont : Font, IAsset
         base.Load();
     }
 
+    /// <summary>
+    /// Releases the font and clears its extracted glyph data.
+    /// </summary>
     public override void Dispose()
     {
         _glyphs = Array.Empty<Glyph>();
@@ -153,6 +218,14 @@ public sealed class SpriteFont : Font, IAsset
         );
     }
 
+    /// <summary>
+    /// Gets the glyph assigned to the specified character.
+    /// </summary>
+    /// <param name="c">The character to resolve.</param>
+    /// <returns>
+    /// The matching glyph, or the first glyph when the character is not present.
+    /// Returns an empty glyph when no glyphs have been extracted.
+    /// </returns>
     public override Glyph GetGlyph(char c)
     {
         int index = _charset.IndexOf(c);

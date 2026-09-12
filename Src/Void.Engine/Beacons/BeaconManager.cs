@@ -1,10 +1,9 @@
 // ============================================================================
 //  BeaconManager.cs
 // ============================================================================
-//  A lightweight publish/subscribe system for decoupled communication using
-//  topic-based beacons.
+//  Topic-based publish/subscribe messaging for decoupled engine and game code.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -14,55 +13,29 @@ using System.Collections.Concurrent;
 namespace Void.Engine.Beacons;
 
 /// <summary>
-/// A lightweight publish/subscribe system for decoupled communication using
-/// topic-based beacons.
+/// Provides topic-based publish/subscribe messaging through a shared manager.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="BeaconManager"/> provides a simple pub/sub system where
-/// subscribers register callbacks for specific topics, and publishers send
-/// beacons with optional data payloads.
+/// Subscribers register an <see cref="Action{T}"/> for a string or enum topic.
+/// Publishing that topic invokes its current subscribers synchronously on the
+/// thread that calls <see cref="Publish(string, object[])"/>.
 /// </para>
 /// <para>
-/// This is useful for:
-/// <list type="bullet">
-///   <item><description>Decoupled communication between systems</description></item>
-///   <item><description>Event-driven architecture</description></item>
-///   <item><description>Cross-system notifications without direct references</description></item>
-///   <item><description>Plugin and mod communication</description></item>
-/// </list>
+/// Multiple callbacks can subscribe to the same topic. A subscription should
+/// be removed when its owner no longer needs to receive notifications.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Subscribe to a topic
-/// BeaconManager.Instance.Subscribe("PlayerDied", handle =>
+/// void OnPlayerMoved(BeaconHandle beacon)
 /// {
-///     Console.WriteLine($"Player died with {handle.Count} data items");
-///     var position = handle.Get&lt;Vect2&gt;(0);
-/// });
-/// 
-/// // Subscribe with enum
-/// BeaconManager.Instance.Subscribe(MyTopics.GameStarted, handle =>
-/// {
-///     Console.WriteLine("Game started!");
-/// });
-/// 
-/// // Publish a beacon
-/// BeaconManager.Instance.Publish("PlayerDied", playerPosition, playerHealth);
-/// 
-/// // Unsubscribe
-/// BeaconManager.Instance.Unsubscribe("PlayerDied", handler);
-/// 
-/// // Clear all subscribers
-/// BeaconManager.Instance.Clear();
+///     if (beacon.TryGet&lt;Vect2&gt;(0, out var position))
+///         Console.WriteLine(position);
+/// }
+///
+/// BeaconManager.Instance.Subscribe("PlayerMoved", OnPlayerMoved);
+/// BeaconManager.Instance.Publish("PlayerMoved", new Vect2(32, 24));
+/// BeaconManager.Instance.Unsubscribe("PlayerMoved", OnPlayerMoved);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe and uses concurrent collections for
-/// subscriber management.
-/// </para>
 /// </remarks>
 public sealed class BeaconManager
 {
@@ -72,23 +45,25 @@ public sealed class BeaconManager
     private readonly ConcurrentDictionary<ulong, Action<BeaconHandle>> _topics = [];
 
     /// <summary>
-    /// Gets the singleton instance of the beacon manager.
+    /// Gets the shared beacon manager.
     /// </summary>
     public static BeaconManager Instance => _instance.Value;
 
     /// <summary>
-    /// Gets the number of subscribed topics.
+    /// Gets the number of topics that currently have subscribers.
     /// </summary>
     public int Count => _topics.Count;
 
     private BeaconManager() { }
 
     /// <summary>
-    /// Subscribes to a beacon topic.
+    /// Subscribes a callback to a string topic.
     /// </summary>
     /// <param name="topic">The topic to subscribe to.</param>
-    /// <param name="handle">The callback to invoke when a beacon is published.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="topic"/> or <paramref name="handle"/> is null.</exception>
+    /// <param name="handle">The callback to invoke when the topic is published.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="topic"/> is null or empty, or <paramref name="handle"/> is null.
+    /// </exception>
     public void Subscribe(string topic, Action<BeaconHandle> handle)
     {
         if (topic.IsEmpty())
@@ -105,20 +80,25 @@ public sealed class BeaconManager
     }
 
     /// <summary>
-    /// Subscribes to a beacon topic using an enum.
+    /// Subscribes a callback to an enum topic.
     /// </summary>
-    /// <param name="topic">The enum representing the topic to subscribe to.</param>
-    /// <param name="handle">The callback to invoke when a beacon is published.</param>
+    /// <param name="topic">The enum value used as the topic.</param>
+    /// <param name="handle">The callback to invoke when the topic is published.</param>
     public void Subscribe(Enum topic, Action<BeaconHandle> handle)
         => Subscribe(topic.ToEnumString(), handle);
 
     /// <summary>
-    /// Unsubscribes from a beacon topic.
+    /// Removes a callback from a string topic.
     /// </summary>
     /// <param name="topic">The topic to unsubscribe from.</param>
     /// <param name="handle">The callback to remove.</param>
-    /// <returns><see langword="true"/> if the subscription was removed; otherwise, <see langword="false"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="topic"/> or <paramref name="handle"/> is null.</exception>
+    /// <returns>
+    /// <see langword="true"/> when the topic existed and the subscription was
+    /// updated or removed; otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="topic"/> is null or empty, or <paramref name="handle"/> is null.
+    /// </exception>
     public bool Unsubscribe(string topic, Action<BeaconHandle> handle)
     {
         if (topic.IsEmpty())
@@ -140,19 +120,25 @@ public sealed class BeaconManager
     }
 
     /// <summary>
-    /// Unsubscribes from a beacon topic using an enum.
+    /// Removes a callback from an enum topic.
     /// </summary>
-    /// <param name="topic">The enum representing the topic to unsubscribe from.</param>
+    /// <param name="topic">The enum value used as the topic.</param>
     /// <param name="handle">The callback to remove.</param>
     public void Unsubscribe(Enum topic, Action<BeaconHandle> handle)
         => Unsubscribe(topic.ToEnumString(), handle);
 
     /// <summary>
-    /// Publishes a beacon on a topic with optional data.
+    /// Publishes a string topic with an optional payload.
     /// </summary>
-    /// <param name="topic">The topic to publish on.</param>
-    /// <param name="data">Optional data payload to include with the beacon.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="topic"/> is null or empty.</exception>
+    /// <param name="topic">The topic to publish.</param>
+    /// <param name="data">The payload items delivered to subscribers.</param>
+    /// <remarks>
+    /// If the topic has no subscribers, the call returns without creating a
+    /// <see cref="BeaconHandle"/>. Subscriber callbacks are invoked synchronously.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="topic"/> is null or empty.
+    /// </exception>
     public void Publish(string topic, params object[] data)
     {
         if (topic.IsEmpty())
@@ -174,15 +160,15 @@ public sealed class BeaconManager
     }
 
     /// <summary>
-    /// Publishes a beacon on a topic with optional data using an enum.
+    /// Publishes an enum topic with an optional payload.
     /// </summary>
-    /// <param name="topic">The enum representing the topic to publish on.</param>
-    /// <param name="data">Optional data payload to include with the beacon.</param>
+    /// <param name="topic">The enum value used as the topic.</param>
+    /// <param name="data">The payload items delivered to subscribers.</param>
     public void Publish(Enum topic, params object[] data)
         => Publish(topic.ToEnumString(), data);
 
     /// <summary>
-    /// Clears all subscriptions.
+    /// Removes all beacon subscriptions.
     /// </summary>
     public void Clear() => _topics.Clear();
 }

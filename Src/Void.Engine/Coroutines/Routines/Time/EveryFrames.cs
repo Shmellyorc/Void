@@ -1,9 +1,9 @@
 // ============================================================================
 //  EveryFrames.cs
 // ============================================================================
-//  A coroutine that executes an action every N frames indefinitely.
+//  A coroutine that executes an action at a repeating frame interval.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,39 +13,14 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Time;
 
 /// <summary>
-/// A coroutine that executes an action every N frames indefinitely.
+/// Executes an action every specified number of coroutine updates until stopped.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="EveryFrames"/> class calls a specified action at a regular
-/// frame interval. It runs indefinitely until the coroutine is stopped.
-/// </para>
-/// <para>
-/// This is useful for frame-rate independent periodic tasks such as
-/// updating UI, checking conditions, or performing maintenance tasks.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
+/// This routine is frame based rather than time based. An interval less than one
+/// is clamped to one, causing the action to run on every update.
 /// <code>
-/// // Call an action every 60 frames (approximately once per second at 60 FPS)
-/// var everyFrame = new EveryFrames(60, () => Console.WriteLine("Tick!"));
-/// CoroutineManager.Instance.Run(everyFrame);
-/// 
-/// // Call an action every 30 frames
 /// CoroutineManager.Instance.Run(new EveryFrames(30, UpdateUI));
-/// 
-/// // Stop after a condition
-/// var handle = CoroutineManager.Instance.Run(new EveryFrames(10, () => 
-/// {
-///     if (someCondition)
-///         CoroutineManager.Instance.Stop(handle);
-/// }));
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class EveryFrames : IEnumerator
 {
@@ -54,15 +29,15 @@ public sealed class EveryFrames : IEnumerator
     private int _elapsed;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the current yielded value. This routine always yields <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EveryFrames"/> class.
+    /// Initializes a repeating frame action.
     /// </summary>
-    /// <param name="interval">The number of frames between each action execution.</param>
-    /// <param name="action">The action to execute at the specified interval.</param>
+    /// <param name="interval">The number of updates between action invocations. Values below one are treated as one.</param>
+    /// <param name="action">The action to invoke at each interval.</param>
     public EveryFrames(int interval, Action action)
     {
         _interval = Math.Max(1, interval);
@@ -71,9 +46,9 @@ public sealed class EveryFrames : IEnumerator
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Advances the frame counter and invokes the action when the interval is reached.
     /// </summary>
-    /// <returns>Always returns <see langword="true"/> (runs indefinitely).</returns>
+    /// <returns>Always <see langword="true"/> because this routine repeats until explicitly stopped.</returns>
     public bool MoveNext()
     {
         _elapsed++;
@@ -86,12 +61,13 @@ public sealed class EveryFrames : IEnumerator
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases the routine. This implementation has no resources to release.
     /// </summary>
     public void Dispose() { }
 }

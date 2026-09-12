@@ -1,9 +1,9 @@
 // ============================================================================
 //  LDtkEntityInstance.cs
 // ============================================================================
-//  Represents an entity instance within an LDtk level.
+//  Represents an entity instance placed in an LDtk entity layer.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,111 +15,67 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.LDtk.Instances;
 
 /// <summary>
-/// Represents an entity instance within an LDtk level.
+/// Represents an entity instance placed in an LDtk entity layer.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="LDtkEntityInstance"/> class represents a single entity
-/// placed in a level. It contains the entity's name, ID, position, size,
-/// pivot, tags, and field settings.
-/// </para>
-/// <para>
-/// <b>Properties:</b>
-/// <list type="bullet">
-///   <item><description><see cref="Name"/> - The name of the entity</description></item>
-///   <item><description><see cref="Id"/> - The unique identifier of the entity instance</description></item>
-///   <item><description><see cref="Size"/> - The size of the entity in pixels</description></item>
-///   <item><description><see cref="Coords"/> - The world coordinates of the entity</description></item>
-///   <item><description><see cref="Pivot"/> - The pivot point of the entity</description></item>
-///   <item><description><see cref="Tags"/> - The tags associated with the entity</description></item>
-///   <item><description><see cref="Settings"/> - The field settings of the entity</description></item>
-///   <item><description><see cref="Location"/> - The grid location of the entity</description></item>
-///   <item><description><see cref="Position"/> - The pixel position of the entity</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get all entities from a layer
-/// var entities = layer.InstanceAs&lt;LDtkEntityInstance&gt;();
-/// 
-/// foreach (var entity in entities)
-/// {
-///     Console.WriteLine($"Entity: {entity.Name} at {entity.Position}");
-///     
-///     // Get entity tags as enums
-///     var tags = entity.TagsAs&lt;MyEntityTag&gt;();
-///     
-///     // Access entity settings
-///     if (LDtkSetting.TryGetIntSetting(entity.Settings, "Health", out int health))
-///     {
-///         // Use health value
-///     }
-/// }
-/// 
-/// // Get a specific entity by ID
-/// var entity = map.GetEntityById("entity_id");
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is immutable and thread-safe.
-/// </para>
+/// Entity instances expose their LDtk identifier, dimensions, pivot, tags, field
+/// settings, grid location, and pixel position. Use <see cref="LDtkSetting"/> helpers
+/// to read values from <see cref="Settings"/>.
 /// </remarks>
 public sealed class LDtkEntityInstance : ILDtkInstance
 {
     /// <summary>
-    /// Gets the name of the entity.
+    /// Gets the LDtk entity identifier.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the pivot point of the entity.
+    /// Gets the normalized entity pivot reported by LDtk.
     /// </summary>
     public Vect2 Pivot { get; }
 
     /// <summary>
-    /// Gets the unique identifier of the entity instance.
+    /// Gets the unique LDtk instance identifier.
     /// </summary>
     public string Id { get; }
 
     /// <summary>
-    /// Gets the size of the entity in pixels.
+    /// Gets the entity size in pixels.
     /// </summary>
     public Vect2 Size { get; }
 
     /// <summary>
-    /// Gets the world coordinates of the entity.
+    /// Gets the entity world coordinates reported by LDtk.
     /// </summary>
     public Vect2 Coords { get; }
 
     /// <summary>
-    /// Gets the tags associated with the entity.
+    /// Gets the tags assigned to the entity definition.
     /// </summary>
     public List<string> Tags { get; }
 
     /// <summary>
-    /// Gets the width of the entity in pixels.
+    /// Gets the entity width in pixels.
     /// </summary>
     public float Width => Size.X;
 
     /// <summary>
-    /// Gets the height of the entity in pixels.
+    /// Gets the entity height in pixels.
     /// </summary>
     public float Height => Size.Y;
 
     /// <summary>
-    /// Gets the field settings of the entity.
+    /// Gets the entity field settings keyed by VOID's hashed field identifiers.
     /// </summary>
     public Dictionary<uint, LDtkSetting> Settings { get; }
 
     /// <summary>
-    /// Gets the grid location of the entity in tile coordinates.
+    /// Gets the entity location in layer grid coordinates.
     /// </summary>
     public Vect2 Location { get; }
 
     /// <summary>
-    /// Gets the pixel position of the entity in world coordinates.
+    /// Gets the entity position in pixels within its level.
     /// </summary>
     public Vect2 Position { get; }
 
@@ -139,10 +95,13 @@ public sealed class LDtkEntityInstance : ILDtkInstance
     }
 
     /// <summary>
-    /// Gets the entity tags as a list of enum values.
+    /// Parses matching entity tags as values of the specified enum type.
     /// </summary>
-    /// <typeparam name="TEnum">The enum type to convert tags to.</typeparam>
-    /// <returns>A list of enum values parsed from the tags.</returns>
+    /// <typeparam name="TEnum">The enum type used to interpret tag names.</typeparam>
+    /// <returns>
+    /// A list containing each tag that could be parsed as <typeparamref name="TEnum"/>.
+    /// Tags that do not match an enum value are skipped.
+    /// </returns>
     public List<TEnum> TagsAs<TEnum>() where TEnum : Enum
     {
         var result = new List<TEnum>(Tags.Count);

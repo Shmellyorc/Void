@@ -1,8 +1,10 @@
 // ============================================================================
 //  Shader.cs
 // ============================================================================
-//  Renderer-neutral .shader asset. Backend programs are created lazily through
-//  ShaderProgram and the active IGraphicsDevice.
+//  Renderer-neutral shader asset loaded from VOID .shader files.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 using System.Numerics;
@@ -13,9 +15,28 @@ using Void.Engine.Graphics.Shaders;
 namespace Void.Engine.Assets.Loaders;
 
 /// <summary>
-/// Shader asset containing vertex and fragment source. Existing files remain
-/// compatible with [vertex]/[fragment] and default to GLSL.
+/// Represents a renderer-neutral shader asset containing vertex and fragment source code.
 /// </summary>
+/// <remarks>
+/// <para>
+/// VOID shader files use <c>[vertex]</c> and <c>[fragment]</c> sections. An optional
+/// <c>[language]</c> section selects the shader language; GLSL is used when no language is specified.
+/// The active renderer creates the backend program lazily through <see cref="ShaderProgram"/>.
+/// </para>
+/// <para>
+/// Uniform values can be assigned directly on the asset before it is submitted through a batcher.
+/// </para>
+/// <code>
+/// Shader shader = AssetManager.Instance.Load&lt;Shader&gt;("Shaders/wave.shader");
+/// shader.SetUniform("uTime", elapsedSeconds);
+///
+/// spriteBatch.SetShader(shader);
+/// spriteBatch.Begin();
+/// spriteBatch.Draw(texture, position, Color.White);
+/// spriteBatch.End();
+/// spriteBatch.ClearShader();
+/// </code>
+/// </remarks>
 public sealed class Shader : IAsset, IShader
 {
     private ShaderProgram _program;
@@ -23,14 +44,39 @@ public sealed class Shader : IAsset, IShader
     private string _fragmentSource;
     private ShaderLanguage _language = ShaderLanguage.Glsl;
 
+    /// <summary>
+    /// Gets the identifier assigned to this shader asset.
+    /// </summary>
     public uint Id { get; }
+
+    /// <summary>
+    /// Gets the normalized asset tag or source path.
+    /// </summary>
     public string Tag { get; }
+
+    /// <summary>
+    /// Gets the original encoded bytes of the VOID shader file.
+    /// </summary>
     public byte[] Data { get; }
+
+    /// <summary>
+    /// Gets whether the shader source has been parsed and a runtime program is available.
+    /// </summary>
     public bool IsValid { get; private set; }
+
+    /// <summary>
+    /// Gets the lifecycle type for this asset.
+    /// </summary>
     public AssetType Type => AssetType.Normal;
+
+    /// <summary>
+    /// Gets or sets the most recent time this shader was accessed.
+    /// </summary>
     public DateTime LastAccessTime { get; set; }
 
-    /// <summary>Gets the renderer-neutral runtime shader program.</summary>
+    /// <summary>
+    /// Gets the renderer-neutral runtime shader program, loading the asset when necessary.
+    /// </summary>
     public ShaderProgram Program
     {
         get
@@ -49,8 +95,17 @@ public sealed class Shader : IAsset, IShader
         LastAccessTime = DateTime.Now;
     }
 
+    /// <summary>
+    /// Releases shader resources if the asset was not disposed explicitly.
+    /// </summary>
     ~Shader() => Dispose();
 
+    /// <summary>
+    /// Parses the shader source and creates the renderer-neutral runtime program.
+    /// </summary>
+    /// <remarks>
+    /// Calling this method on an already loaded shader refreshes <see cref="LastAccessTime"/> without rebuilding the program.
+    /// </remarks>
     public void Load()
     {
         if (IsValid)
@@ -67,6 +122,9 @@ public sealed class Shader : IAsset, IShader
         IsValid = true;
     }
 
+    /// <summary>
+    /// Releases the runtime shader program while retaining the source data for later reloading.
+    /// </summary>
     public void Unload()
     {
         if (!IsValid && _program == null)
@@ -77,22 +135,85 @@ public sealed class Shader : IAsset, IShader
         IsValid = false;
     }
 
+    /// <summary>
+    /// Releases resources owned by this shader asset.
+    /// </summary>
     public void Dispose()
     {
         Unload();
         GC.SuppressFinalize(this);
     }
 
+    /// <summary>
+    /// Sets a floating-point uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="value">The value to assign.</param>
     public void SetUniform(string name, float value) => EnsureProgram().SetUniform(name, value);
+
+    /// <summary>
+    /// Sets an integer uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="value">The value to assign.</param>
     public void SetUniform(string name, int value) => EnsureProgram().SetUniform(name, value);
+
+    /// <summary>
+    /// Sets a two-component vector uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="value">The value to assign.</param>
     public void SetUniform(string name, Vect2 value) => EnsureProgram().SetUniform(name, value);
+
+    /// <summary>
+    /// Sets a three-component vector uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="value">The value to assign.</param>
     public void SetUniform(string name, Vect3 value) => EnsureProgram().SetUniform(name, value);
+
+    /// <summary>
+    /// Sets a four-component vector uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="value">The value to assign.</param>
     public void SetUniform(string name, Vect4 value) => EnsureProgram().SetUniform(name, value);
+
+    /// <summary>
+    /// Sets a color uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="color">The color to assign.</param>
     public void SetUniform(string name, Color color) => EnsureProgram().SetUniform(name, color);
+
+    /// <summary>
+    /// Sets a texture uniform value.
+    /// </summary>
+    /// <param name="name">The sampler uniform name.</param>
+    /// <param name="texture">The texture to assign.</param>
     public void SetUniform(string name, Texture texture) => EnsureProgram().SetUniform(name, texture);
+
+    /// <summary>
+    /// Sets a 4x4 matrix uniform value.
+    /// </summary>
+    /// <param name="name">The uniform name.</param>
+    /// <param name="matrix">The matrix to assign.</param>
     public void SetUniform(string name, Matrix4x4 matrix) => EnsureProgram().SetUniform(name, matrix);
+
+    /// <summary>
+    /// Marks a sampler uniform to use the texture supplied by the current draw operation.
+    /// </summary>
+    /// <param name="name">The sampler uniform name.</param>
     public void SetCurrentTexture(string name) => EnsureProgram().SetCurrentTexture(name);
+
+    /// <summary>
+    /// Binds the runtime shader program on the active graphics device.
+    /// </summary>
     public void Bind() => EnsureProgram().Bind();
+
+    /// <summary>
+    /// Unbinds the runtime shader program when one has been created.
+    /// </summary>
     public void Unbind() => _program?.Unbind();
 
     bool IShader.IsValid => IsValid && _program != null && _program.IsValid;
@@ -173,6 +294,10 @@ public sealed class Shader : IAsset, IShader
         };
     }
 
+    /// <summary>
+    /// Returns a diagnostic string describing this shader asset.
+    /// </summary>
+    /// <returns>A string containing the asset identifier, tag, validity, and shader language.</returns>
     public override string ToString()
         => $"ShaderAsset({Id}, {Tag}, {IsValid}, {_language})";
 }

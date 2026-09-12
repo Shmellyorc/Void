@@ -1,163 +1,129 @@
 // ============================================================================
 //  IAsset.cs
 // ============================================================================
-//  Core interface for all asset types in the asset management system.
+//  Shared asset lifecycle contract used by the asset manager and custom assets.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Assets.Loaders;
 
 /// <summary>
-/// Defines the type of an asset for management and lifecycle purposes.
+/// Identifies how an asset was created and how VOID manages its lifetime.
 /// </summary>
 public enum AssetType
 {
     /// <summary>
-    /// The asset type is unknown or not set.
+    /// Indicates that the asset has no assigned lifecycle type.
     /// </summary>
     None,
 
     /// <summary>
-    /// A standard asset loaded from file data and managed by the <see cref="AssetManager"/>.
+    /// Represents an asset loaded from source data and managed by <see cref="AssetManager"/>.
     /// </summary>
     Normal,
 
     /// <summary>
-    /// A programmatically created asset that is not managed by the <see cref="AssetManager"/>.
+    /// Represents an asset created directly by game or engine code rather than loaded by <see cref="AssetManager"/>.
     /// </summary>
     Instanced,
 
     /// <summary>
-    /// An asset created from a render target, typically used for render textures.
+    /// Represents a texture-like asset backed by renderer-managed data such as an atlas page or render target.
     /// </summary>
     Atlas
 }
 
 /// <summary>
-/// Defines the contract for all asset types in the asset management system.
+/// Defines the lifecycle contract for assets that can be loaded, cached, unloaded, and disposed by VOID.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="IAsset"/> interface provides the core functionality for
-/// assets managed by the <see cref="AssetManager"/>. All asset types must
-/// implement this interface to be loaded, cached, and evicted properly.
+/// Custom asset types registered with <see cref="AssetManager.RegisterAssetType{T}"/>
+/// implement this interface so the asset manager can track their source data, validity, and last access time.
 /// </para>
 /// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Unique identifier for asset tracking</description></item>
-///   <item><description>Tag for identification and logging</description></item>
-///   <item><description>Raw data storage for reloading</description></item>
-///   <item><description>Load/Unload lifecycle management</description></item>
-///   <item><description>Access tick for LRU eviction</description></item>
-///   <item><description>Asset type classification</description></item>
-/// </list>
+/// <see cref="Load"/> should make the asset ready for use and refresh <see cref="LastAccessTime"/>.
+/// <see cref="Unload"/> should release reloadable resources while preserving enough source data to load the asset again.
+/// <see cref="IDisposable.Dispose"/> should perform final cleanup.
 /// </para>
-/// <para>
-/// <b>Lifecycle:</b>
-/// <list type="number">
-///   <item><description>Asset is created with raw data and tag</description></item>
-///   <item><description><see cref="Load"/> is called to create the underlying resource</description></item>
-///   <item><description>Asset is used and access tick is updated</description></item>
-///   <item><description>Asset may be <see cref="Unload"/>ed to free resources</description></item>
-///   <item><description>Asset can be reloaded if accessed again</description></item>
-///   <item><description>Asset is <see cref="IDisposable.Dispose"/>d when no longer needed</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Creating a custom asset type
-/// public class CustomAsset : IAsset
+/// public sealed class DialogueAsset : IAsset
 /// {
 ///     public uint Id { get; }
 ///     public string Tag { get; }
 ///     public byte[] Data { get; }
 ///     public bool IsValid { get; private set; }
 ///     public AssetType Type => AssetType.Normal;
-///     public ushort LastAccessTick { get; set; }
-/// 
-///     public CustomAsset(uint id, byte[] data, string tag)
+///     public DateTime LastAccessTime { get; private set; }
+///
+///     public DialogueAsset(uint id, byte[] data, string tag)
 ///     {
 ///         Id = id;
 ///         Data = data;
 ///         Tag = tag;
 ///     }
-/// 
+///
 ///     public void Load()
 ///     {
-///         // Create underlying resource from Data
+///         LastAccessTime = DateTime.Now;
 ///         IsValid = true;
 ///     }
-/// 
-///     public void Unload()
-///     {
-///         // Free underlying resource
-///         IsValid = false;
-///     }
-/// 
-///     public void Dispose()
-///     {
-///         // Clean up resources
-///     }
+///
+///     public void Unload() => IsValid = false;
+///     public void Dispose() => Unload();
 /// }
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// Implementations should handle their own thread safety if accessed
-/// from multiple threads.
-/// </para>
 /// </remarks>
 public interface IAsset : IDisposable
 {
     /// <summary>
-    /// Gets the unique identifier for this asset.
+    /// Gets the identifier assigned to this asset instance.
     /// </summary>
     uint Id { get; }
 
     /// <summary>
-    /// Gets the tag or path used to identify this asset.
+    /// Gets the asset tag, typically the normalized source path used to load it.
     /// </summary>
     string Tag { get; }
 
     /// <summary>
-    /// Gets the raw data bytes of the asset.
+    /// Gets the source bytes retained by the asset for loading or recreation.
     /// </summary>
     byte[] Data { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the asset is loaded and ready for use.
+    /// Gets whether the asset is currently loaded and ready for use.
     /// </summary>
     bool IsValid { get; }
 
     /// <summary>
-    /// Gets the type of the asset for management purposes.
+    /// Gets the lifecycle type assigned to the asset.
     /// </summary>
     AssetType Type { get; }
 
     /// <summary>
-    /// Gets the last time this asset was accessed, used for LRU eviction.
+    /// Gets the most recent time the asset was accessed or refreshed.
     /// </summary>
+    /// <remarks>
+    /// <see cref="AssetManager"/> uses this value when deciding which managed assets are eligible for eviction.
+    /// </remarks>
     DateTime LastAccessTime { get; }
 
     /// <summary>
-    /// Loads the asset data into memory.
+    /// Loads or refreshes the asset so it is ready for use.
     /// </summary>
     /// <remarks>
-    /// This method should create the underlying resource from the raw data.
-    /// If the asset is already loaded, it should update the last access time.
+    /// Implementations should update <see cref="LastAccessTime"/> when the asset is accessed through this method.
     /// </remarks>
     void Load();
 
     /// <summary>
-    /// Unloads the asset data from memory.
+    /// Releases reloadable resources owned by the asset.
     /// </summary>
     /// <remarks>
-    /// This method should free the underlying resource while keeping the
-    /// raw data available for reloading.
+    /// Managed assets should retain enough source data to support a later call to <see cref="Load"/>.
     /// </remarks>
     void Unload();
 }

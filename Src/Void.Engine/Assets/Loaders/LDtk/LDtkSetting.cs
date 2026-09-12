@@ -1,10 +1,9 @@
 // ============================================================================
 //  LDtkSetting.cs
 // ============================================================================
-//  Strongly-typed setting system for LDtk field instances with support for
-//  primitive types, arrays, and complex LDtk data types.
+//  Typed access helpers for LDtk field-instance values.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -14,111 +13,51 @@ using System.Collections.Generic;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// Strongly-typed wrapper for an LDtk setting value.
+/// Wraps a parsed LDtk field value and provides typed lookup helpers for setting dictionaries.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="LDtkSetting"/> class provides a unified container for all
-/// LDtk field instance values with strong typing and convenient access methods.
-/// Each setting type has a corresponding sealed class that inherits from this
-/// base class.
+/// Level and entity field dictionaries are keyed by VOID's hash of the original
+/// LDtk field name. The static helpers let game code continue using the readable
+/// field name while validating the expected value type.
 /// </para>
-/// <para>
-/// <b>Supported Setting Types:</b>
-/// <list type="bullet">
-///   <item><description><see cref="LDtkBoolSettings"/> - Boolean values</description></item>
-///   <item><description><see cref="LDtkIntSettings"/> - Integer values</description></item>
-///   <item><description><see cref="LDtkFloatSettings"/> - Float values</description></item>
-///   <item><description><see cref="LDtkStringSettings"/> - String values</description></item>
-///   <item><description><see cref="LDtkColorSettings"/> - Color values</description></item>
-///   <item><description><see cref="LDtkPointSettings"/> - Vect2 point values</description></item>
-///   <item><description><see cref="LDtkTileSettings"/> - Tile references</description></item>
-///   <item><description><see cref="LDtkEntityRefSettings"/> - Entity references</description></item>
-///   <item><description><see cref="LDtkEnumSettings"/> - Enum values (stored as strings)</description></item>
-///   <item><description><see cref="LDtkFilePathSettings"/> - File path values</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Array Variants:</b>
-/// All setting types have corresponding array variants:
-/// <list type="bullet">
-///   <item><description><see cref="LDtkBoolArraySettings"/> - List of bool</description></item>
-///   <item><description><see cref="LDtkIntArraySettings"/> - List of int</description></item>
-///   <item><description><see cref="LDtkFloatArraySettings"/> - List of float</description></item>
-///   <item><description><see cref="LDtkStringArraySettings"/> - List of string</description></item>
-///   <item><description><see cref="LDtkColorArraySettings"/> - List of Color</description></item>
-///   <item><description><see cref="LDtkPointArraySettings"/> - List of Vect2</description></item>
-///   <item><description><see cref="LDtkTileArraySettings"/> - List of LDtkTile</description></item>
-///   <item><description><see cref="LDtkEntityRefArraySettings"/> - List of LDtkEntityRef</description></item>
-///   <item><description><see cref="LDtkEnumArraySettings"/> - List of enum values (stored as strings)</description></item>
-///   <item><description><see cref="LDtkFilePathArraySettings"/> - List of file paths</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// var settings = level.Settings;
-/// 
-/// // Get a bool setting
-/// if (LDtkSetting.Contains(settings, "IsActive"))
+/// if (LDtkSetting.TryGetIntSetting(level.Settings, "Difficulty", out int difficulty))
 /// {
-///     bool isActive = LDtkSetting.GetBoolSetting(settings, "IsActive");
+///     // Use difficulty.
 /// }
-/// 
-/// // Get with Try pattern
-/// if (LDtkSetting.TryGetIntSetting(settings, "Health", out int health))
-/// {
-///     // Use health value
-/// }
-/// 
-/// // Get an enum setting
-/// var enumValue = LDtkSetting.GetEnumSetting&lt;MyEnum&gt;(settings, "Type");
-/// 
-/// // Get an array setting
-/// var points = LDtkSetting.GetPointArraySetting(settings, "Waypoints");
-/// 
-/// // Strongly-typed access from the setting object itself
-/// var setting = new LDtkIntSettings(42);
-/// int value = setting.ValueAs&lt;int&gt;();
+///
+/// IReadOnlyList&lt;Vect2&gt; points =
+///     LDtkSetting.GetPointArraySetting(level.Settings, "Waypoints");
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe when used in a read-only manner.
-/// </para>
 /// </remarks>
 public class LDtkSetting(object value)
 {
     /// <summary>
-    /// Gets the raw value of the setting.
+    /// Gets the parsed field value.
     /// </summary>
     public object Value { get; } = value;
 
     /// <summary>
-    /// Gets the value cast to the specified type.
+    /// Casts the stored value to <typeparamref name="T"/>.
     /// </summary>
-    /// <typeparam name="T">The type to cast to.</typeparam>
-    /// <returns>The value cast to type T.</returns>
+    /// <typeparam name="T">The expected value type.</typeparam>
+    /// <returns>The stored value cast to <typeparamref name="T"/>.</returns>
+    /// <exception cref="InvalidCastException">Thrown when the stored value cannot be cast to <typeparamref name="T"/>.</exception>
     public T ValueAs<T>() => (T)Value;
 
     /// <summary>
-    /// Determines whether a setting with the specified name exists.
+    /// Determines whether a setting dictionary contains the specified LDtk field name.
     /// </summary>
-    /// <param name="settings">The settings dictionary to check.</param>
-    /// <param name="name">The name of the setting.</param>
-    /// <returns><see langword="true"/> if the setting exists; otherwise, <see langword="false"/>.</returns>
+    /// <param name="settings">The settings dictionary to inspect.</param>
+    /// <param name="name">The original LDtk field name.</param>
+    /// <returns><see langword="true"/> when the setting exists; otherwise, <see langword="false"/>.</returns>
     public static bool Contains(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
         => settings.ContainsKey(HashHelper.Cache32(name));
 
     /// <summary>
-    /// Gets a boolean setting by name.
+    /// Gets a boolean setting by field name.
     /// </summary>
-    /// <param name="settings">The settings dictionary.</param>
-    /// <param name="name">The name of the setting.</param>
-    /// <returns>The boolean value.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null or empty.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the setting is not found.</exception>
-    /// <exception cref="InvalidCastException">Thrown when the setting is not a boolean.</exception>
     public static bool GetBoolSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
         if (name.IsEmpty())
@@ -132,12 +71,8 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a boolean setting by name.
+    /// Attempts to get a boolean setting by field name.
     /// </summary>
-    /// <param name="settings">The settings dictionary.</param>
-    /// <param name="name">The name of the setting.</param>
-    /// <param name="setting">When this method returns, contains the setting value if successful.</param>
-    /// <returns><see langword="true"/> if the setting was found and is a boolean; otherwise, <see langword="false"/>.</returns>
     public static bool TryGetBoolSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out bool setting)
     {
         try
@@ -153,7 +88,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets an integer setting by name.
+    /// Gets an integer setting by field name.
     /// </summary>
     public static int GetIntSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -168,7 +103,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get an integer setting by name.
+    /// Attempts to get an integer setting by field name.
     /// </summary>
     public static bool TryGetIntSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out int setting)
     {
@@ -185,7 +120,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a float setting by name.
+    /// Gets a floating-point setting by field name.
     /// </summary>
     public static float GetFloatSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -200,7 +135,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a float setting by name.
+    /// Attempts to get a floating-point setting by field name.
     /// </summary>
     public static bool TryGetFloatSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out float setting)
     {
@@ -217,7 +152,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a point (Vect2) setting by name.
+    /// Gets a point setting by field name.
     /// </summary>
     public static Vect2 GetPointSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -232,7 +167,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a point (Vect2) setting by name.
+    /// Attempts to get a point setting by field name.
     /// </summary>
     public static bool TryGetPointSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out Vect2 setting)
     {
@@ -249,7 +184,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a color setting by name.
+    /// Gets a color setting by field name.
     /// </summary>
     public static Color GetColorSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -264,7 +199,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a color setting by name.
+    /// Attempts to get a color setting by field name.
     /// </summary>
     public static bool TryGetColorSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out Color setting)
     {
@@ -281,7 +216,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a string setting by name.
+    /// Gets a string setting by field name.
     /// </summary>
     public static string GetStringSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -296,7 +231,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a string setting by name.
+    /// Attempts to get a string setting by field name.
     /// </summary>
     public static bool TryGetStringSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out string setting)
     {
@@ -313,7 +248,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a file path setting by name.
+    /// Gets a file-path setting by field name.
     /// </summary>
     public static string GetFilePathSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -328,7 +263,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a file path setting by name.
+    /// Attempts to get a file-path setting by field name.
     /// </summary>
     public static bool TryGetFilePathSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out string setting)
     {
@@ -345,7 +280,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a tile setting by name.
+    /// Gets a tile-reference setting by field name.
     /// </summary>
     public static LDtkTile GetTileSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -360,7 +295,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a tile setting by name.
+    /// Attempts to get a tile-reference setting by field name.
     /// </summary>
     public static bool TryGetTileSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out LDtkTile setting)
     {
@@ -377,7 +312,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets an entity reference setting by name.
+    /// Gets an entity-reference setting by field name.
     /// </summary>
     public static LDtkEntityRef GetEntityRefSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -392,7 +327,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get an entity reference setting by name.
+    /// Attempts to get an entity-reference setting by field name.
     /// </summary>
     public static bool TryGetEntityRefSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out LDtkEntityRef setting)
     {
@@ -409,9 +344,9 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets an enum setting by name.
+    /// Gets an enum setting by parsing its stored LDtk string value.
     /// </summary>
-    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <typeparam name="TEnum">The enum type to parse.</typeparam>
     public static TEnum GetEnumSetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name) where TEnum : Enum
     {
         if (name.IsEmpty())
@@ -425,9 +360,9 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get an enum setting by name.
+    /// Attempts to get an enum setting by parsing its stored LDtk string value.
     /// </summary>
-    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <typeparam name="TEnum">The enum type to parse.</typeparam>
     public static bool TryGetEnumSetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out TEnum setting)
         where TEnum : Enum
     {
@@ -444,7 +379,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a boolean array setting by name.
+    /// Gets a boolean-array setting by field name.
     /// </summary>
     public static IReadOnlyList<bool> GetBoolArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -459,7 +394,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a boolean array setting by name.
+    /// Attempts to get a boolean-array setting by field name.
     /// </summary>
     public static bool TryGetBoolArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<bool> setting)
     {
@@ -476,7 +411,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets an integer array setting by name.
+    /// Gets an integer-array setting by field name.
     /// </summary>
     public static IReadOnlyList<int> GetIntArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -491,7 +426,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get an integer array setting by name.
+    /// Attempts to get an integer-array setting by field name.
     /// </summary>
     public static bool TryGetIntArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<int> setting)
     {
@@ -508,7 +443,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a float array setting by name.
+    /// Gets a floating-point-array setting by field name.
     /// </summary>
     public static IReadOnlyList<float> GetFloatArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -523,7 +458,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a float array setting by name.
+    /// Attempts to get a floating-point-array setting by field name.
     /// </summary>
     public static bool TryGetFloatArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<float> setting)
     {
@@ -540,7 +475,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a point (Vect2) array setting by name.
+    /// Gets a point-array setting by field name.
     /// </summary>
     public static IReadOnlyList<Vect2> GetPointArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -555,7 +490,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a point (Vect2) array setting by name.
+    /// Attempts to get a point-array setting by field name.
     /// </summary>
     public static bool TryGetPointArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<Vect2> setting)
     {
@@ -572,7 +507,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a color array setting by name.
+    /// Gets a color-array setting by field name.
     /// </summary>
     public static IReadOnlyList<Color> GetColorArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -587,7 +522,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a color array setting by name.
+    /// Attempts to get a color-array setting by field name.
     /// </summary>
     public static bool TryGetColorArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<Color> setting)
     {
@@ -604,7 +539,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a string array setting by name.
+    /// Gets a string-array setting by field name.
     /// </summary>
     public static IReadOnlyList<string> GetStringArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -619,7 +554,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a string array setting by name.
+    /// Attempts to get a string-array setting by field name.
     /// </summary>
     public static bool TryGetStringArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<string> setting)
     {
@@ -636,7 +571,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a file path array setting by name.
+    /// Gets a file-path-array setting by field name.
     /// </summary>
     public static IReadOnlyList<string> GetFilePathArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -651,7 +586,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a file path array setting by name.
+    /// Attempts to get a file-path-array setting by field name.
     /// </summary>
     public static bool TryGetFilePathArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<string> setting)
     {
@@ -668,7 +603,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets a tile array setting by name.
+    /// Gets a tile-reference-array setting by field name.
     /// </summary>
     public static IReadOnlyList<LDtkTile> GetTileArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -683,7 +618,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get a tile array setting by name.
+    /// Attempts to get a tile-reference-array setting by field name.
     /// </summary>
     public static bool TryGetTileArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<LDtkTile> setting)
     {
@@ -700,7 +635,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets an entity reference array setting by name.
+    /// Gets an entity-reference-array setting by field name.
     /// </summary>
     public static IReadOnlyList<LDtkEntityRef> GetEntityRefArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
     {
@@ -715,7 +650,7 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get an entity reference array setting by name.
+    /// Attempts to get an entity-reference-array setting by field name.
     /// </summary>
     public static bool TryGetEntityRefArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<LDtkEntityRef> setting)
     {
@@ -732,9 +667,12 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Gets an enum array setting by name.
+    /// Gets an enum-array setting by parsing its stored LDtk string values.
     /// </summary>
-    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <typeparam name="TEnum">The enum type to parse.</typeparam>
+    /// <remarks>
+    /// Values that cannot be parsed as <typeparamref name="TEnum"/> are skipped.
+    /// </remarks>
     public static IReadOnlyList<TEnum> GetEnumArraySetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name) where TEnum : Enum
     {
         if (name.IsEmpty())
@@ -760,9 +698,9 @@ public class LDtkSetting(object value)
     }
 
     /// <summary>
-    /// Attempts to get an enum array setting by name.
+    /// Attempts to get and parse an enum-array setting by field name.
     /// </summary>
-    /// <typeparam name="TEnum">The enum type.</typeparam>
+    /// <typeparam name="TEnum">The enum type to parse.</typeparam>
     public static bool TryGetEnumArraySetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<TEnum> setting)
         where TEnum : Enum
     {
@@ -780,101 +718,101 @@ public class LDtkSetting(object value)
 }
 
 /// <summary>
-/// Boolean setting value.
+/// Wraps a Boolean LDtk field value.
 /// </summary>
 public sealed class LDtkBoolSettings(bool value) : LDtkSetting(value);
 
 /// <summary>
-/// Boolean array setting value.
+/// Wraps an array of Boolean LDtk field values.
 /// </summary>
 public sealed class LDtkBoolArraySettings(List<bool> value) : LDtkSetting(value);
 
 /// <summary>
-/// Color setting value.
+/// Wraps an LDtk color field value.
 /// </summary>
 public sealed class LDtkColorSettings(Color value) : LDtkSetting(value);
 
 /// <summary>
-/// Color array setting value.
+/// Wraps an array of LDtk color field values.
 /// </summary>
 public sealed class LDtkColorArraySettings(List<Color> value) : LDtkSetting(value);
 
 /// <summary>
-/// Entity reference setting value.
+/// Wraps an LDtk entity-reference field value.
 /// </summary>
 public sealed class LDtkEntityRefSettings(LDtkEntityRef value) : LDtkSetting(value);
 
 /// <summary>
-/// Entity reference array setting value.
+/// Wraps an array of LDtk entity-reference field values.
 /// </summary>
 public sealed class LDtkEntityRefArraySettings(List<LDtkEntityRef> value) : LDtkSetting(value);
 
 /// <summary>
-/// Enum setting value.
+/// Wraps an LDtk enum field value as its string identifier.
 /// </summary>
 public sealed class LDtkEnumSettings(string value) : LDtkSetting(value);
 
 /// <summary>
-/// Enum array setting value.
+/// Wraps an array of LDtk enum field values as string identifiers.
 /// </summary>
 public sealed class LDtkEnumArraySettings(List<string> value) : LDtkSetting(value);
 
 /// <summary>
-/// File path setting value.
+/// Wraps an LDtk file-path field value.
 /// </summary>
 public sealed class LDtkFilePathSettings(string value) : LDtkSetting(value);
 
 /// <summary>
-/// File path array setting value.
+/// Wraps an array of LDtk file-path field values.
 /// </summary>
 public sealed class LDtkFilePathArraySettings(List<string> value) : LDtkSetting(value);
 
 /// <summary>
-/// Float setting value.
+/// Wraps a floating-point LDtk field value.
 /// </summary>
 public sealed class LDtkFloatSettings(float value) : LDtkSetting(value);
 
 /// <summary>
-/// Float array setting value.
+/// Wraps an array of floating-point LDtk field values.
 /// </summary>
 public sealed class LDtkFloatArraySettings(List<float> value) : LDtkSetting(value);
 
 /// <summary>
-/// Integer setting value.
+/// Wraps an integer LDtk field value.
 /// </summary>
 public sealed class LDtkIntSettings(int value) : LDtkSetting(value);
 
 /// <summary>
-/// Integer array setting value.
+/// Wraps an array of integer LDtk field values.
 /// </summary>
 public sealed class LDtkIntArraySettings(List<int> value) : LDtkSetting(value);
 
 /// <summary>
-/// Point (Vect2) setting value.
+/// Wraps an LDtk point field value.
 /// </summary>
 public sealed class LDtkPointSettings(Vect2 value) : LDtkSetting(value);
 
 /// <summary>
-/// Point (Vect2) array setting value.
+/// Wraps an array of LDtk point field values.
 /// </summary>
 public sealed class LDtkPointArraySettings(List<Vect2> value) : LDtkSetting(value);
 
 /// <summary>
-/// String setting value.
+/// Wraps a string LDtk field value.
 /// </summary>
 public sealed class LDtkStringSettings(string value) : LDtkSetting(value);
 
 /// <summary>
-/// String array setting value.
+/// Wraps an array of string LDtk field values.
 /// </summary>
 public sealed class LDtkStringArraySettings(List<string> value) : LDtkSetting(value);
 
 /// <summary>
-/// Tile setting value.
+/// Wraps an LDtk tile-reference field value.
 /// </summary>
 public sealed class LDtkTileSettings(LDtkTile value) : LDtkSetting(value);
 
 /// <summary>
-/// Tile array setting value.
+/// Wraps an array of LDtk tile-reference field values.
 /// </summary>
 public sealed class LDtkTileArraySettings(List<LDtkTile> value) : LDtkSetting(value);

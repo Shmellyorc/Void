@@ -1,9 +1,9 @@
 // ============================================================================
 //  SpeedTween.cs
 // ============================================================================
-//  A tween with a speed multiplier for fast-forward or slow-motion effects.
+//  Tween whose elapsed time is scaled by a speed multiplier.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,63 +13,14 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A tween with a speed multiplier for fast-forward or slow-motion effects.
+/// Interpolates a value while scaling elapsed time by a speed multiplier.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
-/// <para>
-/// The <see cref="SpeedTween{T}"/> class extends the standard tween by
-/// adding a speed multiplier that affects the animation speed. This allows
-/// for fast-forward, slow-motion, or time-scaling effects on individual tweens.
-/// </para>
-/// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a speed tween (normal speed)
-/// var tween = new SpeedTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     speed: 1f
-/// );
-/// 
-/// // Create a speed tween (double speed)
-/// var tween2 = new SpeedTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     speed: 2f
-/// );
-/// 
-/// // Create a speed tween (half speed)
-/// var tween3 = new SpeedTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     speed: 0.5f
-/// );
-/// 
-/// // Run the tween
-/// CoroutineManager.Instance.Run(tween);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// A speed of <c>1</c> advances by normal frame time, values above <c>1</c>
+/// advance faster, and values between <c>0</c> and <c>1</c> advance more slowly.
+/// The speed value is not validated; zero or negative values do not produce a
+/// normal completing tween.
 /// </remarks>
 public sealed class SpeedTween<T> : IEnumerator
 {
@@ -82,20 +33,21 @@ public sealed class SpeedTween<T> : IEnumerator
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Speed tweens do not yield a
+    /// value, so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SpeedTween{T}"/> class.
+    /// Initializes a speed-scaled tween.
     /// </summary>
     /// <param name="from">The starting value.</param>
     /// <param name="to">The ending value.</param>
-    /// <param name="duration">The base duration of the tween in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
-    /// <param name="speed">The speed multiplier (1 = normal, 2 = double speed, 0.5 = half speed).</param>
+    /// <param name="duration">The base tween duration in seconds.</param>
+    /// <param name="type">The easing function to apply to normalized progress.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
+    /// <param name="speed">The multiplier applied to frame delta time.</param>
     public SpeedTween(T from, T to, float duration, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate, float speed = 1f)
     {
         _from = from;
@@ -108,9 +60,12 @@ public sealed class SpeedTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the tween by frame delta time multiplied by the configured speed.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the tween should continue running;
+    /// otherwise, <see langword="false"/> after applying the ending value.
+    /// </returns>
     public bool MoveNext()
     {
         float deltaTime = Game.Instance.FrameTime.DeltaTime;
@@ -130,7 +85,8 @@ public sealed class SpeedTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a speed tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

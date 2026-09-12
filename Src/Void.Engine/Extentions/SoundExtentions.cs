@@ -1,92 +1,28 @@
 // ============================================================================
 //  SoundExtensions.cs
 // ============================================================================
-//  Extension methods for Sound and SoundInstance providing convenient
-//  playback options, fluent configuration, and collection-based playback.
+//  Playback and fluent configuration helpers for Sound and SoundInstance.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace System;
 
 /// <summary>
-/// Provides extension methods for <see cref="Sound"/> and <see cref="SoundInstance"/>
-/// providing convenient playback options, fluent configuration, and collection-based playback.
+/// Provides convenience playback and configuration helpers for <see cref="Sound"/> and <see cref="SoundInstance"/>.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="SoundExtensions"/> class provides a comprehensive set of
-/// extension methods for sound playback, making common sound operations
-/// more intuitive and expressive.
-/// </para>
-/// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>One-shot playback with optional parameters</description></item>
-///   <item><description>Play-and-forget with automatic cleanup</description></item>
-///   <item><description>Pitch variation for natural variation</description></item>
-///   <item><description>Fluent interface for sound instance configuration</description></item>
-///   <item><description>Collection-based playback (play all, random selection)</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Load a sound
-/// var sound = AssetManager.Instance.Load&lt;Sound&gt;("explosion.wav");
-/// 
-/// // Play one-shot
-/// sound.PlayOneShot(0.8f, 0f, 1f, SoundCategory.SFX);
-/// 
-/// // Play and forget (auto-disposes when done)
-/// sound.PlayAndForget(0.9f);
-/// 
-/// // Play with pitch variation
-/// sound.PlayWithPitchVariation(0.15f, 0.8f, 0f, SoundCategory.SFX);
-/// 
-/// // Fluent interface
-/// sound.CreateInstance()
-///     .WithVolume(0.8f)
-///     .WithPan(-0.5f)
-///     .WithPitch(1.2f)
-///     .WithLooping(true)
-///     .PlayWith(0.8f, -0.5f, 1.2f);
-/// 
-/// // Stop and dispose
-/// instance.StopAndDispose();
-/// 
-/// // Play all sounds in a collection
-/// var sounds = new[] { sound1, sound2, sound3 };
-/// sounds.PlayAll(0.7f);
-/// sounds.PlayAllAndForget(0.7f);
-/// 
-/// // Play random sound from collection
-/// var randomInstance = sounds.PlayRandom(0.8f);
-/// var randomVaried = sounds.PlayRandomWithVariation(0.15f, 0.8f);
-/// 
-/// // Random with auto-dispose
-/// sounds.PlayRandomAndForget(0.8f);
-/// sounds.PlayRandomWithVariationAndForget(0.15f, 0.8f);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// These extension methods are not thread-safe and should be called from
-/// the main thread.
-/// </para>
-/// </remarks>
 public static class SoundExtensions
 {
     /// <summary>
-    /// Plays the sound as a one-shot instance.
+    /// Creates, configures, and starts a sound instance.
     /// </summary>
-    /// <param name="sound">The sound to play.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
+    /// <param name="sound">The sound asset used to create the instance.</param>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The stereo pan value.</param>
     /// <param name="pitch">The pitch multiplier.</param>
-    /// <param name="category">The sound category for volume grouping.</param>
-    /// <returns>The sound instance that was created.</returns>
+    /// <param name="category">The optional category used for category volume.</param>
+    /// <returns>The playing sound instance.</returns>
     public static SoundInstance PlayOneShot(this Sound sound, float volume = 1f, float pan = 0f, float pitch = 1f, Enum category = null!)
     {
         var instance = sound.CreateInstance(category);
@@ -99,14 +35,14 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays the sound and automatically disposes it when playback completes.
+    /// Plays a one-shot sound and disposes its instance after completion or an explicit stop.
     /// </summary>
-    /// <param name="sound">The sound to play.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
+    /// <param name="sound">The sound asset used to create the instance.</param>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The stereo pan value.</param>
     /// <param name="pitch">The pitch multiplier.</param>
-    /// <param name="category">The sound category for volume grouping.</param>
-    /// <returns>The sound instance that was created.</returns>
+    /// <param name="category">The optional category used for category volume.</param>
+    /// <returns>The playing sound instance.</returns>
     public static SoundInstance PlayAndForget(this Sound sound, float volume = 1f, float pan = 0f, float pitch = 1f, Enum category = null!)
     {
         var instance = sound.PlayOneShot(volume, pan, pitch, category);
@@ -118,14 +54,14 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays the sound with random pitch variation.
+    /// Plays a sound with a random pitch centered on 1.
     /// </summary>
-    /// <param name="sound">The sound to play.</param>
-    /// <param name="pitchRange">The pitch variation range (± from 1).</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <param name="category">The sound category for volume grouping.</param>
-    /// <returns>The sound instance that was created.</returns>
+    /// <param name="sound">The sound asset used to create the instance.</param>
+    /// <param name="pitchRange">The amount subtracted from and added to 1 when generating the pitch.</param>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The stereo pan value.</param>
+    /// <param name="category">The optional category used for category volume.</param>
+    /// <returns>The playing sound instance.</returns>
     public static SoundInstance PlayWithPitchVariation(this Sound sound, float pitchRange = 0.1f, float volume = 1f, float pan = 0f, Enum category = null!)
     {
         float pitch = FastRandom.Shared.RangeFloat(1f - pitchRange, 1f + pitchRange);
@@ -133,11 +69,11 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Sets the volume of the sound instance.
+    /// Sets the instance volume and returns the same instance.
     /// </summary>
-    /// <param name="instance">The sound instance.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <returns>The sound instance for method chaining.</returns>
+    /// <param name="instance">The instance to configure.</param>
+    /// <param name="volume">The new volume.</param>
+    /// <returns><paramref name="instance"/>.</returns>
     public static SoundInstance WithVolume(this SoundInstance instance, float volume)
     {
         instance.Volume = volume;
@@ -145,11 +81,11 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Sets the pan of the sound instance.
+    /// Sets the instance pan and returns the same instance.
     /// </summary>
-    /// <param name="instance">The sound instance.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <returns>The sound instance for method chaining.</returns>
+    /// <param name="instance">The instance to configure.</param>
+    /// <param name="pan">The new stereo pan value.</param>
+    /// <returns><paramref name="instance"/>.</returns>
     public static SoundInstance WithPan(this SoundInstance instance, float pan)
     {
         instance.Pan = pan;
@@ -157,11 +93,11 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Sets the pitch of the sound instance.
+    /// Sets the instance pitch and returns the same instance.
     /// </summary>
-    /// <param name="instance">The sound instance.</param>
-    /// <param name="pitch">The pitch multiplier.</param>
-    /// <returns>The sound instance for method chaining.</returns>
+    /// <param name="instance">The instance to configure.</param>
+    /// <param name="pitch">The new pitch multiplier.</param>
+    /// <returns><paramref name="instance"/>.</returns>
     public static SoundInstance WithPitch(this SoundInstance instance, float pitch)
     {
         instance.Pitch = pitch;
@@ -169,11 +105,11 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Sets whether the sound instance should loop.
+    /// Sets the instance looping state and returns the same instance.
     /// </summary>
-    /// <param name="instance">The sound instance.</param>
-    /// <param name="looping">Whether the sound should loop.</param>
-    /// <returns>The sound instance for method chaining.</returns>
+    /// <param name="instance">The instance to configure.</param>
+    /// <param name="looping"><see langword="true"/> to loop playback; otherwise, <see langword="false"/>.</param>
+    /// <returns><paramref name="instance"/>.</returns>
     public static SoundInstance WithLooping(this SoundInstance instance, bool looping)
     {
         instance.Looping = looping;
@@ -181,13 +117,13 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Sets the volume, pan, and pitch, then plays the sound.
+    /// Applies volume, pan, and pitch, starts playback, and returns the same instance.
     /// </summary>
-    /// <param name="instance">The sound instance.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <param name="pitch">The pitch multiplier.</param>
-    /// <returns>The sound instance for method chaining.</returns>
+    /// <param name="instance">The instance to configure and play.</param>
+    /// <param name="volume">The new volume.</param>
+    /// <param name="pan">The new stereo pan value.</param>
+    /// <param name="pitch">The new pitch multiplier.</param>
+    /// <returns><paramref name="instance"/>.</returns>
     public static SoundInstance PlayWith(this SoundInstance instance, float volume, float pan = 0f, float pitch = 1f)
     {
         instance.Volume = volume;
@@ -198,7 +134,7 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Stops the sound instance and disposes it.
+    /// Stops and disposes an instance when it is non-null and has not already been disposed.
     /// </summary>
     /// <param name="instance">The sound instance to stop and dispose.</param>
     public static void StopAndDispose(this SoundInstance instance)
@@ -211,25 +147,25 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays all sounds in the collection as one-shot instances.
+    /// Plays every sound in the sequence as a one-shot instance.
     /// </summary>
     /// <param name="sounds">The sounds to play.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <param name="pitch">The pitch multiplier.</param>
-    /// <returns>A list of all sound instances that were created.</returns>
+    /// <param name="volume">The volume applied to each instance.</param>
+    /// <param name="pan">The pan applied to each instance.</param>
+    /// <param name="pitch">The pitch applied to each instance.</param>
+    /// <returns>The created instances in sequence order.</returns>
     public static List<SoundInstance> PlayAll(this IEnumerable<Sound> sounds, float volume = 1f, float pan = 0f, float pitch = 1f)
     {
         return sounds.Select(s => s.PlayOneShot(volume, pan, pitch)).ToList();
     }
 
     /// <summary>
-    /// Plays all sounds in the collection and automatically disposes them when playback completes.
+    /// Plays every sound in the sequence and arranges for each instance to dispose after completion or stop.
     /// </summary>
     /// <param name="sounds">The sounds to play.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <param name="pitch">The pitch multiplier.</param>
+    /// <param name="volume">The volume applied to each instance.</param>
+    /// <param name="pan">The pan applied to each instance.</param>
+    /// <param name="pitch">The pitch applied to each instance.</param>
     public static void PlayAllAndForget(this IEnumerable<Sound> sounds, float volume = 1f, float pan = 0f, float pitch = 1f)
     {
         foreach (var sound in sounds)
@@ -237,13 +173,13 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays a random sound from the collection.
+    /// Selects and plays one random sound from the sequence.
     /// </summary>
     /// <param name="sounds">The sounds to choose from.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <param name="pitch">The pitch multiplier.</param>
-    /// <returns>The sound instance that was created, or null if the collection is empty.</returns>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The instance pan.</param>
+    /// <param name="pitch">The instance pitch.</param>
+    /// <returns>The created instance, or <see langword="null"/> when the sequence is empty.</returns>
     public static SoundInstance PlayRandom(this IEnumerable<Sound> sounds, float volume = 1f, float pan = 0f, float pitch = 1f)
     {
         var list = sounds as IList<Sound> ?? sounds.ToList();
@@ -254,13 +190,13 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays a random sound from the collection with random pitch variation.
+    /// Selects and plays one random sound with random pitch variation.
     /// </summary>
     /// <param name="sounds">The sounds to choose from.</param>
-    /// <param name="pitchRange">The pitch variation range (± from 1).</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <returns>The sound instance that was created, or null if the collection is empty.</returns>
+    /// <param name="pitchRange">The amount subtracted from and added to 1 when generating pitch.</param>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The instance pan.</param>
+    /// <returns>The created instance, or <see langword="null"/> when the sequence is empty.</returns>
     public static SoundInstance PlayRandomWithVariation(this IEnumerable<Sound> sounds, float pitchRange = 0.1f, float volume = 1f, float pan = 0f)
     {
         var list = sounds as IList<Sound> ?? sounds.ToList();
@@ -271,13 +207,13 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays a random sound from the collection and automatically disposes it when playback completes.
+    /// Selects and plays one random sound and disposes the instance after completion or stop.
     /// </summary>
     /// <param name="sounds">The sounds to choose from.</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <param name="pitch">The pitch multiplier.</param>
-    /// <returns>The sound instance that was created, or null if the collection is empty.</returns>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The instance pan.</param>
+    /// <param name="pitch">The instance pitch.</param>
+    /// <returns>The created instance, or <see langword="null"/> when the sequence is empty.</returns>
     public static SoundInstance PlayRandomAndForget(this IEnumerable<Sound> sounds, float volume = 1f, float pan = 0f, float pitch = 1f)
     {
         var instance = sounds.PlayRandom(volume, pan, pitch);
@@ -290,13 +226,13 @@ public static class SoundExtensions
     }
 
     /// <summary>
-    /// Plays a random sound from the collection with random pitch variation and automatically disposes it when playback completes.
+    /// Selects and plays one random sound with pitch variation and disposes the instance after completion or stop.
     /// </summary>
     /// <param name="sounds">The sounds to choose from.</param>
-    /// <param name="pitchRange">The pitch variation range (± from 1).</param>
-    /// <param name="volume">The volume between 0 and 1.</param>
-    /// <param name="pan">The pan between -1 (left) and 1 (right).</param>
-    /// <returns>The sound instance that was created, or null if the collection is empty.</returns>
+    /// <param name="pitchRange">The amount subtracted from and added to 1 when generating pitch.</param>
+    /// <param name="volume">The instance volume.</param>
+    /// <param name="pan">The instance pan.</param>
+    /// <returns>The created instance, or <see langword="null"/> when the sequence is empty.</returns>
     public static SoundInstance PlayRandomWithVariationAndForget(this IEnumerable<Sound> sounds, float pitchRange = 0.1f, float volume = 1f, float pan = 0f)
     {
         var instance = sounds.PlayRandomWithVariation(pitchRange, volume, pan);

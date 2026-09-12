@@ -1,9 +1,9 @@
 // ============================================================================
 //  WaitForBeaconCount.cs
 // ============================================================================
-//  A coroutine that waits for a specific number of beacons to be published.
+//  Coroutine utility that waits for a number of matching beacon publications.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,61 +13,29 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Utilities;
 
 /// <summary>
-/// A coroutine that waits for a specific number of beacons to be published on a topic.
+/// Waits for a specified number of matching beacons on a topic or an optional timeout.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="WaitForBeaconCount"/> class pauses the coroutine execution until
-/// a specified number of beacons have been published on the topic that match the
-/// optional predicate. It can also timeout if a timeout duration is provided.
+/// Subscription begins lazily on the first call to <see cref="MoveNext"/>.
+/// Only beacons accepted by the optional predicate contribute to the target count.
+/// A negative timeout disables timeout handling; otherwise the timeout advances
+/// with <see cref="FrameTime.DeltaTime"/>.
 /// </para>
 /// <para>
-/// This is useful for:
-/// <list type="bullet">
-///   <item><description>Waiting for multiple events to occur</description></item>
-///   <item><description>Counting events before proceeding</description></item>
-///   <item><description>Batch processing of asynchronous operations</description></item>
-/// </list>
+/// <see cref="LastBeacon"/> contains the most recent matching beacon received,
+/// including when the routine later ends because of a timeout. A null value means
+/// that no matching beacon has been received.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Wait for 3 beacons on the "EnemyKilled" topic
-/// var waitCount = new WaitForBeaconCount("EnemyKilled", 3);
-/// yield return waitCount;
-/// Console.WriteLine("Three enemies killed!");
-/// 
-/// // Wait with predicate filtering
-/// var waitFiltered = new WaitForBeaconCount(
-///     "DamageEvent",
-///     5,
-///     h => h.Source == "Player"
-/// );
-/// yield return waitFiltered;
-/// 
-/// // Wait with timeout
-/// var waitWithTimeout = new WaitForBeaconCount(
-///     "NetworkResponse",
-///     10,
-///     timeoutSeconds: 10f
-/// );
-/// yield return waitWithTimeout;
-/// 
-/// if (waitWithTimeout.LastBeacon == null)
-///     Console.WriteLine("Timed out!");
-/// 
-/// // Access the last beacon received
-/// var lastHandle = waitCount.LastBeacon;
-/// 
-/// // Wait with enum topic
-/// var enumWait = new WaitForBeaconCount(MyTopics.ItemCollected, 5);
-/// yield return enumWait;
+/// var wait = new WaitForBeaconCount("EnemyDefeated", 3, timeoutSeconds: 10f);
+/// yield return wait;
+///
+/// if (wait.LastBeacon is BeaconHandle last)
+/// {
+///     string topic = last.Topic;
+/// }
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class WaitForBeaconCount : IEnumerator, IDisposable
 {
@@ -82,24 +50,34 @@ public sealed class WaitForBeaconCount : IEnumerator, IDisposable
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the value yielded by this routine, which is always <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Gets the last beacon handle that was received before completion.
+    /// Gets the most recent matching beacon received, or <see langword="null"/>
+    /// if no matching beacon has been received.
     /// </summary>
     public BeaconHandle? LastBeacon { get; private set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitForBeaconCount"/> class.
+    /// Initializes a counted beacon wait for a string topic.
     /// </summary>
     /// <param name="topic">The topic to subscribe to.</param>
-    /// <param name="count">The number of beacons to wait for.</param>
-    /// <param name="predicate">An optional predicate to filter beacons.</param>
-    /// <param name="timeoutSeconds">The maximum time to wait, or -1 for no timeout.</param>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="topic"/> is null or empty.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="count"/> is less than or equal to zero.</exception>
+    /// <param name="count">The number of matching beacons required to complete.</param>
+    /// <param name="predicate">
+    /// An optional filter. Only beacons for which this returns
+    /// <see langword="true"/> are counted.
+    /// </param>
+    /// <param name="timeoutSeconds">
+    /// The maximum scaled-time wait in seconds, or a negative value for no timeout.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="topic"/> is <see langword="null"/> or empty.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="count"/> is less than or equal to zero.
+    /// </exception>
     public WaitForBeaconCount(string topic, int count, Func<BeaconHandle, bool> predicate = null, float timeoutSeconds = -1f)
     {
         if (string.IsNullOrEmpty(topic))
@@ -115,19 +93,27 @@ public sealed class WaitForBeaconCount : IEnumerator, IDisposable
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitForBeaconCount"/> class using an enum topic.
+    /// Initializes a counted beacon wait for an enum topic.
     /// </summary>
-    /// <param name="topic">The enum representing the topic to subscribe to.</param>
-    /// <param name="count">The number of beacons to wait for.</param>
-    /// <param name="predicate">An optional predicate to filter beacons.</param>
-    /// <param name="timeoutSeconds">The maximum time to wait, or -1 for no timeout.</param>
+    /// <param name="topic">The enum value representing the topic.</param>
+    /// <param name="count">The number of matching beacons required to complete.</param>
+    /// <param name="predicate">
+    /// An optional filter. Only beacons for which this returns
+    /// <see langword="true"/> are counted.
+    /// </param>
+    /// <param name="timeoutSeconds">
+    /// The maximum scaled-time wait in seconds, or a negative value for no timeout.
+    /// </param>
     public WaitForBeaconCount(Enum topic, int count, Func<BeaconHandle, bool> predicate = null, float timeoutSeconds = -1f)
         : this(topic.ToEnumString(), count, predicate, timeoutSeconds) { }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Subscribes when necessary and advances the optional timeout.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while waiting; otherwise, <see langword="false"/>
+    /// after the target count is reached or the timeout expires.
+    /// </returns>
     public bool MoveNext()
     {
         if (_done) return false;
@@ -155,12 +141,13 @@ public sealed class WaitForBeaconCount : IEnumerator, IDisposable
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine and unsubscribes from the beacon topic.
+    /// Unsubscribes this wait from its beacon topic when currently subscribed.
     /// </summary>
     public void Dispose() => Cleanup();
 

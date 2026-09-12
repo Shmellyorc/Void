@@ -1,10 +1,9 @@
 // ============================================================================
 //  LDtkMap.cs
 // ============================================================================
-//  LDtk map asset that loads and provides access to levels, layers, entities,
-//  tilesets, and settings from an LDtk project file.
+//  LDtk project asset and lookup cache.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,62 +14,22 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// LDtk map asset that loads and provides access to levels, layers, entities,
-/// tilesets, and settings from an LDtk project file.
+/// Loads an LDtk project and provides cached access to its levels, layers, entities, and tilesets.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="LDtkMap"/> class implements <see cref="IAsset"/> and provides
-/// a strongly-typed interface for accessing all data from an LDtk project file.
-/// It parses the JSON once and builds caches for fast lookup of levels, layers,
-/// entities, and tilesets.
+/// Load maps through <see cref="AssetManager"/>. The JSON is parsed on the first
+/// <see cref="Load"/> and lookup caches are built for common ID and name queries.
 /// </para>
-/// <para>
-/// <b>Data Structure:</b>
-/// <list type="bullet">
-///   <item><description><see cref="LDtkMap"/> → Contains <see cref="LDtkLevel"/>s and <see cref="LDtkTileset"/>s</description></item>
-///   <item><description><see cref="LDtkLevel"/> → Contains <see cref="MapLayer"/>s and settings</description></item>
-///   <item><description><see cref="MapLayer"/> → Contains <see cref="ILDtkInstance"/> items (entities, tiles, int grid)</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Lookup Methods:</b>
-/// <list type="bullet">
-///   <item><description><b>Levels:</b> By ID or name</description></item>
-///   <item><description><b>Layers:</b> By ID</description></item>
-///   <item><description><b>Entities:</b> By ID</description></item>
-///   <item><description><b>Tilesets:</b> By ID or name</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Load the LDtk map through AssetManager
-/// var map = AssetManager.Instance.Load&lt;LDtkMap&gt;("levels/level.ldtk");
-/// 
-/// // Get a level by name
-/// var level = map.GetLevelByName("Level_01");
-/// 
-/// // Get a layer by ID
-/// var layer = map.GetLayerById("layer_id");
-/// 
-/// // Get all entities in a layer
-/// var entities = layer.InstanceAs&lt;LDtkEntityInstance&gt;();
-/// 
-/// // Get a specific entity by ID
-/// var entity = map.GetEntityById("entity_id");
-/// 
-/// // Get a tileset
-/// var tileset = map.GetTilesetByName("Tileset_01");
-/// 
-/// // Access level settings
-/// var setting = LDtkSetting.GetStringSetting(level.Settings, "SettingName");
+/// var map = AssetManager.Instance.Load&lt;LDtkMap&gt;("Maps/world.ldtk");
+///
+/// LDtkLevel town = map.GetLevelByName("Town");
+/// if (map.TryGetTilesetByName("Terrain", out var tileset))
+/// {
+///     Texture texture = AssetManager.Instance.LoadTilesetTexture(map, tileset.Id);
+/// }
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class LDtkMap : IAsset
 {
@@ -82,32 +41,32 @@ public sealed class LDtkMap : IAsset
     private readonly Dictionary<uint, LDtkTileset> _tilesetCacheByName = [];
 
     /// <summary>
-    /// Gets the unique identifier of the map.
+    /// Gets the asset identifier assigned by VOID.
     /// </summary>
     public uint Id { get; }
 
     /// <summary>
-    /// Gets the normalized path or tag used to identify the map.
+    /// Gets the normalized asset path or tag used to identify the map.
     /// </summary>
     public string Tag { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the map is loaded and ready for use.
+    /// Gets whether the map is currently marked as loaded.
     /// </summary>
     public bool IsValid { get; private set; }
 
     /// <summary>
-    /// Gets the last access time of the map for eviction tracking.
+    /// Gets or sets the last access time used by asset eviction tracking.
     /// </summary>
     public DateTime LastAccessTime { get; set; }
 
     /// <summary>
-    /// Gets the raw map data bytes.
+    /// Gets the original LDtk JSON bytes retained by the asset.
     /// </summary>
     public byte[] Data { get; private set; }
 
     /// <summary>
-    /// Gets the asset type.
+    /// Gets the asset classification.
     /// </summary>
     public AssetType Type { get; private set; }
 
@@ -121,8 +80,13 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Loads the LDtk map by parsing the JSON data and building lookup caches.
+    /// Parses the LDtk JSON and builds the map lookup caches when needed.
     /// </summary>
+    /// <remarks>
+    /// Calling this method on an already loaded map only refreshes
+    /// <see cref="LastAccessTime"/>. If the map was unloaded, existing caches are
+    /// reused instead of parsing the source JSON again.
+    /// </remarks>
     public void Load()
     {
         if (IsValid)
@@ -183,12 +147,12 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Unloads the map data from memory while keeping the caches for fast reloading.
+    /// Marks the map as unloaded while retaining its parsed lookup caches.
     /// </summary>
     public void Unload() => IsValid = false;
 
     /// <summary>
-    /// Disposes the map and clears all cached data.
+    /// Clears parsed lookup data and marks the map as invalid.
     /// </summary>
     public void Dispose()
     {
@@ -206,12 +170,12 @@ public sealed class LDtkMap : IAsset
     #region Entity
 
     /// <summary>
-    /// Gets an entity instance by its ID.
+    /// Gets an entity instance by its LDtk instance ID.
     /// </summary>
-    /// <param name="id">The entity ID.</param>
-    /// <returns>The entity instance.</returns>
+    /// <param name="id">The entity instance ID.</param>
+    /// <returns>The matching entity instance.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> is null or empty.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the entity is not found.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no matching entity is cached.</exception>
     public LDtkEntityInstance GetEntityById(string id)
     {
         if (string.IsNullOrEmpty(id))
@@ -225,11 +189,11 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Attempts to get an entity instance by its ID.
+    /// Attempts to get an entity instance by its LDtk instance ID.
     /// </summary>
-    /// <param name="id">The entity ID.</param>
-    /// <param name="value">When this method returns, contains the entity instance if found.</param>
-    /// <returns><see langword="true"/> if the entity was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="id">The entity instance ID.</param>
+    /// <param name="value">Receives the entity when found.</param>
+    /// <returns><see langword="true"/> when a matching entity is found; otherwise, <see langword="false"/>.</returns>
     public bool TryGetEntityById(string id, out LDtkEntityInstance value)
     {
         if (string.IsNullOrEmpty(id))
@@ -253,12 +217,12 @@ public sealed class LDtkMap : IAsset
     #region Layer
 
     /// <summary>
-    /// Gets a layer by its ID.
+    /// Gets a layer by its LDtk instance ID.
     /// </summary>
-    /// <param name="id">The layer ID.</param>
-    /// <returns>The layer.</returns>
+    /// <param name="id">The layer instance ID.</param>
+    /// <returns>The matching layer.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> is null or empty.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the layer is not found.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no matching layer is cached.</exception>
     public MapLayer GetLayerById(string id)
     {
         if (string.IsNullOrEmpty(id))
@@ -271,11 +235,11 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Attempts to get a layer by its ID.
+    /// Attempts to get a layer by its LDtk instance ID.
     /// </summary>
-    /// <param name="id">The layer ID.</param>
-    /// <param name="value">When this method returns, contains the layer if found.</param>
-    /// <returns><see langword="true"/> if the layer was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="id">The layer instance ID.</param>
+    /// <param name="value">Receives the layer when found.</param>
+    /// <returns><see langword="true"/> when a matching layer is found; otherwise, <see langword="false"/>.</returns>
     public bool TryGetLayerById(string id, out MapLayer value)
     {
         if (string.IsNullOrEmpty(id))
@@ -298,12 +262,12 @@ public sealed class LDtkMap : IAsset
     #region Levels
 
     /// <summary>
-    /// Gets a level by its ID.
+    /// Gets a level by its LDtk instance ID.
     /// </summary>
-    /// <param name="id">The level ID.</param>
-    /// <returns>The level.</returns>
+    /// <param name="id">The level instance ID.</param>
+    /// <returns>The matching level.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="id"/> is null or empty.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the level is not found.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no matching level is cached.</exception>
     public LDtkLevel GetLevelById(string id)
     {
         if (string.IsNullOrEmpty(id))
@@ -317,11 +281,11 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Attempts to get a level by its ID.
+    /// Attempts to get a level by its LDtk instance ID.
     /// </summary>
-    /// <param name="id">The level ID.</param>
-    /// <param name="level">When this method returns, contains the level if found.</param>
-    /// <returns><see langword="true"/> if the level was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="id">The level instance ID.</param>
+    /// <param name="level">Receives the level when found.</param>
+    /// <returns><see langword="true"/> when a matching level is found; otherwise, <see langword="false"/>.</returns>
     public bool TryGetLevelById(string id, out LDtkLevel level)
     {
         if (string.IsNullOrEmpty(id))
@@ -342,12 +306,12 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Gets a level by its name.
+    /// Gets a level by its LDtk identifier.
     /// </summary>
-    /// <param name="name">The level name.</param>
-    /// <returns>The level.</returns>
+    /// <param name="name">The level identifier.</param>
+    /// <returns>The matching level.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null or empty.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the level is not found.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no matching level is cached.</exception>
     public LDtkLevel GetLevelByName(string name)
     {
         if (string.IsNullOrEmpty(name))
@@ -361,11 +325,11 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Attempts to get a level by its name.
+    /// Attempts to get a level by its LDtk identifier.
     /// </summary>
-    /// <param name="name">The level name.</param>
-    /// <param name="level">When this method returns, contains the level if found.</param>
-    /// <returns><see langword="true"/> if the level was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="name">The level identifier.</param>
+    /// <param name="level">Receives the level when found.</param>
+    /// <returns><see langword="true"/> when a matching level is found; otherwise, <see langword="false"/>.</returns>
     public bool TryGetLevelByName(string name, out LDtkLevel level)
     {
         if (string.IsNullOrEmpty(name))
@@ -389,11 +353,11 @@ public sealed class LDtkMap : IAsset
     #region Tileset
 
     /// <summary>
-    /// Gets a tileset by its ID.
+    /// Gets a tileset by its LDtk UID.
     /// </summary>
-    /// <param name="id">The tileset ID.</param>
-    /// <returns>The tileset.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown when the tileset is not found.</exception>
+    /// <param name="id">The tileset UID.</param>
+    /// <returns>The matching tileset.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown when no matching tileset is cached.</exception>
     public LDtkTileset GetTilesetById(uint id)
     {
         if (!_tilesetCacheById.TryGetValue(id, out var tileset))
@@ -404,11 +368,11 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Attempts to get a tileset by its ID.
+    /// Attempts to get a tileset by its LDtk UID.
     /// </summary>
-    /// <param name="id">The tileset ID.</param>
-    /// <param name="value">When this method returns, contains the tileset if found.</param>
-    /// <returns><see langword="true"/> if the tileset was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="id">The tileset UID.</param>
+    /// <param name="value">Receives the tileset when found.</param>
+    /// <returns><see langword="true"/> when a matching tileset is found; otherwise, <see langword="false"/>.</returns>
     public bool TryGetTilesetById(uint id, out LDtkTileset value)
     {
         if (_tilesetCacheById.TryGetValue(id, out value))
@@ -422,12 +386,12 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Gets a tileset by its name.
+    /// Gets a tileset by its LDtk identifier.
     /// </summary>
-    /// <param name="name">The tileset name.</param>
-    /// <returns>The tileset.</returns>
+    /// <param name="name">The tileset identifier.</param>
+    /// <returns>The matching tileset.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null or empty.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown when the tileset is not found.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown when no matching tileset is cached.</exception>
     public LDtkTileset GetTilesetByName(string name)
     {
         if (string.IsNullOrEmpty(name))
@@ -441,11 +405,11 @@ public sealed class LDtkMap : IAsset
     }
 
     /// <summary>
-    /// Attempts to get a tileset by its name.
+    /// Attempts to get a tileset by its LDtk identifier.
     /// </summary>
-    /// <param name="name">The tileset name.</param>
-    /// <param name="value">When this method returns, contains the tileset if found.</param>
-    /// <returns><see langword="true"/> if the tileset was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="name">The tileset identifier.</param>
+    /// <param name="value">Receives the tileset when found.</param>
+    /// <returns><see langword="true"/> when a matching tileset is found; otherwise, <see langword="false"/>.</returns>
     public bool TryGetTilesetByName(string name, out LDtkTileset value)
     {
         if (string.IsNullOrEmpty(name))

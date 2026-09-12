@@ -1,9 +1,9 @@
 // ============================================================================
 //  Timeout.cs
 // ============================================================================
-//  A coroutine wrapper that limits execution time with a timeout.
+//  A coroutine wrapper that stops after an accumulated timeout.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,44 +13,23 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Time;
 
 /// <summary>
-/// A coroutine wrapper that limits execution time with a timeout.
+/// Wraps a coroutine and stops advancing it after a timeout is reached.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Timeout"/> class wraps another coroutine and ensures it
-/// does not run longer than the specified timeout duration. If the timeout
-/// is reached, the wrapper stops and returns <see langword="false"/>.
+/// The timeout accumulates <see cref="FrameTime.DeltaTime"/> each time this
+/// wrapper's <see cref="MoveNext"/> method is advanced. A negative timeout disables
+/// the timeout and allows the wrapped coroutine to run until it completes.
 /// </para>
 /// <para>
-/// This is useful for preventing coroutines from running indefinitely,
-/// such as waiting for a condition that might never become true, or
-/// protecting against infinite loops in user code.
+/// <see cref="Current"/> forwards the wrapped coroutine's current value so normal
+/// VOID yields, including delays and nested routines, can be processed by the
+/// coroutine manager. Time spent while the manager is processing such a forwarded
+/// yield does not advance this wrapper's timeout counter.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Wrap a coroutine with a 5-second timeout
-/// var timed = new Timeout(
-///     new WaitUntil(() => isReady),
-///     5f
-/// );
-/// 
-/// // In a sequence with fallback
-/// var sequence = new Sequence(
-///     new Timeout(new WaitUntil(() => hasLoaded), 10f),
-///     new Callback(() => 
-///     {
-///         if (!hasLoaded)
-///             LoadFallbackContent();
-///     })
-/// );
-/// CoroutineManager.Instance.Run(sequence);
+/// yield return new Timeout(new WaitUntil(() =&gt; ready), 5f);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class Timeout : IEnumerator, IDisposable
 {
@@ -59,16 +38,16 @@ public sealed class Timeout : IEnumerator, IDisposable
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value from the wrapped coroutine.
+    /// Gets the current yielded value from the wrapped coroutine.
     /// </summary>
     public object Current => _inner?.Current!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Timeout"/> class.
+    /// Initializes a timeout wrapper.
     /// </summary>
-    /// <param name="inner">The coroutine to wrap with a timeout.</param>
-    /// <param name="timeout">The maximum time in seconds before the timeout triggers.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="inner"/> is null.</exception>
+    /// <param name="inner">The coroutine to wrap.</param>
+    /// <param name="timeout">The timeout in scaled seconds. A negative value disables the timeout.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="inner"/> is <see langword="null"/>.</exception>
     public Timeout(IEnumerator inner, float timeout)
     {
         _inner = inner ?? throw new ArgumentNullException(nameof(inner));
@@ -76,9 +55,12 @@ public sealed class Timeout : IEnumerator, IDisposable
     }
 
     /// <summary>
-    /// Advances the wrapped coroutine by one frame.
+    /// Advances the timeout and then the wrapped coroutine when time remains.
     /// </summary>
-    /// <returns><see langword="true"/> if the wrapped coroutine is still running and the timeout hasn't been reached; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the wrapped coroutine is running and the timeout has not been reached;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool MoveNext()
     {
         if (_timeout >= 0f)
@@ -92,12 +74,13 @@ public sealed class Timeout : IEnumerator, IDisposable
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the wrapped coroutine if it is disposable.
+    /// Disposes the wrapped coroutine when it implements <see cref="IDisposable"/>.
     /// </summary>
     public void Dispose() => (_inner as IDisposable)?.Dispose();
 }

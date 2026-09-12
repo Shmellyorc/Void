@@ -25,85 +25,43 @@
 // ============================================================================
 //  CoroutineManager.cs
 // ============================================================================
-//  Manages coroutine execution with support for delays, nested coroutines,
-//  and cancellation. Coroutines are IEnumerators that can yield float values
-//  for delays or nested IEnumerators for complex sequencing.
+//  Frame-driven coroutine runner with delays, nesting, and cancellation.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Coroutines;
 
 /// <summary>
-/// Manages coroutine execution with support for delays, nested coroutines,
-/// and cancellation.
+/// Runs frame-driven <see cref="IEnumerator"/> coroutines.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="CoroutineManager"/> class provides a coroutine system where
-/// coroutines are implemented as <see cref="IEnumerator"/> methods. Coroutines
-/// can yield:
-/// <list type="bullet">
-///   <item><description><see cref="float"/> - A delay in seconds</description></item>
-///   <item><description><see cref="double"/> - A delay in seconds</description></item>
-///   <item><description><see cref="int"/> - A delay in seconds</description></item>
-///   <item><description><see cref="IEnumerator"/> - A nested coroutine to execute</description></item>
-/// </list>
+/// Coroutines are advanced by VOID's game loop. Yielding a <see cref="float"/>,
+/// <see cref="double"/>, or <see cref="int"/> pauses the coroutine for that many
+/// seconds. Yielding another <see cref="IEnumerator"/> runs it as a nested
+/// coroutine before the parent continues. Other yielded values, including
+/// <see langword="null"/>, resume on a later manager update without adding a
+/// timed delay.
 /// </para>
 /// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Coroutine execution with optional delays</description></item>
-///   <item><description>Nested coroutine support</description></item>
-///   <item><description>Coroutine cancellation by reference or handle</description></item>
-///   <item><description>Stop all coroutines</description></item>
-///   <item><description>Automatic cleanup of completed or failed coroutines</description></item>
-///   <item><description>Thread-safe singleton access</description></item>
-/// </list>
+/// The manager is intended to be used from the game thread. Its internal lists
+/// are not synchronized for concurrent access.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Define a coroutine
-/// IEnumerator MyCoroutine()
+/// IEnumerator FlashMessage()
 /// {
-///     // Wait 1 second
-///     yield return 1.0f;
-///     
-///     // Do something
-///     Console.WriteLine("After 1 second");
-///     
-///     // Wait 0.5 seconds
-///     yield return 0.5f;
-///     
-///     // Nest another coroutine
-///     yield return AnotherCoroutine();
-///     
-///     Console.WriteLine("Done!");
+///     ShowMessage();
+///     yield return 1.5f;
+///     HideMessage();
 /// }
-/// 
-/// // Start a coroutine
-/// var handle = CoroutineManager.Instance.Run(MyCoroutine());
-/// 
-/// // Start with an initial delay
-/// var handle2 = CoroutineManager.Instance.Run(0.5f, MyCoroutine());
-/// 
-/// // Stop a coroutine
-/// CoroutineManager.Instance.Stop(handle);
-/// 
-/// // Stop all coroutines
-/// CoroutineManager.Instance.StopAll();
-/// 
-/// // Check if a coroutine is running
-/// bool running = CoroutineManager.Instance.IsRunning(handle);
+///
+/// CoroutineHandle handle = CoroutineManager.Instance.Run(FlashMessage());
+///
+/// if (handle.IsRunning)
+///     handle.Stop();
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. All operations should be performed from
-/// the main thread.
-/// </para>
 /// </remarks>
 public sealed class CoroutineManager
 {
@@ -113,23 +71,31 @@ public sealed class CoroutineManager
     private readonly List<float> _delays = [];
 
     /// <summary>
-    /// Gets the singleton instance of the coroutine manager.
+    /// Gets the shared coroutine manager used by the engine.
     /// </summary>
     public static CoroutineManager Instance => _instance.Value;
 
     /// <summary>
-    /// Gets the number of currently running coroutines.
+    /// Gets the number of coroutine entries currently tracked by the manager.
     /// </summary>
+    /// <remarks>
+    /// A coroutine stopped individually remains as an empty entry until the next
+    /// manager update, so this value can temporarily include a coroutine for which
+    /// <see cref="IsRunning(CoroutineHandle)"/> returns <see langword="false"/>.
+    /// </remarks>
     public int Count => _running.Count;
 
     private CoroutineManager() { }
 
     /// <summary>
-    /// Starts a coroutine with the specified initial delay.
+    /// Schedules a coroutine with an initial delay.
     /// </summary>
-    /// <param name="delay">The initial delay in seconds before the coroutine starts.</param>
-    /// <param name="routine">The coroutine to run.</param>
-    /// <returns>A handle that can be used to track and stop the coroutine.</returns>
+    /// <param name="delay">
+    /// The initial delay in seconds. Values less than or equal to zero make the
+    /// coroutine eligible to advance on the next manager update.
+    /// </param>
+    /// <param name="routine">The coroutine enumerator to run.</param>
+    /// <returns>A handle for querying, waiting for, or stopping the coroutine.</returns>
     public CoroutineHandle Run(float delay, IEnumerator routine)
     {
         Logger.Instance.DebugWithCategory("Coroutine",
@@ -142,17 +108,24 @@ public sealed class CoroutineManager
     }
 
     /// <summary>
-    /// Starts a coroutine immediately.
+    /// Schedules a coroutine without an initial timed delay.
     /// </summary>
-    /// <param name="routine">The coroutine to run.</param>
-    /// <returns>A handle that can be used to track and stop the coroutine.</returns>
+    /// <param name="routine">The coroutine enumerator to run.</param>
+    /// <returns>A handle for querying, waiting for, or stopping the coroutine.</returns>
     public CoroutineHandle Run(IEnumerator routine) => Run(0f, routine);
 
     /// <summary>
-    /// Stops a running coroutine.
+    /// Stops a coroutine registered with this manager.
     /// </summary>
-    /// <param name="routine">The coroutine to stop.</param>
-    /// <returns><see langword="true"/> if the coroutine was found and stopped; otherwise, <see langword="false"/>.</returns>
+    /// <param name="routine">The root coroutine enumerator to stop.</param>
+    /// <returns>
+    /// <see langword="true"/> when the coroutine was found and stopped;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <remarks>
+    /// If the root enumerator implements <see cref="IDisposable"/>, it is disposed
+    /// when stopped.
+    /// </remarks>
     public bool Stop(IEnumerator routine)
     {
         int i = _running.IndexOf(routine);
@@ -170,10 +143,13 @@ public sealed class CoroutineManager
     }
 
     /// <summary>
-    /// Stops a running coroutine using its handle.
+    /// Stops the coroutine represented by a handle.
     /// </summary>
     /// <param name="routine">The coroutine handle to stop.</param>
-    /// <returns><see langword="true"/> if the coroutine was found and stopped; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> when the handle referred to a running coroutine and
+    /// it was stopped; otherwise, <see langword="false"/>.
+    /// </returns>
     public bool Stop(CoroutineHandle routine)
     {
         if (!routine.IsRunning)
@@ -183,8 +159,12 @@ public sealed class CoroutineManager
     }
 
     /// <summary>
-    /// Stops all running coroutines.
+    /// Stops and removes all coroutines currently tracked by the manager.
     /// </summary>
+    /// <remarks>
+    /// Root enumerators that implement <see cref="IDisposable"/> are disposed before
+    /// the manager clears its coroutine state.
+    /// </remarks>
     public void StopAll()
     {
         Logger.Instance.InfoWithCategory("Coroutine",
@@ -201,17 +181,23 @@ public sealed class CoroutineManager
     }
 
     /// <summary>
-    /// Determines whether a coroutine is currently running.
+    /// Determines whether a root coroutine enumerator is currently running.
     /// </summary>
-    /// <param name="routine">The coroutine to check.</param>
-    /// <returns><see langword="true"/> if the coroutine is running; otherwise, <see langword="false"/>.</returns>
+    /// <param name="routine">The coroutine enumerator to check.</param>
+    /// <returns>
+    /// <see langword="true"/> when the enumerator is registered as running;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool IsRunning(IEnumerator routine) => _running.Contains(routine);
 
     /// <summary>
-    /// Determines whether a coroutine is currently running using its handle.
+    /// Determines whether a coroutine handle currently refers to a running coroutine.
     /// </summary>
     /// <param name="routine">The coroutine handle to check.</param>
-    /// <returns><see langword="true"/> if the coroutine is running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> when the coroutine is running; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
     public bool IsRunning(CoroutineHandle routine) => routine.IsRunning;
 
     internal void Update(float frameTime)

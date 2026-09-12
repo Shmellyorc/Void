@@ -1,13 +1,20 @@
+// ============================================================================
+//  AudioBuffer.cs
+// ============================================================================
+//  Reference-counted decoded OpenAL buffer used by sounds and sound instances.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using System;
 using System.Threading;
 
 namespace Void.Engine.Audio;
 
-/// <summary>
-/// Reference-counted decoded OpenAL buffer. A Sound asset owns one reference and
-/// each live SoundInstance owns another, so asset eviction cannot invalidate audio
-/// that is already playing.
-/// </summary>
+// A Sound owns one reference and each live SoundInstance owns another. This
+// allows asset eviction to release its reference without invalidating audio
+// that is already playing.
 internal sealed class AudioBuffer : IDisposable
 {
     private uint _handle;

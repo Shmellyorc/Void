@@ -1,3 +1,12 @@
+// ============================================================================
+//  AudioDecoder.cs
+// ============================================================================
+//  Decodes encoded audio into PCM16 data for the OpenAL runtime.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,10 +30,8 @@ internal readonly struct DecodedAudio
     }
 }
 
-/// <summary>
-/// Central encoded-audio decoder. OpenAL never sees encoded OGG/WAV/FLAC/MP3 bytes;
-/// it only receives normalized PCM16 output from this layer.
-/// </summary>
+// OpenAL receives normalized PCM16 data from this decoder rather than the
+// original encoded OGG, WAV, FLAC, or MP3 bytes.
 internal static class AudioDecoder
 {
     public static DecodedAudio Decode(ReadOnlySpan<byte> encodedData)
@@ -41,8 +48,8 @@ internal static class AudioDecoder
         if (sourceChannels <= 0 || sampleRate <= 0)
             throw new InvalidDataException("Decoded audio has an invalid channel count or sample rate.");
 
-        // Standard OpenAL guarantees mono/stereo PCM. Preserve mono/stereo sources;
-        // down-mix wider layouts to mono so the backend remains portable.
+        // Standard OpenAL guarantees mono and stereo PCM. Preserve those
+        // layouts and down-mix wider sources to mono for backend portability.
         int outputChannels = sourceChannels <= 2 ? sourceChannels : 1;
         var output = new List<short>();
         var input = new float[Math.Max(8192, sourceChannels * 1024)];

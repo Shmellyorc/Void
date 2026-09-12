@@ -1,77 +1,21 @@
 // ============================================================================
 //  FloatExtensions.cs
 // ============================================================================
-//  Extension methods for floating-point operations including clamping,
-//  wrapping, conversion, and rounding utilities.
+//  Common floating-point math, conversion, formatting, and rounding helpers.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace System;
 
 /// <summary>
-/// Provides extension methods for floating-point operations including
-/// clamping, wrapping, conversion, and rounding utilities.
+/// Provides common math, conversion, formatting, and rounding helpers for <see cref="float"/> values.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="FloatExtensions"/> class provides a comprehensive set of
-/// extension methods for <see cref="float"/> values, making common
-/// mathematical operations more intuitive and readable.
-/// </para>
-/// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Clamping and saturation</description></item>
-///   <item><description>Angle conversion (degrees ↔ radians)</description></item>
-///   <item><description>Wrapping values within ranges</description></item>
-///   <item><description>Rounding and snapping</description></item>
-///   <item><description>Epsilon-based equality comparisons</description></item>
-///   <item><description>Formatting (percent, time)</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// float value = 1.5f;
-/// 
-/// // Clamping
-/// float clamped = value.Clamp(0f, 1f); // 1f
-/// float saturated = value.Saturate(); // 1f
-/// 
-/// // Wrapping
-/// float wrapped = 5f.Wrap(0f, 3f); // 2f
-/// 
-/// // Conversion
-/// float radians = 90f.ToRadians(); // PI/2
-/// float degrees = PI.ToDegrees(); // 180f
-/// 
-/// // Rounding
-/// int rounded = 3.7f.RoundToInt(); // 4
-/// int floored = 3.7f.FloorToInt(); // 3
-/// int ceiled = 3.2f.CeilToInt(); // 4
-/// 
-/// // Snapping
-/// float snapped = 12.3f.Snap(5f); // 10f
-/// 
-/// // Formatting
-/// string percent = 0.75f.ToPercent(); // "75%"
-/// string time = 125f.ToTimeString(); // "2:05"
-/// 
-/// // Interpolation
-/// float lerped = 0f.LerpTo(10f, 0.5f); // 5f
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// These extension methods are thread-safe as they operate on value types.
-/// </para>
-/// </remarks>
 public static class FloatExtensions
 {
     /// <summary>
-    /// Clamps the value between a minimum and maximum.
+    /// Clamps the value to the inclusive range defined by <paramref name="min"/> and <paramref name="max"/>.
     /// </summary>
     /// <param name="value">The value to clamp.</param>
     /// <param name="min">The minimum allowed value.</param>
@@ -81,136 +25,136 @@ public static class FloatExtensions
         => Math.Clamp(value, min, max);
 
     /// <summary>
-    /// Clamps the value between 0 and 1.
+    /// Clamps the value to the inclusive range from 0 to 1.
     /// </summary>
-    /// <param name="value">The value to saturate.</param>
-    /// <returns>The saturated value between 0 and 1.</returns>
+    /// <param name="value">The value to clamp.</param>
+    /// <returns>The clamped value.</returns>
     public static float Saturate(this float value)
         => Math.Clamp(value, 0f, 1f);
 
     /// <summary>
-    /// Wraps the value within the range [0, max).
+    /// Wraps the value into the range [0, <paramref name="max"/>).
     /// </summary>
     /// <param name="value">The value to wrap.</param>
-    /// <param name="max">The exclusive maximum value.</param>
+    /// <param name="max">The exclusive upper bound.</param>
     /// <returns>The wrapped value.</returns>
     public static float Wrap(this float value, float max)
         => ((value % max) + max) % max;
 
     /// <summary>
-    /// Wraps the value within the range [min, max).
+    /// Wraps the value into the range [<paramref name="min"/>, <paramref name="max"/>).
     /// </summary>
     /// <param name="value">The value to wrap.</param>
-    /// <param name="min">The inclusive minimum value.</param>
-    /// <param name="max">The exclusive maximum value.</param>
+    /// <param name="min">The inclusive lower bound.</param>
+    /// <param name="max">The exclusive upper bound.</param>
     /// <returns>The wrapped value.</returns>
     public static float Wrap(this float value, float min, float max)
         => min + ((value - min) % (max - min) + (max - min)) % (max - min);
 
     /// <summary>
-    /// Converts degrees to radians.
+    /// Converts an angle from degrees to radians.
     /// </summary>
-    /// <param name="value">The value in degrees.</param>
-    /// <returns>The value in radians.</returns>
+    /// <param name="value">The angle in degrees.</param>
+    /// <returns>The angle in radians.</returns>
     public static float ToRadians(this float value)
         => value * MathHelper.DegToRad;
 
     /// <summary>
-    /// Converts radians to degrees.
+    /// Converts an angle from radians to degrees.
     /// </summary>
-    /// <param name="value">The value in radians.</param>
-    /// <returns>The value in degrees.</returns>
+    /// <param name="value">The angle in radians.</param>
+    /// <returns>The angle in degrees.</returns>
     public static float ToDegrees(this float value)
         => value * MathHelper.RadToDeg;
 
     /// <summary>
-    /// Gets the sign of the value (-1, 0, or 1).
+    /// Returns the sign of the value.
     /// </summary>
-    /// <param name="value">The value to get the sign of.</param>
-    /// <returns>The sign of the value.</returns>
+    /// <param name="value">The value to inspect.</param>
+    /// <returns>-1 for negative values, 0 for zero, or 1 for positive values.</returns>
     public static float Sign(this float value)
         => MathF.Sign(value);
 
     /// <summary>
-    /// Gets the absolute value.
+    /// Returns the absolute value.
     /// </summary>
-    /// <param name="value">The value to get the absolute value of.</param>
+    /// <param name="value">The value to convert to its magnitude.</param>
     /// <returns>The absolute value.</returns>
     public static float Abs(this float value)
         => MathF.Abs(value);
 
     /// <summary>
-    /// Determines whether the value is approximately zero.
+    /// Determines whether the absolute value is smaller than <see cref="MathHelper.Epsilon"/>.
     /// </summary>
-    /// <param name="value">The value to check.</param>
-    /// <returns><see langword="true"/> if the value is within epsilon of zero; otherwise, <see langword="false"/>.</returns>
+    /// <param name="value">The value to test.</param>
+    /// <returns><see langword="true"/> when the value is within the engine epsilon of zero; otherwise, <see langword="false"/>.</returns>
     public static bool IsZero(this float value)
         => MathF.Abs(value) < MathHelper.Epsilon;
 
     /// <summary>
-    /// Determines whether the value is approximately equal to another value.
+    /// Determines whether two values differ by less than <see cref="MathHelper.Epsilon"/>.
     /// </summary>
-    /// <param name="value">The value to compare.</param>
-    /// <param name="other">The other value to compare against.</param>
-    /// <returns><see langword="true"/> if the values are within epsilon of each other; otherwise, <see langword="false"/>.</returns>
+    /// <param name="value">The first value.</param>
+    /// <param name="other">The value to compare against.</param>
+    /// <returns><see langword="true"/> when the values are within the engine epsilon; otherwise, <see langword="false"/>.</returns>
     public static bool ApproxEquals(this float value, float other)
         => MathF.Abs(value - other) < MathHelper.Epsilon;
 
     /// <summary>
-    /// Rounds the value to the nearest integer.
+    /// Rounds the value to the nearest integer using <see cref="MathF.Round(float)"/>.
     /// </summary>
     /// <param name="value">The value to round.</param>
-    /// <returns>The rounded integer value.</returns>
+    /// <returns>The rounded integer.</returns>
     public static int RoundToInt(this float value)
         => (int)MathF.Round(value);
 
     /// <summary>
-    /// Floors the value to the nearest integer.
+    /// Rounds the value downward to the nearest integer.
     /// </summary>
     /// <param name="value">The value to floor.</param>
-    /// <returns>The floored integer value.</returns>
+    /// <returns>The floored integer.</returns>
     public static int FloorToInt(this float value)
         => (int)MathF.Floor(value);
 
     /// <summary>
-    /// Ceils the value to the nearest integer.
+    /// Rounds the value upward to the nearest integer.
     /// </summary>
     /// <param name="value">The value to ceil.</param>
-    /// <returns>The ceiled integer value.</returns>
+    /// <returns>The ceiled integer.</returns>
     public static int CeilToInt(this float value)
         => (int)MathF.Ceiling(value);
 
     /// <summary>
-    /// Rounds the value to the specified number of decimal places.
+    /// Rounds the value to the specified number of fractional digits.
     /// </summary>
     /// <param name="value">The value to round.</param>
-    /// <param name="decimals">The number of decimal places.</param>
+    /// <param name="decimals">The number of fractional digits.</param>
     /// <returns>The rounded value.</returns>
     public static float Round(this float value, int decimals = 0)
         => MathF.Round(value, decimals);
 
     /// <summary>
-    /// Snaps the value to the nearest multiple of the specified grid size.
+    /// Rounds the value to the nearest multiple of <paramref name="gridSize"/>.
     /// </summary>
     /// <param name="value">The value to snap.</param>
-    /// <param name="gridSize">The grid size to snap to.</param>
+    /// <param name="gridSize">The spacing between snap points.</param>
     /// <returns>The snapped value.</returns>
     public static float Snap(this float value, float gridSize)
         => MathF.Round(value / gridSize) * gridSize;
 
     /// <summary>
-    /// Converts the value to a percentage string.
+    /// Formats the value as a whole-number percentage after multiplying it by 100.
     /// </summary>
-    /// <param name="value">The value (0-1) to convert.</param>
-    /// <returns>The percentage string.</returns>
+    /// <param name="value">The fractional value to format.</param>
+    /// <returns>The formatted percentage string.</returns>
     public static string ToPercent(this float value)
         => $"{value * 100f:0}%";
 
     /// <summary>
-    /// Converts the value to a time string in M:SS format.
+    /// Formats a number of seconds as minutes and two-digit seconds.
     /// </summary>
-    /// <param name="value">The time in seconds.</param>
-    /// <returns>The formatted time string.</returns>
+    /// <param name="value">The time value in seconds.</param>
+    /// <returns>A string in M:SS form.</returns>
     public static string ToTimeString(this float value)
     {
         int minutes = (int)(value / 60f);
@@ -219,19 +163,19 @@ public static class FloatExtensions
     }
 
     /// <summary>
-    /// Converts the value to a boolean.
+    /// Converts zero to <see langword="false"/> and every nonzero value to <see langword="true"/>.
     /// </summary>
     /// <param name="value">The value to convert.</param>
-    /// <returns><see langword="true"/> if the value is not zero; otherwise, <see langword="false"/>.</returns>
+    /// <returns>The Boolean representation of the value.</returns>
     public static bool ToBool(this float value)
         => value != 0f;
 
     /// <summary>
-    /// Linearly interpolates from this value to another.
+    /// Linearly interpolates from this value toward <paramref name="to"/>.
     /// </summary>
     /// <param name="from">The starting value.</param>
     /// <param name="to">The target value.</param>
-    /// <param name="t">The interpolation factor (0-1).</param>
+    /// <param name="t">The interpolation amount. The value is not clamped.</param>
     /// <returns>The interpolated value.</returns>
     public static float LerpTo(this float from, float to, float t)
         => from + (to - from) * t;

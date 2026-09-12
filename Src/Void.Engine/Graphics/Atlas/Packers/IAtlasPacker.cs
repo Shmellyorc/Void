@@ -1,189 +1,165 @@
 // ============================================================================
 //  IAtlasPacker.cs
 // ============================================================================
-//  Defines the contract for texture atlas packing algorithms.
-//  Provides methods for packing, freeing, defragmenting, and tracking
-//  atlas space usage.
+//  Contract for pluggable texture-atlas packing algorithms.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics.Atlas;
 
 /// <summary>
-/// Defines the contract for texture atlas packing algorithms.
+/// Defines the geometry contract used by VOID texture-atlas packers.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="IAtlasPacker"/> interface provides methods for packing
-/// rectangular textures into a larger atlas texture. Different implementations
-/// use different algorithms (e.g., Guillotine, Skyline) with varying trade-offs
-/// between packing efficiency, speed, and fragmentation.
+/// A packer owns only allocation geometry. It does not upload pixels or manage
+/// renderer resources. <see cref="AtlasManager"/> uses the rectangles returned by
+/// this interface to update atlas pixels and renderer textures.
 /// </para>
 /// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Pack textures of varying sizes into a fixed-size atlas</description></item>
-///   <item><description>Free individual textures when no longer needed</description></item>
-///   <item><description>Defragment to recover wasted space</description></item>
-///   <item><description>Track used space and fragmentation metrics</description></item>
-/// </list>
+/// Custom packers selected through <see cref="GameSettings.SetAtlasPacker(Type)"/>
+/// must provide a public constructor with the signature
+/// <c>(int width, int height)</c>. The dimensions supplied to that constructor are
+/// the atlas page dimensions in pixels.
 /// </para>
 /// <para>
-/// <b>Usage Example:</b>
+/// All successful allocations must use integral pixel coordinates, remain fully
+/// inside the configured page, preserve the requested width and height, and never
+/// overlap another live allocation.
+/// </para>
 /// <code>
-/// var packer = new SkylinePacker(2048, 2048);
-/// 
-/// if (packer.TryPack(128, 128, out var packedRect))
+/// public sealed class MyAtlasPacker : IAtlasPacker
 /// {
-///     // Texture was packed at packedRect.X, packedRect.Y
-///     // Copy texture data to the atlas at this position
+///     public MyAtlasPacker(int width, int height)
+///     {
+///         // Initialize one page of allocation state.
+///     }
+///
+///     // Implement the allocation contract below.
 /// }
-/// 
-/// // Check fragmentation
-/// float frag = packer.Fragmentation;
-/// if (frag > 0.3f) // 30% wasted space
-/// {
-///     var moves = packer.Defrag();
-///     // Update texture data based on moves
-/// }
-/// 
-/// // Free a texture when no longer needed
-/// packer.Free(packedRect);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// Implementations are not guaranteed to be thread-safe. Use a single packer
-/// per atlas and access it from the main thread.
-/// </para>
 /// </remarks>
 public interface IAtlasPacker
 {
     /// <summary>
-    /// Attempts to pack a rectangle of the specified size into the atlas.
+    /// Attempts to reserve a rectangle of the requested size.
     /// </summary>
-    /// <param name="width">The width of the rectangle to pack.</param>
-    /// <param name="height">The height of the rectangle to pack.</param>
-    /// <param name="packedRect">When this method returns, contains the packed position and size if successful; otherwise, <see langword="default"/>.</param>
-    /// <returns><see langword="true"/> if the rectangle was successfully packed; otherwise, <see langword="false"/>.</returns>
+    /// <param name="width">The requested width in pixels.</param>
+    /// <param name="height">The requested height in pixels.</param>
+    /// <param name="packedRect">
+    /// Receives the reserved rectangle when successful; otherwise,
+    /// <see langword="default"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the rectangle was reserved; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
     /// <remarks>
     /// <para>
-    /// This method searches for the best available free space in the atlas
-    /// that can accommodate the requested size. The exact placement strategy
-    /// depends on the specific packer implementation.
+    /// On success, the rectangle must have integral X and Y coordinates, exactly
+    /// match the requested width and height, remain inside the page, and not
+    /// intersect any other live allocation. Rotation is not part of the contract.
     /// </para>
     /// <para>
-    /// If successful, the returned <paramref name="packedRect"/> contains
-    /// the position (X, Y) and size (Width, Height) where the texture should
-    /// be placed in the atlas.
+    /// The returned rectangle remains reserved until it is released through
+    /// <see cref="Free"/>, removed by <see cref="Clear"/>, or relocated by a
+    /// successful <see cref="Defrag"/> operation.
+    /// </para>
+    /// <para>
+    /// A failed attempt must not mutate the existing allocation layout.
     /// </para>
     /// </remarks>
     bool TryPack(int width, int height, out Rect2 packedRect);
 
     /// <summary>
-    /// Clears all packed rectangles from the atlas.
+    /// Releases an exact live allocation.
+    /// </summary>
+    /// <param name="rect">A rectangle previously returned by a successful <see cref="TryPack"/> call.</param>
+    /// <remarks>
+    /// Releasing an exact live rectangle must make that allocation no longer live.
+    /// Passing a rectangle that is not currently allocated must be a harmless no-op.
+    /// Implementations may defer reuse of newly freed space when their packing model
+    /// cannot safely represent that space without defragmentation.
+    /// </remarks>
+    void Free(Rect2 rect);
+
+    /// <summary>
+    /// Removes all live allocations and restores the initial empty-page state.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// This method resets the packer to its initial state, removing all
-    /// packed rectangles and resetting used space to zero. The atlas space
-    /// becomes fully available for new textures.
-    /// </para>
-    /// <para>
-    /// This does not dispose or release any underlying GPU resources.
-    /// It only resets the packer's internal tracking state.
-    /// </para>
+    /// After this call, <see cref="UsedSpace"/> must be zero and the full page must
+    /// be available for future allocations. This method manages geometry only and
+    /// must not create, dispose, or update renderer resources.
     /// </remarks>
     void Clear();
 
     /// <summary>
-    /// Defragments the atlas to reduce fragmentation and recover wasted space.
+    /// Attempts to compact live allocations and reports every rectangle that moved.
     /// </summary>
     /// <returns>
-    /// A list of moves, where each item contains the old rectangle and the
-    /// new rectangle for textures that were relocated during defragmentation.
-    /// Rectangles that did not move are not included in the list.
+    /// A list containing the exact old and new rectangle for each allocation whose
+    /// position changed. Unchanged allocations are omitted.
     /// </returns>
     /// <remarks>
     /// <para>
-    /// Over time, packing and freeing textures can leave fragmented free space
-    /// that cannot be used for larger textures. Defragmentation rearranges
-    /// packed textures to consolidate free space into larger contiguous blocks.
+    /// Defragmentation is transactional. If the packer cannot produce a complete
+    /// valid replacement layout, it must leave the current layout unchanged and
+    /// return an empty list.
     /// </para>
     /// <para>
-    /// The returned move list is essential for atlas managers to physically
-    /// copy texture data from old positions to new positions on the render
-    /// texture. Without this, the atlas texture will contain stale pixel data
-    /// at the old positions, causing visual artifacts.
+    /// When moves are returned, the packer's live allocation state must already
+    /// represent the new layout. Every new rectangle must preserve the old
+    /// rectangle's dimensions, use integral pixel coordinates, remain inside the
+    /// page, and not overlap another live allocation. Each moved old rectangle must
+    /// appear exactly once in the returned list.
     /// </para>
     /// <para>
-    /// Defragmentation is typically an expensive operation that should be
-    /// performed sparingly, such as when <see cref="Fragmentation"/> exceeds
-    /// a certain threshold.
-    /// </para>
-    /// <para>
-    /// After defragmentation, existing references to packed rectangles become
-    /// invalid and must be updated. The <see cref="AtlasManager"/> handles
-    /// this automatically.
+    /// Returning an empty list means that no allocation positions changed.
     /// </para>
     /// </remarks>
     List<(Rect2 OldRect, Rect2 NewRect)> Defrag();
 
     /// <summary>
-    /// Frees a previously packed rectangle, making its space available for reuse.
-    /// </summary>
-    /// <param name="rect">The rectangle to free, as returned from <see cref="TryPack"/>.</param>
-    /// <remarks>
-    /// <para>
-    /// This method marks the specified rectangle as free space that can be
-    /// used for future packing operations. The packer may merge adjacent
-    /// free rectangles to reduce fragmentation.
-    /// </para>
-    /// <para>
-    /// The rectangle must match exactly the rectangle that was returned from
-    /// a previous successful call to <see cref="TryPack"/>.
-    /// </para>
-    /// </remarks>
-    void Free(Rect2 rect);
-
-    /// <summary>
-    /// Gets the fragmentation percentage of the atlas.
+    /// Gets a normalized estimate of external allocation fragmentation.
     /// </summary>
     /// <value>
-    /// A value between 0 and 1 representing the percentage of wasted space
-    /// due to fragmentation. Higher values indicate more wasted space.
+    /// A value from 0 to 1, where 0 means the currently free area is fully useful
+    /// for allocation and higher values indicate that more free area is split or
+    /// trapped in a form that defragmentation may recover.
     /// </value>
     /// <remarks>
     /// <para>
-    /// Fragmentation is calculated as: <c>1 - (UsedSpace / TotalSpace)</c>
+    /// This value describes allocation fragmentation, not the percentage of the
+    /// page that is unused. An empty page therefore reports 0 rather than 1.
     /// </para>
     /// <para>
-    /// A fragmentation value of 0 means all used space is contiguous and
-    /// efficiently packed. Higher values indicate that free space is fragmented
-    /// into smaller blocks that cannot be used for larger textures.
+    /// The built-in packers calculate this as
+    /// <c>1 - (largest currently allocatable free rectangle area / total free area)</c>.
+    /// Custom packers should use the same definition or a conservative equivalent
+    /// based on space that can be allocated without moving live rectangles.
+    /// A completely full page reports 0 because it has no free area to fragment.
     /// </para>
     /// </remarks>
     float Fragmentation { get; }
 
     /// <summary>
-    /// Gets the total amount of space currently used by packed rectangles.
+    /// Gets the total pixel area occupied by all live allocations.
     /// </summary>
-    /// <value>The total area (in pixels) occupied by packed textures.</value>
     /// <remarks>
-    /// This value represents the sum of the areas of all packed rectangles.
-    /// It does not include wasted space due to fragmentation.
+    /// This is the sum of <c>Width * Height</c> for the rectangles currently
+    /// reserved by the packer. It is an area in pixels, not a byte count and not
+    /// an allocator-specific envelope or bookkeeping estimate.
     /// </remarks>
     int UsedSpace { get; }
 
     /// <summary>
-    /// Gets the total available space in the atlas.
+    /// Gets the total pixel area of the page managed by this packer.
     /// </summary>
-    /// <value>The total area (in pixels) of the atlas.</value>
     /// <remarks>
-    /// This is the product of the atlas width and height, representing the
-    /// maximum possible space available for packing textures.
+    /// For a page created with dimensions <c>width</c> and <c>height</c>, this value
+    /// is <c>width * height</c>.
     /// </remarks>
     int TotalSpace { get; }
 }

@@ -3,7 +3,7 @@
 // ============================================================================
 //  A coroutine that waits until a condition becomes true or a timeout occurs.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,44 +13,12 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Conditionals;
 
 /// <summary>
-/// A coroutine that waits until a condition becomes true or a timeout occurs.
+/// Waits until a condition becomes <see langword="true"/> or a timeout elapses.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="WaitUntilOrTimeout"/> class pauses the coroutine execution
-/// until either the specified condition returns <see langword="true"/> or the
-/// timeout duration elapses, whichever happens first.
-/// </para>
-/// <para>
-/// This is useful for scenarios where you want to wait for something to happen
-/// but don't want to wait forever, such as waiting for a network response,
-/// asset loading, or user input with a fallback.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Wait for a flag with a 5-second timeout
-/// yield return new WaitUntilOrTimeout(() => isReady, 5f);
-/// 
-/// // Wait for a value with timeout
-/// yield return new WaitUntilOrTimeout(() => health > 50, 3f);
-/// 
-/// // In a sequence with fallback
-/// var sequence = new Sequence(
-///     new WaitUntilOrTimeout(() => hasLoaded, 10f),
-///     new Callback(() => 
-///     {
-///         if (!hasLoaded)
-///             LoadFallbackContent();
-///     })
-/// );
-/// CoroutineManager.Instance.Run(sequence);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// The condition is checked before elapsed time is advanced on each call to
+/// <see cref="MoveNext"/>. The coroutine completes when the condition succeeds
+/// or when the accumulated frame time reaches the configured timeout.
 /// </remarks>
 public sealed class WaitUntilOrTimeout : IEnumerator
 {
@@ -59,15 +27,17 @@ public sealed class WaitUntilOrTimeout : IEnumerator
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the value yielded by the coroutine, which is always <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitUntilOrTimeout"/> class.
+    /// Initializes a conditional wait with a timeout.
     /// </summary>
-    /// <param name="condition">The condition to wait for. Returns <see langword="true"/> when the wait should end.</param>
-    /// <param name="timeoutSeconds">The maximum time to wait in seconds.</param>
+    /// <param name="condition">
+    /// The condition to evaluate. The wait ends when it returns <see langword="true"/>.
+    /// </param>
+    /// <param name="timeoutSeconds">The maximum accumulated wait time, in seconds.</param>
     public WaitUntilOrTimeout(Func<bool> condition, float timeoutSeconds)
     {
         _condition = condition;
@@ -76,9 +46,12 @@ public sealed class WaitUntilOrTimeout : IEnumerator
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Evaluates the condition and advances the timeout using the current frame time.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the condition is false and the timeout has
+    /// not elapsed; otherwise, <see langword="false"/>.
+    /// </returns>
     public bool MoveNext()
     {
         if (_condition())
@@ -89,12 +62,13 @@ public sealed class WaitUntilOrTimeout : IEnumerator
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this coroutine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases the coroutine. This implementation performs no work.
     /// </summary>
     public void Dispose() { }
 }

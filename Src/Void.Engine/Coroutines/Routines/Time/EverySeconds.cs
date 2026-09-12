@@ -1,9 +1,9 @@
 // ============================================================================
 //  EverySeconds.cs
 // ============================================================================
-//  A coroutine that executes an action at a regular time interval indefinitely.
+//  A coroutine that executes an action at a repeating scaled-time interval.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,42 +13,21 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Time;
 
 /// <summary>
-/// A coroutine that executes an action at a regular time interval indefinitely.
+/// Executes an action at a repeating scaled-time interval until stopped.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="EverySeconds"/> class calls a specified action at a regular
-/// time interval. It runs indefinitely until the coroutine is stopped.
+/// Elapsed time is accumulated from <see cref="FrameTime.DeltaTime"/>, so the
+/// interval is affected by <see cref="FrameTime.TimeScale"/>. An interval of zero
+/// or less invokes the action on every coroutine update.
 /// </para>
 /// <para>
-/// Unlike <see cref="EveryFrames"/>, this class uses time-based intervals,
-/// making it frame-rate independent and consistent regardless of frame rate.
+/// When an update passes the interval, one interval is subtracted from the
+/// accumulated time. At most one action invocation occurs per update.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Call an action every 1 second
-/// var everySecond = new EverySeconds(1f, () => Console.WriteLine("Tick!"));
-/// CoroutineManager.Instance.Run(everySecond);
-/// 
-/// // Call an action every 0.5 seconds
-/// CoroutineManager.Instance.Run(new EverySeconds(0.5f, UpdateHealthBar));
-/// 
-/// // Call an action every frame (effectively)
-/// CoroutineManager.Instance.Run(new EverySeconds(0f, () => UpdateUI()));
-/// 
-/// // Stop after a condition
-/// var handle = CoroutineManager.Instance.Run(new EverySeconds(2f, () => 
-/// {
-///     if (gameOver)
-///         CoroutineManager.Instance.Stop(handle);
-/// }));
+/// CoroutineManager.Instance.Run(new EverySeconds(0.5f, UpdateStatus));
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public class EverySeconds : IEnumerator
 {
@@ -57,15 +36,15 @@ public class EverySeconds : IEnumerator
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the current yielded value. This routine always yields <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EverySeconds"/> class.
+    /// Initializes a repeating timed action.
     /// </summary>
-    /// <param name="interval">The time in seconds between each action execution.</param>
-    /// <param name="action">The action to execute at the specified interval.</param>
+    /// <param name="interval">The scaled-time interval in seconds. Negative values are treated as zero.</param>
+    /// <param name="action">The action to invoke at each interval.</param>
     public EverySeconds(float interval, Action action)
     {
         _interval = Math.Max(0f, interval);
@@ -74,9 +53,9 @@ public class EverySeconds : IEnumerator
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Advances the timer and invokes the action when the interval is reached.
     /// </summary>
-    /// <returns>Always returns <see langword="true"/> (runs indefinitely).</returns>
+    /// <returns>Always <see langword="true"/> because this routine repeats until explicitly stopped.</returns>
     public bool MoveNext()
     {
         if (_interval <= 0f)
@@ -95,12 +74,13 @@ public class EverySeconds : IEnumerator
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases the routine. This implementation has no resources to release.
     /// </summary>
     public void Dispose() { }
 }

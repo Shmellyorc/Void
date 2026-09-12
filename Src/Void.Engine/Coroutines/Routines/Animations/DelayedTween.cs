@@ -1,9 +1,9 @@
 // ============================================================================
 //  DelayedTween.cs
 // ============================================================================
-//  A tween with an initial delay before the animation begins.
+//  Tween that waits before interpolation begins.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,41 +13,13 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A tween with an initial delay before the animation begins.
+/// Interpolates a value after an initial delay.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
-/// <para>
-/// The <see cref="DelayedTween{T}"/> class extends the standard tween by
-/// adding a delay before the animation starts. This is useful for sequencing
-/// animations or creating staggered effects.
-/// </para>
-/// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a delayed tween
-/// var tween = new DelayedTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     delay: 0.5f
-/// );
-/// 
-/// // Run the tween (will wait 0.5s before starting)
-/// CoroutineManager.Instance.Run(tween);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// While the delay is active, <see cref="MoveNext"/> advances elapsed time
+/// without invoking the update callback. Interpolation then proceeds using
+/// <see cref="Game.FrameTime"/> and the selected easing function.
 /// </remarks>
 public sealed class DelayedTween<T> : IEnumerator
 {
@@ -60,20 +32,21 @@ public sealed class DelayedTween<T> : IEnumerator
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Delayed tweens do not yield a
+    /// value, so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DelayedTween{T}"/> class.
+    /// Initializes a delayed tween.
     /// </summary>
     /// <param name="from">The starting value.</param>
     /// <param name="to">The ending value.</param>
-    /// <param name="duration">The duration of the tween in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
-    /// <param name="delay">The initial delay in seconds before the tween starts.</param>
+    /// <param name="duration">The interpolation duration in seconds.</param>
+    /// <param name="type">The easing function to apply to normalized progress.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
+    /// <param name="delay">The delay in seconds before interpolation begins.</param>
     public DelayedTween(T from, T to, float duration, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate, float delay)
     {
         _from = from;
@@ -87,9 +60,12 @@ public sealed class DelayedTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the delay or tween using the current frame delta time.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the delay or tween is active;
+    /// otherwise, <see langword="false"/> after applying the ending value.
+    /// </returns>
     public bool MoveNext()
     {
         float deltaTime = Game.Instance.FrameTime.DeltaTime;
@@ -115,7 +91,8 @@ public sealed class DelayedTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a delayed tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

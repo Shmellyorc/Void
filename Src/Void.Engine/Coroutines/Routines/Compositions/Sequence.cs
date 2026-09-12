@@ -1,9 +1,9 @@
 // ============================================================================
 //  Sequence.cs
 // ============================================================================
-//  A coroutine that executes multiple coroutines in sequential order.
+//  Coroutine composition that runs routines in order.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,37 +13,22 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Compositions;
 
 /// <summary>
-/// A coroutine that executes multiple coroutines in sequential order.
+/// Executes a collection of coroutines sequentially.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Sequence"/> class allows multiple coroutines to be chained
-/// together, executing one after another. Each coroutine must complete before
-/// the next one begins.
+/// Each routine runs until it completes before the next routine is advanced.
+/// Null entries are skipped. The active routine's <see cref="IEnumerator.Current"/>
+/// value is exposed through <see cref="Current"/>, allowing normal coroutine
+/// yields to flow through the sequence.
 /// </para>
-/// <para>
-/// This is useful for creating complex sequences of animations, effects, or
-/// operations that need to happen in a specific order.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Create a sequence of tweens
 /// var sequence = new Sequence(
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new Tween&lt;float&gt;(100f, 200f, 0.5f, EaseType.Linear, Lerp, value => x = value),
-///     new Tween&lt;float&gt;(200f, 0f, 0.75f, EaseType.QuadIn, Lerp, value => x = value),
-///     new Delay(0.5f),
-///     new Callback(() => Console.WriteLine("Sequence complete!"))
-/// );
-/// 
+///     new Tween&lt;float&gt;(0f, 100f, 0.5f, EaseType.QuadOut, Lerp, value =&gt; x = value),
+///     new Tween&lt;float&gt;(100f, 0f, 0.5f, EaseType.QuadIn, Lerp, value =&gt; x = value));
+///
 /// CoroutineManager.Instance.Run(sequence);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public class Sequence : IEnumerator
 {
@@ -51,8 +36,11 @@ public class Sequence : IEnumerator
     private int _index;
 
     /// <summary>
-    /// Gets the current value from the currently running coroutine.
+    /// Gets the value yielded by the currently active routine.
     /// </summary>
+    /// <remarks>
+    /// Returns <see langword="null"/> when the sequence is empty or has completed.
+    /// </remarks>
     public object Current
     {
         get
@@ -64,9 +52,12 @@ public class Sequence : IEnumerator
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Sequence"/> class.
+    /// Initializes a sequence from the supplied routines.
     /// </summary>
-    /// <param name="routines">The coroutines to execute in sequence.</param>
+    /// <param name="routines">
+    /// The routines to execute in order. A null array produces an empty sequence,
+    /// and null entries are skipped during execution.
+    /// </param>
     public Sequence(params IEnumerator[] routines)
     {
         _routines = routines ?? [];
@@ -74,9 +65,12 @@ public class Sequence : IEnumerator
     }
 
     /// <summary>
-    /// Advances the sequence by one frame.
+    /// Advances the active routine, moving to later routines as earlier ones complete.
     /// </summary>
-    /// <returns><see langword="true"/> if the sequence is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while a routine in the sequence remains active;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool MoveNext()
     {
         while (_index < _routines.Length)
@@ -93,7 +87,8 @@ public class Sequence : IEnumerator
     }
 
     /// <summary>
-    /// Resets the sequence to its initial state. Not supported.
+    /// Resetting a sequence is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

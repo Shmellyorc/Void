@@ -1,13 +1,20 @@
+// ============================================================================
+//  AudioRuntime.cs
+// ============================================================================
+//  Owns the shared OpenAL device and context used by VOID audio.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using System;
 using Silk.NET.OpenAL;
 
 namespace Void.Engine.Audio;
 
-/// <summary>
-/// Internal OpenAL device/context owner. All AL calls are serialized and the context
-/// is made current only for the duration of a call so the sound-pool worker thread
-/// and the game thread can safely share the same device.
-/// </summary>
+// OpenAL calls are serialized and the context is made current only for the
+// duration of each operation so the game thread and sound-pool worker can share
+// the same device safely.
 internal static unsafe class AudioRuntime
 {
     private static readonly object Sync = new();
@@ -63,8 +70,8 @@ internal static unsafe class AudioRuntime
         return Execute(al =>
         {
             uint source = al.GenSource();
-            // Panning uses source position; disable distance attenuation so changing
-            // Pan cannot unexpectedly change the perceived volume.
+            // Panning uses source position. Disable distance attenuation so
+            // changing Pan cannot unexpectedly change perceived volume.
             al.SetSourceProperty(source, SourceFloat.RolloffFactor, 0f);
             return source;
         });
@@ -118,7 +125,7 @@ internal static unsafe class AudioRuntime
             }
             catch
             {
-                // Best-effort shutdown.
+                // Shutdown is best-effort during process exit.
             }
 
             try { _alc.MakeContextCurrent(null); } catch { }
@@ -191,7 +198,7 @@ internal static unsafe class AudioRuntime
         }
 
         _alc.MakeContextCurrent(_context);
-        _al.GetError(); // clear any pre-existing error state
+        _al.GetError(); // Clear any pre-existing error state.
         _alc.MakeContextCurrent(null);
         _initialized = true;
     }

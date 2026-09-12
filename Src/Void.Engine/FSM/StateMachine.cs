@@ -1,10 +1,10 @@
 // ============================================================================
 //  StateMachine.cs
 // ============================================================================
-//  A fluent, coroutine-based finite state machine with support for state
-//  transitions, history, and nested coroutines.
+//  Coroutine-based finite state machine with fluent state registration,
+//  transitions, history, and lifecycle callbacks.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,91 +15,48 @@ using System.Collections.Generic;
 namespace Void.Engine.FSM;
 
 /// <summary>
-/// A fluent, coroutine-based finite state machine with support for state
-/// transitions, history, and nested coroutines.
+/// Provides a coroutine-based finite state machine with named transitions,
+/// history navigation, pause control, and lifecycle callbacks.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="StateMachine"/> class provides a flexible state machine
-/// implementation where states are registered as coroutine factories.
-/// States can yield strings to transition to other states, or yield nested
-/// <see cref="IEnumerator"/> objects for complex sequencing.
+/// States are registered as <see cref="IEnumerator"/> factories. State names are
+/// matched case-insensitively. A state can request a transition by yielding the
+/// name of another registered state.
 /// </para>
 /// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Fluent API for state registration and configuration</description></item>
-///   <item><description>Coroutine-based state execution</description></item>
-///   <item><description>String-based state transitions</description></item>
-///   <item><description>State history with back navigation</description></item>
-///   <item><description>Pause and resume support</description></item>
-///   <item><description>Enter, exit, and changed callbacks</description></item>
-/// </list>
+/// A state may also yield an <see cref="IEnumerator"/>. The state machine advances
+/// that direct child until it completes before resuming the state. The child is
+/// advanced directly rather than through <c>CoroutineManager</c>, so values yielded
+/// by that child are not recursively interpreted by this state machine.
 /// </para>
 /// <para>
-/// <b>Usage Example:</b>
+/// When a state finishes naturally, <see cref="IsRunning"/> becomes
+/// <see langword="false"/>. The state exit callback is invoked only when the
+/// current state is explicitly exited by a state change, <see cref="Stop"/>, or
+/// <see cref="Dispose"/>.
+/// </para>
 /// <code>
-/// var fsm = new StateMachine();
-/// 
-/// // Register states
-/// fsm.AddState("Idle", () => IdleState());
-/// fsm.AddState("Walk", () => WalkState());
-/// fsm.AddState("Jump", () => JumpState());
-/// 
-/// // Set callbacks
-/// fsm.OnEnter(state => Console.WriteLine($"Entering {state}"));
-/// fsm.OnExit(state => Console.WriteLine($"Exiting {state}"));
-/// fsm.OnChanged((from, to) => Console.WriteLine($"{from} -> {to}"));
-/// 
-/// // Start the state machine
-/// fsm.ChangeState("Idle");
-/// 
-/// // In the update loop
-/// fsm.Update(frameTime);
-/// 
-/// // Pause and resume
-/// fsm.Pause();
-/// fsm.Resume();
-/// 
-/// // Go back to previous state
-/// fsm.GoBack();
-/// 
-/// // Clean up
-/// fsm.Dispose();
-/// 
-/// // State coroutine examples
-/// IEnumerator IdleState()
+/// var machine = new StateMachine()
+///     .AddState("Idle", Idle)
+///     .AddState("Active", Active)
+///     .OnChanged((from, to) =&gt; Console.WriteLine($"{from} -&gt; {to}"));
+///
+/// machine.ChangeState("Idle");
+/// machine.Update(frameTime);
+///
+/// IEnumerator Idle()
+/// {
+///     yield return new WaitForSeconds(0.5f);
+///     yield return "Active";
+/// }
+///
+/// IEnumerator Active()
 /// {
 ///     while (true)
-///     {
-///         // Do idle behavior
 ///         yield return null;
-///         
-///         if (Input.IsPressed("Jump"))
-///             yield return "Jump"; // Transition to Jump state
-///     }
-/// }
-/// 
-/// IEnumerator WalkState()
-/// {
-///     // Walk for 2 seconds then transition
-///     yield return new WaitForSeconds(2f);
-///     yield return "Idle";
 /// }
 /// </code>
-/// </para>
-/// <para>
-/// <b>State Transitions:</b>
-/// States can transition by yielding a string that matches a registered
-/// state name. The state machine handles the transition cleanly by exiting
-/// the current state, entering the new state, and firing the appropriate
-/// callbacks.
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. All operations should be performed from
-/// the main thread.
-/// </para>
 /// </remarks>
 public sealed class StateMachine : IDisposable
 {
@@ -114,62 +71,84 @@ public sealed class StateMachine : IDisposable
     private bool _disposed;
 
     /// <summary>
-    /// Gets the current frame time for this state machine.
+    /// Gets the most recent frame timing data supplied to <see cref="Update(FrameTime)"/>.
     /// </summary>
+    /// <remarks>
+    /// This value is not initialized until <see cref="Update(FrameTime)"/> has been called.
+    /// </remarks>
     public FrameTime FrameTime => _frameTime;
 
     /// <summary>
-    /// Gets the name of the current state.
+    /// Gets the name of the currently selected state.
     /// </summary>
+    /// <remarks>
+    /// The name remains available after the state stops or completes naturally.
+    /// It is not initialized until the first successful state change.
+    /// </remarks>
     public string CurrentState => _currentStateName;
 
     /// <summary>
-    /// Gets the name of the previous state.
+    /// Gets the state name recorded immediately before the most recent state change.
     /// </summary>
+    /// <remarks>
+    /// This value is not initialized until a state change records a previous state.
+    /// </remarks>
     public string PreviousState => _previousStateName;
 
     /// <summary>
-    /// Gets whether the state machine is currently running.
+    /// Gets a value indicating whether the current state is still running.
     /// </summary>
     public bool IsRunning => _running;
 
     /// <summary>
-    /// Gets whether the state machine is paused.
+    /// Gets a value indicating whether updates to the current state are paused.
     /// </summary>
     public bool IsPaused => _paused;
 
     /// <summary>
-    /// Gets whether the state machine has been disposed.
+    /// Gets a value indicating whether this state machine has been disposed.
     /// </summary>
     public bool IsDisposed => _disposed;
 
     /// <summary>
-    /// Gets all registered state names.
+    /// Gets the registered state names.
     /// </summary>
+    /// <remarks>
+    /// The returned collection reflects subsequent registrations made by this state machine.
+    /// </remarks>
     public IReadOnlyCollection<string> States => _stateFactories.Keys;
 
     /// <summary>
-    /// Called when a state is entered.
+    /// Gets or sets the callback invoked after a state becomes current.
     /// </summary>
     public Action<string> OnStateEnter { get; set; }
 
     /// <summary>
-    /// Called when a state is exited.
+    /// Gets or sets the callback invoked when the current state is explicitly exited.
     /// </summary>
+    /// <remarks>
+    /// Natural completion of a state does not invoke this callback by itself.
+    /// </remarks>
     public Action<string> OnStateExit { get; set; }
 
     /// <summary>
-    /// Called after a state transition completes.
+    /// Gets or sets the callback invoked after <see cref="ChangeState(string)"/>
+    /// completes a transition.
     /// </summary>
+    /// <remarks>
+    /// Restarting the already-current state through <see cref="ForceChangeState(string)"/>
+    /// does not invoke this callback.
+    /// </remarks>
     public Action<string, string> OnStateChanged { get; set; }
 
     /// <summary>
-    /// Registers a new state with the state machine.
+    /// Registers or replaces a named state factory.
     /// </summary>
-    /// <param name="name">The unique name of the state.</param>
-    /// <param name="stateFactory">A factory that creates a new <see cref="IEnumerator"/> for the state.</param>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> or <paramref name="stateFactory"/> is null.</exception>
+    /// <param name="name">The state name. State names are matched case-insensitively.</param>
+    /// <param name="stateFactory">A factory that creates a new state enumerator when the state is entered.</param>
+    /// <returns>This state machine for chaining.</returns>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null or empty, or <paramref name="stateFactory"/> is null.</exception>
     public StateMachine AddState(string name, Func<IEnumerator> stateFactory)
     {
         ThrowIfDisposed();
@@ -184,10 +163,11 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Sets the state enter callback.
+    /// Sets the state-enter callback.
     /// </summary>
-    /// <param name="callback">The callback to invoke when a state is entered.</param>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <param name="callback">The callback to assign.</param>
+    /// <returns>This state machine for chaining.</returns>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine OnEnter(Action<string> callback)
     {
         ThrowIfDisposed();
@@ -196,10 +176,11 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Sets the state exit callback.
+    /// Sets the state-exit callback.
     /// </summary>
-    /// <param name="callback">The callback to invoke when a state is exited.</param>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <param name="callback">The callback to assign.</param>
+    /// <returns>This state machine for chaining.</returns>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine OnExit(Action<string> callback)
     {
         ThrowIfDisposed();
@@ -208,10 +189,11 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Sets the state changed callback.
+    /// Sets the state-changed callback.
     /// </summary>
-    /// <param name="callback">The callback to invoke when a state transition occurs.</param>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <param name="callback">The callback to assign. Its arguments are the previous and new state names.</param>
+    /// <returns>This state machine for chaining.</returns>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine OnChanged(Action<string, string> callback)
     {
         ThrowIfDisposed();
@@ -220,11 +202,18 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Transitions to a new state.
+    /// Exits the current state and enters the specified registered state.
     /// </summary>
-    /// <param name="name">The name of the state to transition to.</param>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown when the state is not registered.</exception>
+    /// <param name="name">The state name to enter.</param>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// The destination is pushed onto the history stack. Calling this method with
+    /// the already-current state still performs a full transition and records that
+    /// state again in history.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null.</exception>
+    /// <exception cref="KeyNotFoundException">No state is registered with the specified name.</exception>
     public StateMachine ChangeState(string name)
     {
         ThrowIfDisposed();
@@ -249,10 +238,19 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Forces a state change even if already in that state.
+    /// Re-enters the specified state, with special handling when it is already current.
     /// </summary>
-    /// <param name="name">The name of the state to transition to.</param>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <param name="name">The registered state name to enter.</param>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// When <paramref name="name"/> is already the current state, the current
+    /// enumerator is exited and recreated without changing history, updating
+    /// <see cref="PreviousState"/>, or invoking <see cref="OnStateChanged"/>.
+    /// For a different state, this method delegates to <see cref="ChangeState(string)"/>.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="name"/> is null.</exception>
+    /// <exception cref="KeyNotFoundException">No state is registered with the specified name.</exception>
     public StateMachine ForceChangeState(string name)
     {
         ThrowIfDisposed();
@@ -271,9 +269,14 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Returns to the previous state in the history.
+    /// Returns to the previous state stored in history, if one is available.
     /// </summary>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// If history contains fewer than two entries, this method has no effect.
+    /// The restored state becomes the newest history entry again.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine GoBack()
     {
         ThrowIfDisposed();
@@ -288,9 +291,15 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Restarts the current state.
+    /// Restarts the current state through a normal state change.
     /// </summary>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// Restarting records the current state again in history and invokes the normal
+    /// exit, enter, and changed callbacks. If no state has been selected, this method
+    /// has no effect.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine Restart()
     {
         ThrowIfDisposed();
@@ -301,9 +310,13 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Pauses the state machine. Update calls will be ignored while paused.
+    /// Pauses advancement of the current state.
     /// </summary>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// <see cref="Update(FrameTime)"/> still records its supplied frame timing data while paused.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine Pause()
     {
         ThrowIfDisposed();
@@ -312,9 +325,10 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Resumes a paused state machine.
+    /// Resumes advancement after a pause.
     /// </summary>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <returns>This state machine for chaining.</returns>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine Resume()
     {
         ThrowIfDisposed();
@@ -323,9 +337,13 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Stops the state machine entirely.
+    /// Exits the current state and marks the state machine as not running.
     /// </summary>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// The selected state name and history are retained.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine Stop()
     {
         ThrowIfDisposed();
@@ -335,11 +353,17 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Advances the state machine by one frame.
+    /// Updates frame timing data and advances the active state when running and not paused.
     /// </summary>
-    /// <param name="frameTime">The current frame time information.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="frameTime"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when a state yields a nested <see cref="StateMachine"/>.</exception>
+    /// <param name="frameTime">The frame timing data for this update.</param>
+    /// <remarks>
+    /// A yielded string transitions only when it matches a registered state name.
+    /// Other yielded values are not interpreted. A directly yielded
+    /// <see cref="IEnumerator"/> is advanced until it completes before the parent state resumes.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="frameTime"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">The current state yields another <see cref="StateMachine"/>.</exception>
     public void Update(FrameTime frameTime)
     {
         ThrowIfDisposed();
@@ -375,10 +399,14 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Checks if the state machine is currently in the specified state.
+    /// Determines whether the selected state has the specified name.
     /// </summary>
-    /// <param name="name">The name of the state to check.</param>
-    /// <returns><see langword="true"/> if the state machine is in the specified state; otherwise, <see langword="false"/>.</returns>
+    /// <param name="name">The state name to compare, using case-insensitive ordinal comparison.</param>
+    /// <returns><see langword="true"/> when the selected state name matches; otherwise, <see langword="false"/>.</returns>
+    /// <remarks>
+    /// This checks the selected state name, which remains set even when the state machine is not running.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public bool IsInState(string name)
     {
         ThrowIfDisposed();
@@ -386,9 +414,14 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Clears the state history.
+    /// Removes all entries from the state history.
     /// </summary>
-    /// <returns>This <see cref="StateMachine"/> instance for method chaining.</returns>
+    /// <returns>This state machine for chaining.</returns>
+    /// <remarks>
+    /// The current state is not changed. After clearing, <see cref="GoBack"/> has no
+    /// effect until later transitions rebuild history.
+    /// </remarks>
+    /// <exception cref="ObjectDisposedException">The state machine has been disposed.</exception>
     public StateMachine ClearHistory()
     {
         ThrowIfDisposed();
@@ -397,7 +430,7 @@ public sealed class StateMachine : IDisposable
     }
 
     /// <summary>
-    /// Stops the state machine and releases all resources.
+    /// Stops the current state, clears callbacks and registrations, and marks this instance as disposed.
     /// </summary>
     public void Dispose()
     {

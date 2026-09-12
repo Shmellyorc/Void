@@ -1,9 +1,9 @@
 // ============================================================================
 //  WaitForAny.cs
 // ============================================================================
-//  A coroutine that waits for any of multiple coroutines to complete.
+//  Coroutine utility that completes when any wrapped routine completes.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,52 +15,12 @@ using System.Linq;
 namespace Void.Engine.Coroutines.Routines.Utilities;
 
 /// <summary>
-/// A coroutine that waits for any of multiple coroutines to complete.
+/// Advances multiple routines and completes when the first one finishes.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="WaitForAny"/> class runs multiple coroutines concurrently
-/// and completes as soon as any one of them finishes. The remaining
-/// coroutines are disposed when the wait completes.
-/// </para>
-/// <para>
-/// This is useful for:
-/// <list type="bullet">
-///   <item><description>Waiting for the first of several events to occur</description></item>
-///   <item><description>Race conditions between multiple operations</description></item>
-///   <item><description>Implementing timeouts or fallback mechanisms</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Wait for the first to complete
-/// var waitAny = new WaitForAny(
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new Delay(0.5f),
-///     new WaitForSeconds(2f)
-/// );
-/// CoroutineManager.Instance.Run(waitAny);
-/// 
-/// // In a sequence with timeout
-/// var sequence = new Sequence(
-///     new WaitForAny(
-///         new WaitUntil(() => isReady),
-///         new Timeout(new WaitForSeconds(5f), 5f)
-///     ),
-///     new DoOnce(() => 
-///     {
-///         if (!isReady)
-///             Console.WriteLine("Timed out!");
-///     })
-/// );
-/// CoroutineManager.Instance.Run(sequence);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// Null entries are ignored. Each call to <see cref="MoveNext"/> advances the
+/// remaining routines in their original order until one returns
+/// <see langword="false"/>. An empty routine set never completes on its own.
 /// </remarks>
 public sealed class WaitForAny : IEnumerator, IDisposable
 {
@@ -68,7 +28,8 @@ public sealed class WaitForAny : IEnumerator, IDisposable
     private bool _completed;
 
     /// <summary>
-    /// Gets the current value from the first non-null running coroutine.
+    /// Gets the current value exposed by the first stored routine, or
+    /// <see langword="null"/> when no routine is available.
     /// </summary>
     public object Current
     {
@@ -84,16 +45,21 @@ public sealed class WaitForAny : IEnumerator, IDisposable
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitForAny"/> class.
+    /// Initializes a wait that completes when any supplied routine finishes.
     /// </summary>
-    /// <param name="routines">The coroutines to run concurrently.</param>
+    /// <param name="routines">
+    /// The routines to advance. Null entries are discarded.
+    /// </param>
     public WaitForAny(params IEnumerator[] routines)
         => _routines = routines?.Where(r => r != null).ToArray() ?? [];
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Advances each stored routine until one completes.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while all advanced routines continue running;
+    /// otherwise, <see langword="false"/> once any routine completes.
+    /// </returns>
     public bool MoveNext()
     {
         if (_completed) return false;
@@ -111,12 +77,13 @@ public sealed class WaitForAny : IEnumerator, IDisposable
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes all wrapped coroutines that are disposable.
+    /// Disposes each stored routine that implements <see cref="IDisposable"/>.
     /// </summary>
     public void Dispose()
     {

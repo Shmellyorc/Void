@@ -1,130 +1,62 @@
 // ============================================================================
 //  StringExtensions.cs
 // ============================================================================
-//  Extension methods for string operations including validation, parsing,
-//  manipulation, and enumeration caching.
+//  Common string validation, parsing, matching, and manipulation helpers.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace System;
 
 /// <summary>
-/// Provides extension methods for string operations including validation,
-/// parsing, manipulation, and enumeration caching.
+/// Provides common validation, parsing, matching, formatting, and manipulation helpers for strings.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="StringExtensions"/> class provides a comprehensive set of
-/// extension methods for <see cref="string"/> values, making common string
-/// operations more intuitive and readable.
-/// </para>
-/// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Empty and whitespace checks</description></item>
-///   <item><description>Numeric validation (integer, decimal, numeric)</description></item>
-///   <item><description>Enum to string conversion with caching</description></item>
-///   <item><description>String trimming and truncation</description></item>
-///   <item><description>Character and substring counting</description></item>
-///   <item><description>Pattern matching (starts/ends/contains with any/all)</description></item>
-///   <item><description>Whitespace removal and string splitting</description></item>
-///   <item><description>String reversal and take/last operations</description></item>
-///   <item><description>Collection joining</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// string text = "Hello World";
-/// 
-/// // Empty checks
-/// bool empty = text.IsEmpty(); // false
-/// bool notEmpty = text.IsNotEmpty(); // true
-/// 
-/// // Numeric checks
-/// bool isInt = "123".IsInteger(); // true
-/// bool isDecimal = "12.34".IsDecimal(); // true
-/// bool isNumeric = "12.34".IsNumeric(); // true
-/// 
-/// // Enum to string
-/// string enumStr = MyEnum.Value.ToEnumString(); // "Namespace.MyEnum.Value"
-/// 
-/// // Trimming
-/// string trimmed = "Hello World".TrimToLength(5); // "Hello"
-/// 
-/// // Counting
-/// int count = "Hello World".CountChar('l'); // 3
-/// int subCount = "Hello Hello".CountSubstring("Hello"); // 2
-/// 
-/// // Pattern matching
-/// bool starts = "Hello World".StartsWithAny("He", "Wo"); // true
-/// bool ends = "Hello World".EndsWithAny("rld", "ld"); // true
-/// bool contains = "Hello World".ContainsAny("ell", "xyz"); // true
-/// bool containsAll = "Hello World".ContainsAll("Hello", "World"); // true
-/// 
-/// // Whitespace removal
-/// string noSpace = "Hello World".RemoveWhitespace(); // "HelloWorld"
-/// 
-/// // Split and trim
-/// string[] parts = "one, two, three".SplitAndTrim(','); // ["one", "two", "three"]
-/// 
-/// // Reverse
-/// string reversed = "Hello".Reverse(); // "olleH"
-/// 
-/// // Take and last
-/// string first = "Hello World".Take(5); // "Hello"
-/// string last = "Hello World".Last(5); // "World"
-/// 
-/// // Remove from ends
-/// string removedEnd = "Hello World".RemoveEnd(6); // "Hello"
-/// string removedStart = "Hello World".RemoveStart(6); // "World"
-/// 
-/// // Join collection
-/// string joined = new[] { "a", "b", "c" }.JoinToString(", "); // "a, b, c"
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe. The enum cache uses locks for synchronization.
-/// </para>
-/// </remarks>
 public static class StringExtensions
 {
     private static readonly Dictionary<Enum, string> _enumStringCache = new();
     private static readonly Lock _enumCacheLock = new();
 
     /// <summary>
-    /// Determines whether the string is null, empty, or consists only of whitespace.
+    /// Determines whether a string is null, empty, or consists only of whitespace.
     /// </summary>
+    /// <param name="v">The string to inspect.</param>
+    /// <returns><see langword="true"/> when the string is null, empty, or whitespace; otherwise, <see langword="false"/>.</returns>
     public static bool IsEmpty(this string v) => string.IsNullOrWhiteSpace(v);
 
     /// <summary>
-    /// Determines whether the string is not null, not empty, and not whitespace.
+    /// Determines whether a string contains at least one non-whitespace character.
     /// </summary>
+    /// <param name="v">The string to inspect.</param>
+    /// <returns><see langword="true"/> when the string is not null, empty, or whitespace; otherwise, <see langword="false"/>.</returns>
     public static bool IsNotEmpty(this string v) => !IsEmpty(v);
 
     /// <summary>
-    /// Determines whether the string represents a valid integer.
+    /// Determines whether the string can be parsed as a <see cref="long"/> using the current culture.
     /// </summary>
+    /// <param name="v">The string to test.</param>
+    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
     public static bool IsInteger(this string v) => long.TryParse(v, out _);
 
     /// <summary>
-    /// Determines whether the string represents a valid decimal number.
+    /// Determines whether the string can be parsed as a <see cref="decimal"/> using the current culture.
     /// </summary>
+    /// <param name="v">The string to test.</param>
+    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
     public static bool IsDecimal(this string v) => decimal.TryParse(v, out _);
 
     /// <summary>
-    /// Determines whether the string represents a valid numeric value.
+    /// Determines whether the string can be parsed as a <see cref="double"/> using the current culture.
     /// </summary>
+    /// <param name="v">The string to test.</param>
+    /// <returns><see langword="true"/> when parsing succeeds; otherwise, <see langword="false"/>.</returns>
     public static bool IsNumeric(this string v) => double.TryParse(v, out _);
 
     /// <summary>
-    /// Converts an enum to its fully qualified string representation with caching.
+    /// Returns a cached topic-style string containing the enum type's full name and value.
     /// </summary>
     /// <param name="v">The enum value to convert.</param>
-    /// <returns>The fully qualified string representation of the enum.</returns>
+    /// <returns>A string in the form <c>Namespace.EnumType.Value</c>.</returns>
     public static string ToEnumString(this Enum v)
     {
         lock (_enumCacheLock)
@@ -139,11 +71,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Truncates the string to the specified maximum length.
+    /// Truncates a string to at most the requested number of characters.
     /// </summary>
     /// <param name="v">The string to truncate.</param>
-    /// <param name="maxLength">The maximum length.</param>
-    /// <returns>The truncated string, or the original if shorter.</returns>
+    /// <param name="maxLength">The maximum returned length.</param>
+    /// <returns>The original string when already short enough; otherwise, its leading <paramref name="maxLength"/> characters.</returns>
     public static string TrimToLength(this string v, int maxLength)
     {
         if (string.IsNullOrEmpty(v) || v.Length <= maxLength)
@@ -153,11 +85,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Counts the number of occurrences of a character in the string.
+    /// Counts occurrences of a character.
     /// </summary>
     /// <param name="input">The string to search.</param>
     /// <param name="target">The character to count.</param>
-    /// <returns>The number of occurrences.</returns>
+    /// <returns>The number of matching characters, or 0 when the input is null or empty.</returns>
     public static int CountChar(this string input, char target)
     {
         if (string.IsNullOrEmpty(input))
@@ -174,11 +106,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Counts the number of occurrences of a substring in the string.
+    /// Counts non-overlapping ordinal occurrences of a substring.
     /// </summary>
     /// <param name="input">The string to search.</param>
     /// <param name="target">The substring to count.</param>
-    /// <returns>The number of occurrences.</returns>
+    /// <returns>The number of non-overlapping matches, or 0 when either string is null or empty.</returns>
     public static int CountSubstring(this string input, string target)
     {
         if (string.IsNullOrEmpty(input) || string.IsNullOrEmpty(target))
@@ -195,11 +127,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Determines whether the string starts with any of the specified values.
+    /// Determines whether the string starts with any supplied value using an ordinal case-insensitive comparison.
     /// </summary>
-    /// <param name="v">The string to check.</param>
-    /// <param name="values">The values to check for.</param>
-    /// <returns><see langword="true"/> if the string starts with any of the values; otherwise, <see langword="false"/>.</returns>
+    /// <param name="v">The string to inspect.</param>
+    /// <param name="values">The candidate prefixes.</param>
+    /// <returns><see langword="true"/> when any prefix matches; otherwise, <see langword="false"/>.</returns>
     public static bool StartsWithAny(this string v, params string[] values)
     {
         if (string.IsNullOrEmpty(v) || values == null)
@@ -214,11 +146,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Determines whether the string ends with any of the specified values.
+    /// Determines whether the string ends with any supplied value using an ordinal case-insensitive comparison.
     /// </summary>
-    /// <param name="v">The string to check.</param>
-    /// <param name="values">The values to check for.</param>
-    /// <returns><see langword="true"/> if the string ends with any of the values; otherwise, <see langword="false"/>.</returns>
+    /// <param name="v">The string to inspect.</param>
+    /// <param name="values">The candidate suffixes.</param>
+    /// <returns><see langword="true"/> when any suffix matches; otherwise, <see langword="false"/>.</returns>
     public static bool EndsWithAny(this string v, params string[] values)
     {
         if (string.IsNullOrEmpty(v) || values == null)
@@ -233,11 +165,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Determines whether the string contains any of the specified values.
+    /// Determines whether the string contains any supplied value using an ordinal case-insensitive comparison.
     /// </summary>
-    /// <param name="v">The string to check.</param>
-    /// <param name="values">The values to check for.</param>
-    /// <returns><see langword="true"/> if the string contains any of the values; otherwise, <see langword="false"/>.</returns>
+    /// <param name="v">The string to inspect.</param>
+    /// <param name="values">The candidate substrings.</param>
+    /// <returns><see langword="true"/> when any substring is present; otherwise, <see langword="false"/>.</returns>
     public static bool ContainsAny(this string v, params string[] values)
     {
         if (string.IsNullOrEmpty(v) || values == null)
@@ -252,11 +184,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Determines whether the string contains all of the specified values.
+    /// Determines whether the string contains every supplied value using ordinal case-insensitive comparisons.
     /// </summary>
-    /// <param name="v">The string to check.</param>
-    /// <param name="values">The values to check for.</param>
-    /// <returns><see langword="true"/> if the string contains all of the values; otherwise, <see langword="false"/>.</returns>
+    /// <param name="v">The string to inspect.</param>
+    /// <param name="values">The required substrings.</param>
+    /// <returns><see langword="true"/> when every substring is present; otherwise, <see langword="false"/>.</returns>
     public static bool ContainsAll(this string v, params string[] values)
     {
         if (string.IsNullOrEmpty(v) || values == null)
@@ -271,10 +203,10 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Removes all whitespace characters from the string.
+    /// Removes every Unicode whitespace character from a string.
     /// </summary>
     /// <param name="v">The string to process.</param>
-    /// <returns>The string with all whitespace removed.</returns>
+    /// <returns>The string with whitespace removed, or the original null or empty value.</returns>
     public static string RemoveWhitespace(this string v)
     {
         if (string.IsNullOrEmpty(v))
@@ -284,11 +216,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Splits the string by a separator, trims each part, and removes empty entries.
+    /// Splits a string by a character, trims each part, and removes empty results.
     /// </summary>
     /// <param name="v">The string to split.</param>
     /// <param name="separator">The separator character.</param>
-    /// <returns>An array of trimmed, non-empty parts.</returns>
+    /// <returns>The trimmed, non-empty parts.</returns>
     public static string[] SplitAndTrim(this string v, char separator = ',')
     {
         if (string.IsNullOrEmpty(v))
@@ -301,11 +233,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Splits the string by a separator, trims each part, and removes empty entries.
+    /// Splits a string by another string, trims each part, and removes empty results.
     /// </summary>
     /// <param name="v">The string to split.</param>
     /// <param name="separator">The separator string.</param>
-    /// <returns>An array of trimmed, non-empty parts.</returns>
+    /// <returns>The trimmed, non-empty parts, or an empty array when the source or separator is null or empty.</returns>
     public static string[] SplitAndTrim(this string v, string separator)
     {
         if (string.IsNullOrEmpty(v) || string.IsNullOrEmpty(separator))
@@ -321,10 +253,10 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Reverses the string.
+    /// Reverses the UTF-16 character sequence in a string.
     /// </summary>
     /// <param name="v">The string to reverse.</param>
-    /// <returns>The reversed string.</returns>
+    /// <returns>The reversed string, or the original null or empty value.</returns>
     public static string Reverse(this string v)
     {
         if (string.IsNullOrEmpty(v))
@@ -337,11 +269,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Takes the first n characters from the string.
+    /// Returns up to the first <paramref name="count"/> characters.
     /// </summary>
-    /// <param name="v">The string to take from.</param>
-    /// <param name="count">The number of characters to take.</param>
-    /// <returns>The first n characters, or the full string if shorter.</returns>
+    /// <param name="v">The source string.</param>
+    /// <param name="count">The maximum number of characters to return.</param>
+    /// <returns>The requested leading characters, or an empty string when the source is null or empty or the count is nonpositive.</returns>
     public static string Take(this string v, int count)
     {
         if (string.IsNullOrEmpty(v) || count <= 0)
@@ -351,11 +283,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Takes the last n characters from the string.
+    /// Returns up to the last <paramref name="count"/> characters.
     /// </summary>
-    /// <param name="v">The string to take from.</param>
-    /// <param name="count">The number of characters to take.</param>
-    /// <returns>The last n characters, or the full string if shorter.</returns>
+    /// <param name="v">The source string.</param>
+    /// <param name="count">The maximum number of characters to return.</param>
+    /// <returns>The requested trailing characters, or an empty string when the source is null or empty or the count is nonpositive.</returns>
     public static string Last(this string v, int count)
     {
         if (string.IsNullOrEmpty(v) || count <= 0)
@@ -365,11 +297,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Removes the last n characters from the string.
+    /// Removes up to the requested number of characters from the end of a string.
     /// </summary>
-    /// <param name="v">The string to remove from.</param>
-    /// <param name="count">The number of characters to remove.</param>
-    /// <returns>The string with the last n characters removed.</returns>
+    /// <param name="v">The source string.</param>
+    /// <param name="count">The number of trailing characters to remove.</param>
+    /// <returns>The remaining string.</returns>
     public static string RemoveEnd(this string v, int count)
     {
         if (string.IsNullOrEmpty(v) || count <= 0)
@@ -379,11 +311,11 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Removes the first n characters from the string.
+    /// Removes up to the requested number of characters from the start of a string.
     /// </summary>
-    /// <param name="v">The string to remove from.</param>
-    /// <param name="count">The number of characters to remove.</param>
-    /// <returns>The string with the first n characters removed.</returns>
+    /// <param name="v">The source string.</param>
+    /// <param name="count">The number of leading characters to remove.</param>
+    /// <returns>The remaining string.</returns>
     public static string RemoveStart(this string v, int count)
     {
         if (string.IsNullOrEmpty(v) || count <= 0)
@@ -393,12 +325,12 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Joins the elements of a collection into a string using the specified separator.
+    /// Joins a sequence using the supplied separator.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the collection.</typeparam>
-    /// <param name="values">The collection to join.</param>
-    /// <param name="separator">The separator string.</param>
-    /// <returns>The joined string.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="values">The values to join.</param>
+    /// <param name="separator">The text inserted between values.</param>
+    /// <returns>The joined string, or an empty string when <paramref name="values"/> is null.</returns>
     public static string JoinToString<T>(this IEnumerable<T> values, string separator = ", ")
     {
         if (values == null)
@@ -408,26 +340,38 @@ public static class StringExtensions
     }
 
     /// <summary>
-    /// Parses the string to an integer.
+    /// Parses an integer using the current culture, returning a fallback when parsing fails.
     /// </summary>
+    /// <param name="v">The string to parse.</param>
+    /// <param name="defaultValue">The value returned when parsing fails.</param>
+    /// <returns>The parsed integer or <paramref name="defaultValue"/>.</returns>
     public static int ToInt(this string v, int defaultValue = 0)
         => int.TryParse(v, out int result) ? result : defaultValue;
 
     /// <summary>
-    /// Parses the string to a float.
+    /// Parses a floating-point value using the current culture, returning a fallback when parsing fails.
     /// </summary>
+    /// <param name="v">The string to parse.</param>
+    /// <param name="defaultValue">The value returned when parsing fails.</param>
+    /// <returns>The parsed value or <paramref name="defaultValue"/>.</returns>
     public static float ToFloat(this string v, float defaultValue = 0f)
         => float.TryParse(v, out float result) ? result : defaultValue;
 
     /// <summary>
-    /// Parses the string to a double.
+    /// Parses a double-precision value using the current culture, returning a fallback when parsing fails.
     /// </summary>
+    /// <param name="v">The string to parse.</param>
+    /// <param name="defaultValue">The value returned when parsing fails.</param>
+    /// <returns>The parsed value or <paramref name="defaultValue"/>.</returns>
     public static double ToDouble(this string v, double defaultValue = 0.0)
         => double.TryParse(v, out double result) ? result : defaultValue;
 
     /// <summary>
-    /// Parses the string to a decimal.
+    /// Parses a decimal value using the current culture, returning a fallback when parsing fails.
     /// </summary>
+    /// <param name="v">The string to parse.</param>
+    /// <param name="defaultValue">The value returned when parsing fails.</param>
+    /// <returns>The parsed value or <paramref name="defaultValue"/>.</returns>
     public static decimal ToDecimal(this string v, decimal defaultValue = 0m)
         => decimal.TryParse(v, out decimal result) ? result : defaultValue;
 }

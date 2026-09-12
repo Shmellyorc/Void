@@ -1,110 +1,46 @@
 // ============================================================================
 //  IEnumerableExtensions.cs
 // ============================================================================
-//  Extension methods for IEnumerable<T> to simplify common sequence operations
-//  including validation, iteration, random selection, and partitioning.
+//  Convenience helpers for common IEnumerable<T> operations.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace System;
 
 /// <summary>
-/// Provides extension methods for <see cref="IEnumerable{T}"/> to simplify common sequence operations.
+/// Provides convenience operations for <see cref="IEnumerable{T}"/> sequences.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="IEnumerableExtensions"/> class provides a comprehensive set of
-/// extension methods for working with sequences, including validation, iteration,
-/// random selection, partitioning, shuffling, and more.
-/// </para>
-/// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Empty and not-empty checks</description></item>
-///   <item><description>ForEach iteration with action</description></item>
-///   <item><description>Random element selection with optional random instance</description></item>
-///   <item><description>Safe element access with fallback</description></item>
-///   <item><description>Index finding and partitioning</description></item>
-///   <item><description>Shuffling and random sampling</description></item>
-///   <item><description>Distinct by key selector</description></item>
-///   <item><description>Null filtering for reference and nullable value types</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// var items = new List&lt;int&gt; { 1, 2, 3, 4, 5 };
-/// 
-/// // Check if empty
-/// if (items.IsNotEmpty())
-/// {
-///     // Iterate with action
-///     items.ForEach(x => Console.WriteLine(x));
-///     
-///     // Get random element
-///     int random = items.Random();
-///     
-///     // Get random with specific random instance
-///     int random2 = items.Random(myRandom);
-///     
-///     // Safe element access
-///     int value = items.SafeElementAt(2); // 3
-///     int notFound = items.SafeElementAt(10); // default
-///     
-///     // Find index
-///     int index = items.IndexOf(3); // 2
-///     
-///     // Partition by predicate
-///     var (evens, odds) = items.Partition(x => x % 2 == 0);
-///     
-///     // Shuffle
-///     var shuffled = items.Shuffle();
-///     
-///     // Random sample
-///     var sample = items.RandomSample(3);
-///     
-///     // Distinct by key
-///     var distinct = items.DistinctBy(x => x % 2);
-///     
-///     // Check all distinct
-///     bool allDistinct = items.AllDistinct();
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// These extension methods are thread-safe for reading operations. Modifying
-/// operations on mutable collections are not thread-safe.
-/// </para>
-/// </remarks>
 public static class IEnumerableExtensions
 {
     /// <summary>
-    /// Determines whether the sequence is null or empty.
+    /// Determines whether the sequence is <see langword="null"/> or contains no elements.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The sequence to check.</param>
-    /// <returns><see langword="true"/> if the sequence is null or empty; otherwise, <see langword="false"/>.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The sequence to inspect.</param>
+    /// <returns><see langword="true"/> when the sequence is null or empty; otherwise, <see langword="false"/>.</returns>
     public static bool IsEmpty<T>(this IEnumerable<T> source)
         => source == null || !source.Any();
 
     /// <summary>
-    /// Determines whether the sequence is not null and not empty.
+    /// Determines whether the sequence is non-null and contains at least one element.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The sequence to check.</param>
-    /// <returns><see langword="true"/> if the sequence is not null and not empty; otherwise, <see langword="false"/>.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The sequence to inspect.</param>
+    /// <returns><see langword="true"/> when the sequence contains an element; otherwise, <see langword="false"/>.</returns>
     public static bool IsNotEmpty<T>(this IEnumerable<T> source)
         => !source.IsEmpty();
 
     /// <summary>
-    /// Performs the specified action on each element of the sequence.
+    /// Invokes an action for each element in the sequence.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The sequence to iterate over.</param>
-    /// <param name="action">The action to perform on each element.</param>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The sequence to enumerate.</param>
+    /// <param name="action">The action invoked for each element.</param>
+    /// <remarks>
+    /// If either argument is <see langword="null"/>, this method returns without doing anything.
+    /// </remarks>
     public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
     {
         if (source == null || action == null)
@@ -115,13 +51,13 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Gets a random element from the sequence.
+    /// Selects a random element using <see cref="FastRandom.Shared"/>.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The sequence to select from.</param>
-    /// <returns>A random element from the sequence.</returns>
+    /// <returns>A randomly selected element.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the sequence is empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the sequence contains no elements.</exception>
     public static T Random<T>(this IEnumerable<T> source)
     {
         if (source == null)
@@ -135,14 +71,14 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Gets a random element from the sequence using the specified random generator.
+    /// Selects a random element using the supplied random generator.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The sequence to select from.</param>
     /// <param name="random">The random generator to use.</param>
-    /// <returns>A random element from the sequence.</returns>
+    /// <returns>A randomly selected element.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="source"/> or <paramref name="random"/> is null.</exception>
-    /// <exception cref="InvalidOperationException">Thrown when the sequence is empty.</exception>
+    /// <exception cref="InvalidOperationException">Thrown when the sequence contains no elements.</exception>
     public static T Random<T>(this IEnumerable<T> source, FastRandom random)
     {
         if (source == null)
@@ -158,12 +94,12 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Safely gets the element at the specified index, returning default if out of range.
+    /// Returns the element at an index, or the default value when the source or index is invalid.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The sequence to access.</param>
-    /// <param name="index">The index of the element to retrieve.</param>
-    /// <returns>The element at the specified index, or default if the index is out of range.</returns>
+    /// <param name="index">The zero-based index to retrieve.</param>
+    /// <returns>The element at the requested index, or <see langword="default"/> when it cannot be retrieved.</returns>
     public static T SafeElementAt<T>(this IEnumerable<T> source, int index)
     {
         if (source == null || index < 0)
@@ -184,12 +120,12 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Finds the index of the first occurrence of the specified item.
+    /// Finds the zero-based index of the first element equal to <paramref name="item"/>.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The sequence to search.</param>
-    /// <param name="item">The item to find.</param>
-    /// <returns>The index of the item, or -1 if not found.</returns>
+    /// <param name="item">The item to locate.</param>
+    /// <returns>The first matching index, or -1 when no match is found or the sequence is null.</returns>
     public static int IndexOf<T>(this IEnumerable<T> source, T item)
     {
         if (source == null)
@@ -207,12 +143,15 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Partitions the sequence into two lists based on a predicate.
+    /// Splits a sequence into elements that match a predicate and elements that do not.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The sequence to partition.</param>
-    /// <param name="predicate">The predicate to determine partition.</param>
-    /// <returns>A tuple containing the matches and non-matches lists.</returns>
+    /// <param name="predicate">The predicate used to classify each element.</param>
+    /// <returns>Two lists containing matching and nonmatching elements in their original order.</returns>
+    /// <remarks>
+    /// If <paramref name="source"/> or <paramref name="predicate"/> is null, both returned lists are empty.
+    /// </remarks>
     public static (List<T> matches, List<T> nonMatches) Partition<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
         var matches = new List<T>();
@@ -233,11 +172,11 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Shuffles the sequence using the Fisher-Yates algorithm.
+    /// Returns a shuffled copy of the sequence using <see cref="FastRandom.Shared"/>.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The element type.</typeparam>
     /// <param name="source">The sequence to shuffle.</param>
-    /// <returns>A shuffled list of the sequence elements.</returns>
+    /// <returns>A shuffled list, or an empty list when <paramref name="source"/> is null.</returns>
     public static List<T> Shuffle<T>(this IEnumerable<T> source)
     {
         if (source == null)
@@ -256,22 +195,22 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Filters out null elements from a sequence of reference types.
+    /// Filters null values from a sequence of reference types.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The reference type.</typeparam>
     /// <param name="source">The sequence to filter.</param>
-    /// <returns>A sequence with all non-null elements.</returns>
+    /// <returns>A sequence containing only non-null elements.</returns>
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T> source) where T : class
         => source?.Where(x => x != null) ?? Enumerable.Empty<T>();
 
     /// <summary>
-    /// Returns distinct elements from a sequence based on a key selector.
+    /// Returns the first element encountered for each unique key.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <typeparam name="TKey">The type of the key.</typeparam>
-    /// <param name="source">The sequence to process.</param>
-    /// <param name="keySelector">The function to extract the key from each element.</param>
-    /// <returns>A sequence of distinct elements based on the key selector.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <typeparam name="TKey">The key type.</typeparam>
+    /// <param name="source">The sequence to filter.</param>
+    /// <param name="keySelector">The function used to obtain each element's key.</param>
+    /// <returns>A lazily evaluated sequence containing one element per unique key.</returns>
     public static IEnumerable<T> DistinctBy<T, TKey>(this IEnumerable<T> source, Func<T, TKey> keySelector)
     {
         if (source == null)
@@ -286,12 +225,12 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Gets a random sample of the specified size from the sequence.
+    /// Returns up to <paramref name="count"/> randomly ordered elements from the sequence.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The sequence to sample from.</param>
-    /// <param name="count">The number of elements to sample.</param>
-    /// <returns>A list containing the random sample.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The sequence to sample.</param>
+    /// <param name="count">The maximum number of elements to return.</param>
+    /// <returns>A random sample without replacement, or an empty list when the source is null.</returns>
     public static List<T> RandomSample<T>(this IEnumerable<T> source, int count)
     {
         if (source == null)
@@ -301,11 +240,11 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Determines whether all elements in the sequence are distinct.
+    /// Determines whether every element in the sequence is unique according to the default equality comparer.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
-    /// <param name="source">The sequence to check.</param>
-    /// <returns><see langword="true"/> if all elements are distinct; otherwise, <see langword="false"/>.</returns>
+    /// <typeparam name="T">The element type.</typeparam>
+    /// <param name="source">The sequence to inspect.</param>
+    /// <returns><see langword="true"/> when all elements are unique or the source is null; otherwise, <see langword="false"/>.</returns>
     public static bool AllDistinct<T>(this IEnumerable<T> source)
     {
         if (source == null)
@@ -322,11 +261,11 @@ public static class IEnumerableExtensions
     }
 
     /// <summary>
-    /// Filters out null values from a sequence of nullable value types.
+    /// Filters null values from a sequence of nullable value types and unwraps the remaining values.
     /// </summary>
-    /// <typeparam name="T">The type of elements in the sequence.</typeparam>
+    /// <typeparam name="T">The underlying value type.</typeparam>
     /// <param name="source">The sequence to filter.</param>
-    /// <returns>A sequence of non-null values.</returns>
+    /// <returns>A lazily evaluated sequence containing the non-null values.</returns>
     public static IEnumerable<T> NotNull<T>(this IEnumerable<T?> source) where T : struct
     {
         if (source == null)

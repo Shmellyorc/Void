@@ -1,9 +1,9 @@
 // ============================================================================
 //  LDtkTile.cs
 // ============================================================================
-//  Represents a tile reference within an LDtk tileset.
+//  Tile references parsed from LDtk field values.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -12,52 +12,17 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// Represents a tile reference within an LDtk tileset.
+/// Identifies a tile inside an LDtk tileset.
 /// </summary>
-/// <remarks>
-/// <para>
-/// The <see cref="LDtkTile"/> structure identifies a specific tile within a
-/// tileset by its tileset ID and source rectangle. It is used in LDtk settings
-/// and tile instances to reference individual tiles.
-/// </para>
-/// <para>
-/// <b>Properties:</b>
-/// <list type="bullet">
-///   <item><description><see cref="TilesetId"/> - The unique identifier of the tileset containing the tile</description></item>
-///   <item><description><see cref="Source"/> - The rectangular region of the tile within the tileset texture</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get a tile from a setting
-/// var tile = LDtkSetting.GetTileSetting(settings, "TileName");
-/// 
-/// // Access tile properties
-/// int tilesetId = tile.TilesetId;
-/// Rect2 source = tile.Source;
-/// 
-/// // Get the tileset from the map
-/// var tileset = map.GetTilesetById((uint)tile.TilesetId);
-/// 
-/// // Load the tile texture
-/// var texture = AssetManager.Instance.LoadTexture(tileset.Path);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This structure is immutable and thread-safe.
-/// </para>
-/// </remarks>
 public readonly struct LDtkTile
 {
     /// <summary>
-    /// Gets the unique identifier of the tileset containing this tile.
+    /// Gets the LDtk tileset UID containing the tile.
     /// </summary>
     public int TilesetId { get; }
 
     /// <summary>
-    /// Gets the rectangular region of the tile within the tileset texture.
+    /// Gets the tile region in source-texture pixels.
     /// </summary>
     public Rect2 Source { get; }
 

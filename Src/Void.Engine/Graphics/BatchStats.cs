@@ -1,125 +1,64 @@
 // ============================================================================
 //  BatchStats.cs
 // ============================================================================
-//  Contains performance statistics for batch rendering, including draw calls,
-//  vertex counts, texture and blend mode switches, and timing data.
+//  Statistics reported by VOID batchers for their most recent flush.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics;
 
 /// <summary>
-/// Contains performance statistics for batch rendering operations.
+/// Contains rendering statistics reported by a batcher.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="BatchStats"/> structure tracks key performance metrics
-/// for batched rendering, including:
-/// <list type="bullet">
-///   <item><description>Draw calls and vertex counts</description></item>
-///   <item><description>Texture and blend mode switches</description></item>
-///   <item><description>CPU-side batch processing time</description></item>
-///   <item><description>Command counts for batched operations</description></item>
-/// </list>
+/// Built-in batchers reset these values when a batch begins and update them when
+/// a non-empty flush completes. The values describe the most recently reported
+/// flush rather than a cumulative lifetime total.
 /// </para>
-/// <para>
-/// These statistics are useful for profiling and optimizing rendering performance.
-/// They help identify bottlenecks such as excessive draw calls or texture switches.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// var stats = batcher.Stats;
-///
-/// Console.WriteLine($"Draw Calls: {stats.DrawCalls}");
-/// Console.WriteLine($"Vertices: {stats.Vertices}");
-/// Console.WriteLine($"CPU Batch Time: {stats.CPUTime:F2}ms");
-///
-/// if (stats.DrawCalls > 100)
-/// {
-///     // Consider optimizing batching or texture atlasing
-/// }
-/// </code>
-/// </para>
+/// <para><code>
+/// BatchStats stats = batcher.Stats;
+/// Console.WriteLine($"{stats.DrawCalls} draw calls, {stats.Vertices} vertices");
+/// </code></para>
 /// </remarks>
 public struct BatchStats
 {
-    /// <summary>
-    /// Gets or sets the number of draw calls issued during the batch.
-    /// </summary>
-    /// <value>The total number of GPU draw calls.</value>
-    /// <remarks>
-    /// Lower draw call counts generally indicate better batching efficiency.
-    /// </remarks>
+    /// <summary>Gets or sets the number of draw submissions issued by the flush.</summary>
     public int DrawCalls;
 
-    /// <summary>
-    /// Gets or sets the total number of vertices rendered during the batch.
-    /// </summary>
-    /// <value>The total vertex count.</value>
+    /// <summary>Gets or sets the number of vertices reported by the flush.</summary>
     public int Vertices;
 
-    /// <summary>
-    /// Gets or sets the total number of triangles rendered during the batch.
-    /// </summary>
-    /// <value>The total triangle count.</value>
+    /// <summary>Gets or sets the number of triangles reported by the batcher.</summary>
+    /// <remarks>Concrete batchers may report zero when triangle accounting is not provided.</remarks>
     public int Triangles;
 
-    /// <summary>
-    /// Gets or sets the number of draw commands processed during the batch.
-    /// </summary>
-    /// <value>The total number of batched commands.</value>
+    /// <summary>Gets or sets the number of commands processed by the flush.</summary>
     public int Commands;
 
-    /// <summary>
-    /// Gets or sets the number of texture switches that occurred during the batch.
-    /// </summary>
-    /// <value>The total number of texture changes.</value>
-    /// <remarks>
-    /// High texture switch counts can indicate that textures are not being
-    /// properly batched or that atlas packing could be improved.
-    /// </remarks>
+    /// <summary>Gets or sets the number of texture switches reported by the batcher.</summary>
     public int TextureSwitches;
 
-    /// <summary>
-    /// Gets or sets the number of blend mode switches that occurred during the batch.
-    /// </summary>
-    /// <value>The total number of blend mode changes.</value>
-    /// <remarks>
-    /// High blend mode switch counts can impact rendering performance.
-    /// </remarks>
+    /// <summary>Gets or sets the number of blend-mode switches reported by the batcher.</summary>
     public int BlendModeSwitches;
 
-    /// <summary>
-    /// Gets or sets the CPU time spent processing and submitting the batch.
-    /// </summary>
-    /// <value>The calling-thread wall-clock time in milliseconds.</value>
+    /// <summary>Gets or sets CPU-side flush time in milliseconds.</summary>
     /// <remarks>
-    /// This includes CPU-side sorting, geometry preparation, buffer upload calls,
-    /// and draw submission. It does not measure asynchronous GPU execution time.
+    /// Built-in batchers measure calling-thread wall-clock time spent sorting,
+    /// preparing or uploading geometry, and issuing draw submissions. This is not GPU time.
     /// </remarks>
     public float CPUTime;
 
-    /// <summary>
-    /// Reserved for actual backend-reported GPU execution time.
-    /// </summary>
-    /// <value>The GPU execution time in milliseconds when supported; otherwise zero.</value>
+    /// <summary>Gets or sets backend-reported GPU execution time in milliseconds.</summary>
     /// <remarks>
-    /// VOID does not currently issue GPU timer queries for batch statistics, so
-    /// built-in batchers leave this value at zero. It is retained to preserve the
-    /// existing public statistics surface while backend-neutral GPU timing is evaluated.
+    /// VOID's built-in batchers do not currently issue GPU timer queries, so this
+    /// value remains zero unless a future or custom implementation supplies it.
     /// </remarks>
     public float GPUTime;
 
-    /// <summary>
-    /// Resets all statistics to their default (zero) values.
-    /// </summary>
-    /// <remarks>
-    /// This method is called automatically when beginning a new batch
-    /// and can be used to manually reset statistics if needed.
-    /// </remarks>
+    /// <summary>Resets every statistic to zero.</summary>
     public void Reset()
     {
         DrawCalls = 0;
@@ -132,10 +71,8 @@ public struct BatchStats
         GPUTime = 0;
     }
 
-    /// <summary>
-    /// Returns a string representation of the batch statistics.
-    /// </summary>
-    /// <returns>A formatted string containing key statistics.</returns>
+    /// <summary>Returns the primary counters in a compact diagnostic string.</summary>
+    /// <returns>A string containing draw-call, vertex, triangle, and command counts.</returns>
     public override string ToString()
         => $"DrawCalls: {DrawCalls}, Vertices: {Vertices}, Triangles: {Triangles}, Commands: {Commands}";
 }

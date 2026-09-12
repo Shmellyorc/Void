@@ -1,10 +1,10 @@
 // ============================================================================
 //  Spritesheet.cs
 // ============================================================================
-//  Spritesheet asset that parses and provides access to sprite data from
-//  a JSON spritesheet definition.
+//  Spritesheet asset that parses named bounds, patches, and pivots from a
+//  JSON spritesheet definition.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,93 +15,70 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.Spritesheets;
 
 /// <summary>
-/// A spritesheet asset that parses and provides access to sprite data from
-/// a JSON spritesheet definition.
+/// Provides named sprite bounds, nine-patch regions, and pivots loaded from a
+/// spritesheet definition.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Spritesheet"/> class implements <see cref="IAsset"/> and
-/// parses spritesheet JSON data to provide access to sprite bounds, patches,
-/// and pivots by name. It supports loading from file data through the
-/// <see cref="AssetManager"/>.
+/// Spritesheets are loaded through <see cref="AssetManager"/> and parsed from
+/// the slice data in the JSON <c>meta.slices</c> array. Each slice uses its
+/// first key as the source of bounds, center, and pivot data.
 /// </para>
 /// <para>
-/// <b>JSON Format:</b>
-/// The spritesheet JSON should follow a format with a "meta" object containing
-/// a "slices" array. Each slice must have:
-/// <list type="bullet">
-///   <item><description>"name" - The name of the sprite</description></item>
-///   <item><description>"keys" - Array containing at least one key with bounds, center, and pivot data</description></item>
-/// </list>
+/// Parsed entries are retained when <see cref="Unload"/> is called, allowing a
+/// later <see cref="Load"/> to reactivate the asset without reparsing the JSON.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Load a spritesheet through AssetManager
-/// var spritesheet = AssetManager.Instance.Load&lt;Spritesheet&gt;("sprites/player.sheet");
-/// 
-/// // Get a sprite bounds
-/// Rect2 bounds = spritesheet.GetBound("walking_01");
-/// 
-/// // Try get with fallback
-/// if (spritesheet.TryGetBounds("walking_01", out var bounds))
+/// var sheet = AssetManager.Instance.Load&lt;Spritesheet&gt;("Sprites/player.sheet");
+///
+/// Rect2 idle = sheet.GetBound("idle");
+///
+/// if (sheet.TryGetPatch("panel", out Rect2 patch))
 /// {
-///     // Use bounds
+///     // Use patch for nine-patch rendering.
 /// }
-/// 
-/// // Get multiple sprite bounds
-/// var boundsList = spritesheet.GetBounds("walking_01", "walking_02", "walking_03");
-/// 
-/// // Get patch and pivot data
-/// Rect2 patch = spritesheet.GetPatch("character");
-/// Vect2 pivot = spritesheet.GetPivot("character");
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class Spritesheet : IAsset
 {
     private readonly Dictionary<uint, SpritesheetEntry> _entries = [];
 
     /// <summary>
-    /// Gets the unique identifier of the spritesheet.
+    /// Gets the unique asset identifier.
     /// </summary>
     public uint Id { get; }
 
     /// <summary>
-    /// Gets the normalized path or tag used to identify the spritesheet.
+    /// Gets the normalized path or tag associated with this spritesheet.
     /// </summary>
     public string Tag { get; }
 
     /// <summary>
-    /// Gets the raw spritesheet data bytes.
+    /// Gets the original JSON data used to build the spritesheet entries.
     /// </summary>
     public byte[] Data { get; }
 
     /// <summary>
-    /// Gets the asset type.
+    /// Gets the asset classification.
     /// </summary>
     public AssetType Type { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the spritesheet is loaded and ready for use.
+    /// Gets whether the spritesheet is currently loaded.
     /// </summary>
     public bool IsValid { get; private set; }
 
     /// <summary>
-    /// Gets the last access time of the spritesheet for eviction tracking.
+    /// Gets the last time this spritesheet was successfully loaded or queried.
     /// </summary>
     public DateTime LastAccessTime { get; private set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Spritesheet"/> class.
+    /// Creates a spritesheet asset from encoded JSON data.
     /// </summary>
-    /// <param name="id">The unique identifier for the asset.</param>
-    /// <param name="data">The raw spritesheet data bytes.</param>
-    /// <param name="tag">The normalized path or tag used to identify the asset.</param>
+    /// <param name="id">The unique asset identifier.</param>
+    /// <param name="data">The JSON spritesheet data.</param>
+    /// <param name="tag">The normalized path or tag associated with the asset.</param>
     public Spritesheet(uint id, byte[] data, string tag)
     {
         Id = id;
@@ -112,8 +89,12 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Loads the spritesheet data by parsing the JSON definition.
+    /// Loads the spritesheet and parses its entries when they have not already
+    /// been created.
     /// </summary>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when required spritesheet metadata is missing.
+    /// </exception>
     public void Load()
     {
         if (IsValid)
@@ -190,12 +171,12 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Unloads the spritesheet data from memory.
+    /// Marks the spritesheet as unloaded while retaining its parsed entries.
     /// </summary>
     public void Unload() => IsValid = false;
 
     /// <summary>
-    /// Disposes the spritesheet and releases all resources.
+    /// Clears all parsed spritesheet entries.
     /// </summary>
     public void Dispose()
     {
@@ -206,10 +187,13 @@ public sealed class Spritesheet : IAsset
 
     #region GetBounds
     /// <summary>
-    /// Gets the bounds for multiple sprite names.
+    /// Gets bounds for each requested sprite that has valid bounds data.
     /// </summary>
-    /// <param name="names">The sprite names to get bounds for.</param>
-    /// <returns>A list of bounds for the specified sprites.</returns>
+    /// <param name="names">The sprite names to query.</param>
+    /// <returns>
+    /// The bounds found for the requested names, in request order. Missing or
+    /// empty entries are skipped.
+    /// </returns>
     public IReadOnlyList<Rect2> GetBounds(params string[] names)
     {
         if (names.IsEmpty())
@@ -229,11 +213,13 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Gets the bounds for a specific sprite name.
+    /// Gets the source bounds for a named sprite.
     /// </summary>
     /// <param name="name">The sprite name.</param>
-    /// <returns>The bounds of the sprite.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the sprite name does not exist or bounds are empty.</exception>
+    /// <returns>The sprite bounds.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the sprite does not exist or its bounds are empty.
+    /// </exception>
     public Rect2 GetBound(string name)
     {
         var hash = HashHelper.Cache32(name);
@@ -248,11 +234,14 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Attempts to get the bounds for a specific sprite name.
+    /// Attempts to get the source bounds for a named sprite.
     /// </summary>
     /// <param name="name">The sprite name.</param>
-    /// <param name="value">When this method returns, contains the bounds if successful.</param>
-    /// <returns><see langword="true"/> if the bounds were found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="value">Receives the sprite bounds when found.</param>
+    /// <returns>
+    /// <see langword="true"/> when the sprite exists and has non-empty bounds;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool TryGetBounds(string name, out Rect2 value)
     {
         try
@@ -270,10 +259,13 @@ public sealed class Spritesheet : IAsset
 
     #region GetPatch
     /// <summary>
-    /// Gets the patch for multiple sprite names.
+    /// Gets nine-patch regions for each requested sprite that has valid patch data.
     /// </summary>
-    /// <param name="names">The sprite names to get patches for.</param>
-    /// <returns>A list of patches for the specified sprites.</returns>
+    /// <param name="names">The sprite names to query.</param>
+    /// <returns>
+    /// The patch regions found for the requested names, in request order. Missing
+    /// or empty entries are skipped.
+    /// </returns>
     public IReadOnlyList<Rect2> GetPatches(params string[] names)
     {
         if (names.IsEmpty())
@@ -293,11 +285,13 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Gets the patch for a specific sprite name.
+    /// Gets the nine-patch region for a named sprite.
     /// </summary>
     /// <param name="name">The sprite name.</param>
-    /// <returns>The patch of the sprite.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the sprite name does not exist or patch is empty.</exception>
+    /// <returns>The sprite patch region.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the sprite does not exist or its patch region is empty.
+    /// </exception>
     public Rect2 GetPatch(string name)
     {
         var hash = HashHelper.Cache32(name);
@@ -312,11 +306,14 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Attempts to get the patch for a specific sprite name.
+    /// Attempts to get the nine-patch region for a named sprite.
     /// </summary>
     /// <param name="name">The sprite name.</param>
-    /// <param name="value">When this method returns, contains the patch if successful.</param>
-    /// <returns><see langword="true"/> if the patch was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="value">Receives the patch region when found.</param>
+    /// <returns>
+    /// <see langword="true"/> when the sprite exists and has a non-empty patch;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool TryGetPatch(string name, out Rect2 value)
     {
         try
@@ -334,10 +331,13 @@ public sealed class Spritesheet : IAsset
 
     #region GetPivot
     /// <summary>
-    /// Gets the pivot for multiple sprite names.
+    /// Gets pivots for each requested sprite that has a nonzero pivot.
     /// </summary>
-    /// <param name="names">The sprite names to get pivots for.</param>
-    /// <returns>A list of pivots for the specified sprites.</returns>
+    /// <param name="names">The sprite names to query.</param>
+    /// <returns>
+    /// The pivots found for the requested names, in request order. Missing entries
+    /// and zero pivots are skipped.
+    /// </returns>
     public IReadOnlyList<Vect2> GetPivots(params string[] names)
     {
         if (names.IsEmpty())
@@ -357,11 +357,13 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Gets the pivot for a specific sprite name.
+    /// Gets the pivot for a named sprite.
     /// </summary>
     /// <param name="name">The sprite name.</param>
-    /// <returns>The pivot of the sprite.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the sprite name does not exist or pivot is zero.</exception>
+    /// <returns>The sprite pivot.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the sprite does not exist or its pivot is <see cref="Vect2.Zero"/>.
+    /// </exception>
     public Vect2 GetPivot(string name)
     {
         var hash = HashHelper.Cache32(name);
@@ -376,11 +378,14 @@ public sealed class Spritesheet : IAsset
     }
 
     /// <summary>
-    /// Attempts to get the pivot for a specific sprite name.
+    /// Attempts to get the pivot for a named sprite.
     /// </summary>
     /// <param name="name">The sprite name.</param>
-    /// <param name="value">When this method returns, contains the pivot if successful.</param>
-    /// <returns><see langword="true"/> if the pivot was found; otherwise, <see langword="false"/>.</returns>
+    /// <param name="value">Receives the pivot when found.</param>
+    /// <returns>
+    /// <see langword="true"/> when the sprite exists and has a nonzero pivot;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool TryGetPivot(string name, out Vect2 value)
     {
         try

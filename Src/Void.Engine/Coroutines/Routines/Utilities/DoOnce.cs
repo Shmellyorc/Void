@@ -1,9 +1,9 @@
 // ============================================================================
 //  DoOnce.cs
 // ============================================================================
-//  A coroutine that executes an action once and immediately completes.
+//  Coroutine utility that invokes an action once and then completes.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,49 +13,22 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Utilities;
 
 /// <summary>
-/// A coroutine that executes an action once and immediately completes.
+/// Invokes an action the first time the routine is advanced, then completes.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="DoOnce"/> class executes the provided action immediately
-/// when the coroutine starts and then completes. This is useful for
-/// embedding side effects into sequences or concurrent coroutines.
+/// The action is not run by the constructor. It runs on the first call to
+/// <see cref="MoveNext"/>, which makes this type useful for inserting a side
+/// effect into a composed coroutine flow.
 /// </para>
-/// <para>
-/// This is useful for:
-/// <list type="bullet">
-///   <item><description>Executing callbacks within a sequence</description></item>
-///   <item><description>Initializing state in a coroutine flow</description></item>
-///   <item><description>Triggering side effects in a concurrent group</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Execute an action once
-/// CoroutineManager.Instance.Run(new DoOnce(() => Console.WriteLine("Done!")));
-/// 
-/// // In a sequence
 /// var sequence = new Sequence(
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new DoOnce(() => Console.WriteLine("Halfway!")),
-///     new Tween&lt;float&gt;(100f, 200f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new DoOnce(() => Console.WriteLine("Complete!"))
+///     new DoOnce(() => OpenDoor()),
+///     new Delay(0.5f),
+///     new DoOnce(() => CloseDoor())
 /// );
 /// CoroutineManager.Instance.Run(sequence);
-/// 
-/// // In a concurrent group
-/// var concurrent = new Concurrent(
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value),
-///     new DoOnce(() => Console.WriteLine("Started!"))
-/// );
-/// CoroutineManager.Instance.Run(concurrent);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class DoOnce : IEnumerator
 {
@@ -63,24 +36,26 @@ public sealed class DoOnce : IEnumerator
     private bool _done;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the value yielded by this routine, which is always <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DoOnce"/> class.
+    /// Initializes a one-shot coroutine action.
     /// </summary>
-    /// <param name="action">The action to execute once.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is null.</exception>
+    /// <param name="action">The action to invoke once.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="action"/> is <see langword="null"/>.
+    /// </exception>
     public DoOnce(Action action)
     {
         _action = action ?? throw new ArgumentNullException(nameof(action));
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Invokes the action once and completes the routine.
     /// </summary>
-    /// <returns>Always returns <see langword="false"/> (completes immediately).</returns>
+    /// <returns>Always <see langword="false"/>.</returns>
     public bool MoveNext()
     {
         if (!_done)
@@ -92,12 +67,13 @@ public sealed class DoOnce : IEnumerator
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this routine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases this routine. This implementation performs no work.
     /// </summary>
     public void Dispose() { }
 }

@@ -1,10 +1,9 @@
 // ============================================================================
 //  LDtkLevel.cs
 // ============================================================================
-//  Represents a level within an LDtk map, containing layers, settings,
-//  and metadata such as position, size, and background information.
+//  Level data parsed from an LDtk project.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -16,134 +15,81 @@ using System.Linq;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// Represents a level within an LDtk map, containing layers, settings,
-/// and metadata such as position, size, and background information.
+/// Represents a level loaded from an LDtk project.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="LDtkLevel"/> class contains all the data for a single level
-/// in an LDtk project. It provides access to the level's name, ID, position,
-/// size, background, neighboring levels, layers, and field settings.
-/// </para>
-/// <para>
-/// <b>Properties:</b>
-/// <list type="bullet">
-///   <item><description><see cref="Name"/> - The display name of the level</description></item>
-///   <item><description><see cref="Id"/> - The unique identifier of the level</description></item>
-///   <item><description><see cref="Coords"/> - The world coordinates of the level</description></item>
-///   <item><description><see cref="WorldDepth"/> - The depth of the level in the world</description></item>
-///   <item><description><see cref="Size"/> - The size of the level in pixels</description></item>
-///   <item><description><see cref="GridSize"/> - The size of the level in tiles</description></item>
-///   <item><description><see cref="Color"/> - The background color of the level</description></item>
-///   <item><description><see cref="BgPath"/> - The path to the background image</description></item>
-///   <item><description><see cref="Neighbours"/> - The neighboring levels</description></item>
-///   <item><description><see cref="Layers"/> - The layers in the level</description></item>
-///   <item><description><see cref="Settings"/> - The field settings of the level</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get a level by name or ID
-/// var level = map.GetLevelByName("Level_01");
-/// 
-/// // Access level properties
-/// Vect2 size = level.Size;
-/// Vect2 gridSize = level.GridSize;
-/// Color bgColor = level.Color;
-/// 
-/// // Iterate over layers
-/// foreach (var layer in level.Layers)
-/// {
-///     if (layer.Type == LDtkLayerType.Entities)
-///     {
-///         var entities = layer.InstanceAs&lt;LDtkEntityInstance&gt;();
-///     }
-/// }
-/// 
-/// // Access level settings
-/// if (LDtkSetting.TryGetStringSetting(level.Settings, "SettingName", out var value))
-/// {
-///     // Use the setting value
-/// }
-/// 
-/// // Get neighbouring levels
-/// if (!string.IsNullOrEmpty(level.Neighbours.North))
-/// {
-///     var northLevel = map.GetLevelById(level.Neighbours.North);
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is immutable and thread-safe.
-/// </para>
+/// A level contains its world placement, dimensions, background data, neighbouring
+/// level references, parsed layers, and custom field settings.
 /// </remarks>
 public sealed class LDtkLevel
 {
     /// <summary>
-    /// Gets the display name of the level.
+    /// Gets the LDtk level identifier.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the unique identifier of the level.
+    /// Gets the LDtk instance ID for the level.
     /// </summary>
     public string Id { get; }
 
     /// <summary>
-    /// Gets the world coordinates of the level.
+    /// Gets the level position in LDtk world pixels.
     /// </summary>
     public Vect2 Coords { get; }
 
     /// <summary>
-    /// Gets the depth of the level in the world.
+    /// Gets the level depth in the LDtk world.
     /// </summary>
     public int WorldDepth { get; }
 
     /// <summary>
-    /// Gets the size of the level in pixels.
+    /// Gets the level dimensions in pixels.
     /// </summary>
     public Vect2 Size { get; }
 
     /// <summary>
-    /// Gets the size of the level in tiles.
+    /// Gets the level dimensions measured in default-grid cells.
     /// </summary>
     public Vect2 GridSize { get; }
 
     /// <summary>
-    /// Gets the background color of the level.
+    /// Gets the resolved background color for the level.
     /// </summary>
     public Color Color { get; }
 
     /// <summary>
-    /// Gets the path to the background image.
+    /// Gets the LDtk-relative path to the level background image, if one is assigned.
     /// </summary>
     public string BgPath { get; }
 
     /// <summary>
-    /// Gets the position of the background image.
+    /// Gets the background image position in pixels.
     /// </summary>
     public Vect2 BgPosition { get; }
 
     /// <summary>
-    /// Gets the pivot point of the background image.
+    /// Gets the normalized background pivot reported by LDtk.
     /// </summary>
     public Vect2 BgPivot { get; }
 
     /// <summary>
-    /// Gets the neighboring levels of this level.
+    /// Gets the neighbouring level references for this level.
     /// </summary>
     public MapNeighbour Neighbours { get; }
 
     /// <summary>
-    /// Gets the layers in this level.
+    /// Gets the layers contained in this level.
     /// </summary>
     public IReadOnlyList<MapLayer> Layers { get; }
 
     /// <summary>
-    /// Gets the field settings of this level.
+    /// Gets the custom level fields keyed by VOID's hash of the LDtk field name.
     /// </summary>
+    /// <remarks>
+    /// Use the static helpers on <see cref="LDtkSetting"/> to access settings by
+    /// their original LDtk field names.
+    /// </remarks>
     public IReadOnlyDictionary<uint, LDtkSetting> Settings { get; }
 
     internal LDtkLevel(string name, string id, Vect2 coords, int worthDepth, Vect2 size,

@@ -1,9 +1,9 @@
 // ============================================================================
 //  PulseTween.cs
 // ============================================================================
-//  A tween that pulses between two values like a heartbeat or breathing effect.
+//  Repeating two-phase tween that moves between two values and back.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,51 +13,18 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A tween that pulses between two values like a heartbeat or breathing effect.
+/// Repeats a two-phase interpolation from one value to another and back.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
 /// <para>
-/// The <see cref="PulseTween{T}"/> class creates a pulse effect by animating
-/// from one value to another and back again in a single cycle. Each cycle
-/// consists of a forward tween followed by a reverse tween.
+/// Each cycle spends half of its duration interpolating from <c>a</c> to
+/// <c>b</c>, then half interpolating from <c>b</c> back to <c>a</c>. A cycle
+/// count of <c>-1</c> repeats indefinitely.
 /// </para>
 /// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a pulse tween (scale up and down)
-/// var tween = new PulseTween&lt;float&gt;(
-///     a: 1f,
-///     b: 1.5f,
-///     durationPerCycle: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => transform.Scale = value,
-///     cycles: -1  // Infinite
-/// );
-/// 
-/// // Create a pulse tween (3 cycles)
-/// var tween2 = new PulseTween&lt;float&gt;(
-///     a: 0f,
-///     b: 100f,
-///     durationPerCycle: 2f,
-///     type: EaseType.SineInOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     cycles: 3
-/// );
-/// 
-/// // Run the tween
-/// CoroutineManager.Instance.Run(tween);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
+/// For a finite cycle count, the implementation applies <c>b</c> as its final
+/// update before the enumerator completes.
 /// </para>
 /// </remarks>
 public sealed class PulseTween<T> : IEnumerator
@@ -72,20 +39,21 @@ public sealed class PulseTween<T> : IEnumerator
     private int _completedCycles;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Pulse tweens do not yield a
+    /// value, so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PulseTween{T}"/> class.
+    /// Initializes a pulsing tween.
     /// </summary>
-    /// <param name="a">The first value (start of pulse).</param>
-    /// <param name="b">The second value (peak of pulse).</param>
-    /// <param name="durationPerCycle">The duration of one complete pulse cycle in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
-    /// <param name="cycles">The number of pulse cycles, or -1 for infinite pulsing.</param>
+    /// <param name="a">The first value and start of each cycle.</param>
+    /// <param name="b">The second value reached halfway through each cycle.</param>
+    /// <param name="durationPerCycle">The duration of one complete forward-and-reverse cycle in seconds.</param>
+    /// <param name="type">The easing function applied independently to each half of the cycle.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
+    /// <param name="cycles">The number of cycles, or <c>-1</c> to repeat indefinitely.</param>
     public PulseTween(T a, T b, float durationPerCycle, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate, int cycles = -1)
     {
         _a = a;
@@ -100,9 +68,12 @@ public sealed class PulseTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the current pulse cycle using the current frame delta time.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while additional pulse work remains;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool MoveNext()
     {
         float deltaTime = Game.Instance.FrameTime.DeltaTime;
@@ -145,7 +116,8 @@ public sealed class PulseTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a pulse tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

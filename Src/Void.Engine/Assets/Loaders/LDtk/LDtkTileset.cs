@@ -1,9 +1,9 @@
 // ============================================================================
 //  LDtkTileset.cs
 // ============================================================================
-//  Represents a tileset definition from an LDtk project.
+//  Tileset metadata parsed from an LDtk project.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -15,101 +15,56 @@ using System.Text.Json;
 namespace Void.Engine.Assets.Loaders.LDtk;
 
 /// <summary>
-/// Represents a tileset definition from an LDtk project.
+/// Describes a tileset definition from an LDtk project.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="LDtkTileset"/> class contains all the metadata for a tileset
-/// defined in an LDtk project, including its dimensions, path, and tags.
-/// Tilesets are loaded as part of the <see cref="LDtkMap"/> and can be
-/// accessed by ID or name.
-/// </para>
-/// <para>
-/// <b>Properties:</b>
-/// <list type="bullet">
-///   <item><description><see cref="Id"/> - Unique identifier for the tileset</description></item>
-///   <item><description><see cref="Name"/> - Display name of the tileset</description></item>
-///   <item><description><see cref="CellSize"/> - Number of tiles in each dimension</description></item>
-///   <item><description><see cref="Size"/> - Size of the tileset texture in pixels</description></item>
-///   <item><description><see cref="Path"/> - Relative path to the tileset image file</description></item>
-///   <item><description><see cref="TileSize"/> - Size of each tile in pixels</description></item>
-///   <item><description><see cref="Spacing"/> - Spacing between tiles in the texture</description></item>
-///   <item><description><see cref="Padding"/> - Padding around tiles in the texture</description></item>
-///   <item><description><see cref="Tags"/> - List of tags associated with the tileset</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Get a tileset from the map
-/// var tileset = map.GetTilesetByName("Tileset_01");
-/// 
-/// // Access tileset properties
-/// int tileSize = tileset.TileSize;
-/// string texturePath = tileset.Path;
-/// 
-/// // Load the tileset texture
-/// var texture = AssetManager.Instance.LoadTexture(tileset.Path);
-/// 
-/// // Get tileset by ID
-/// var tilesetById = map.GetTilesetById(1);
-/// 
-/// // Check tags
-/// if (tileset.Tags.Contains("ground"))
-/// {
-///     // Handle ground tileset
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is immutable and thread-safe.
-/// </para>
+/// The tileset stores LDtk metadata only. Use <see cref="AssetManager.LoadTilesetTexture(LDtkMap, uint)"/>
+/// when you need the corresponding VOID texture with LDtk path remapping applied.
 /// </remarks>
 public sealed class LDtkTileset
 {
     /// <summary>
-    /// Gets the unique identifier of the tileset.
+    /// Gets the LDtk tileset UID.
     /// </summary>
     public uint Id { get; }
 
     /// <summary>
-    /// Gets the name of the tileset.
+    /// Gets the tileset identifier from the LDtk project.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the number of tiles in each dimension.
+    /// Gets the tileset dimensions measured in cells.
     /// </summary>
     public Vect2 CellSize { get; }
 
     /// <summary>
-    /// Gets the size of the tileset texture in pixels.
+    /// Gets the tileset texture dimensions in pixels.
     /// </summary>
     public Vect2 Size { get; }
 
     /// <summary>
-    /// Gets the relative path to the tileset image file.
+    /// Gets the LDtk-relative path to the tileset image.
     /// </summary>
     public string Path { get; }
 
     /// <summary>
-    /// Gets the size of each tile in pixels.
+    /// Gets the tile grid size in pixels.
     /// </summary>
     public int TileSize { get; }
 
     /// <summary>
-    /// Gets the spacing between tiles in the texture.
+    /// Gets the spacing in pixels between tiles.
     /// </summary>
     public int Spacing { get; }
 
     /// <summary>
-    /// Gets the padding around tiles in the texture.
+    /// Gets the padding in pixels around the tileset grid.
     /// </summary>
     public int Padding { get; }
 
     /// <summary>
-    /// Gets the list of tags associated with the tileset.
+    /// Gets the enum tags assigned to the tileset.
     /// </summary>
     public List<string> Tags { get; }
 

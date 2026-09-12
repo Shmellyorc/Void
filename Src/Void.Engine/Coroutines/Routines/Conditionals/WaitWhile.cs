@@ -3,7 +3,7 @@
 // ============================================================================
 //  A coroutine that waits while a given condition remains true.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,72 +13,44 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Conditionals;
 
 /// <summary>
-/// A coroutine that waits while a given condition remains true.
+/// Waits while a predicate continues to return <see langword="true"/>.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="WaitWhile"/> class pauses the coroutine execution while
-/// the specified predicate returns <see langword="true"/>. The predicate is
-/// checked each frame.
-/// </para>
-/// <para>
-/// This is the inverse of <see cref="WaitUntil"/> and is useful for waiting
-/// for a condition to become false, such as waiting for a state to change,
-/// a timer to expire, or an animation to complete.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Wait while a flag is true
-/// yield return new WaitWhile(() => isAnimating);
-/// 
-/// // Wait while health is above zero (i.e., while alive)
-/// yield return new WaitWhile(() => health > 0);
-/// 
-/// // Wait while an object exists
-/// yield return new WaitWhile(() => enemy != null);
-/// 
-/// // In a sequence
-/// var sequence = new Sequence(
-///     new WaitWhile(() => isPlaying),
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value)
-/// );
-/// CoroutineManager.Instance.Run(sequence);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// The predicate is evaluated each time the coroutine advances. The coroutine
+/// completes as soon as the predicate returns <see langword="false"/>.
 /// </remarks>
 public sealed class WaitWhile : IEnumerator
 {
     private readonly Func<bool> _predicate;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the value yielded by the coroutine, which is always <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitWhile"/> class.
+    /// Initializes a wait that continues while the specified predicate is true.
     /// </summary>
-    /// <param name="predicate">The condition to wait for. Returns <see langword="true"/> while waiting should continue.</param>
+    /// <param name="predicate">
+    /// The condition to evaluate. The wait continues while it returns
+    /// <see langword="true"/>.
+    /// </param>
     public WaitWhile(Func<bool> predicate) => _predicate = predicate;
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Evaluates the predicate and advances the wait.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns>The current result of the predicate.</returns>
     public bool MoveNext() => _predicate();
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this coroutine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases the coroutine. This implementation performs no work.
     /// </summary>
     public void Dispose() { }
 }

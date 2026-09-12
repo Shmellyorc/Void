@@ -25,9 +25,9 @@
 // ============================================================================
 //  CoroutineHandle.cs
 // ============================================================================
-//  A handle for tracking and controlling a running coroutine.
+//  Handle for tracking and controlling a coroutine managed by CoroutineManager.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -36,54 +36,22 @@ using System.Collections;
 namespace Void.Engine.Coroutines;
 
 /// <summary>
-/// A handle for tracking and controlling a running coroutine.
+/// Identifies a coroutine managed by a <see cref="CoroutineManager"/>.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="CoroutineHandle"/> structure provides a lightweight way to
-/// reference and control a coroutine that was started through the
-/// <see cref="CoroutineManager"/>. It can be used to stop the coroutine,
-/// check its status, or wait for its completion.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Start a coroutine and get a handle
-/// var handle = CoroutineManager.Instance.Run(MyCoroutine());
-/// 
-/// // Check if it's still running
-/// if (handle.IsRunning)
-/// {
-///     // Do something while it runs
-/// }
-/// 
-/// // Stop the coroutine
-/// handle.Stop();
-/// 
-/// // Wait for the coroutine to complete from another coroutine
-/// IEnumerator WaitForCoroutine()
-/// {
-///     yield return handle.Wait();
-///     Console.WriteLine("Coroutine finished!");
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This structure is immutable and thread-safe. However, the underlying
-/// coroutine operations are not thread-safe and should only be performed
-/// from the main thread.
-/// </para>
+/// A handle keeps the manager and root enumerator used when the coroutine was
+/// started. It can be used to query, stop, or wait for that coroutine without
+/// retaining those values separately.
 /// </remarks>
 public readonly struct CoroutineHandle
 {
     /// <summary>
-    /// Gets the coroutine manager that is running this coroutine.
+    /// Gets the manager that owns the coroutine.
     /// </summary>
     public CoroutineManager Runner { get; }
 
     /// <summary>
-    /// Gets the enumerator representing the coroutine.
+    /// Gets the root enumerator registered with the manager.
     /// </summary>
     public IEnumerator Enumerator { get; }
 
@@ -94,15 +62,24 @@ public readonly struct CoroutineHandle
     }
 
     /// <summary>
-    /// Stops the coroutine if it is currently running.
+    /// Stops the coroutine when it is still running.
     /// </summary>
-    /// <returns><see langword="true"/> if the coroutine was stopped; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> when the coroutine was running and was stopped;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool Stop() => IsRunning && Runner.Stop(Enumerator);
 
     /// <summary>
-    /// Returns a coroutine that waits for this coroutine to complete.
+    /// Creates an enumerator that waits until this coroutine is no longer running.
     /// </summary>
-    /// <returns>An enumerator that yields until the coroutine completes.</returns>
+    /// <returns>
+    /// An enumerator that yields once per update while the coroutine remains active.
+    /// </returns>
+    /// <remarks>
+    /// A default handle, or a handle whose coroutine has already finished or been
+    /// stopped, completes immediately.
+    /// </remarks>
     public IEnumerator Wait()
     {
         if (Enumerator != null)

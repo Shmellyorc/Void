@@ -3,7 +3,7 @@
 // ============================================================================
 //  A coroutine that waits until a value becomes non-null.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,42 +13,13 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Conditionals;
 
 /// <summary>
-/// A coroutine that waits until a value becomes non-null.
+/// Waits until a reference returned by a getter becomes non-null.
 /// </summary>
-/// <typeparam name="T">The type of value to wait for.</typeparam>
+/// <typeparam name="T">The reference type being observed.</typeparam>
 /// <remarks>
-/// <para>
-/// The <see cref="WaitUntilNotNull{T}"/> class pauses the coroutine execution
-/// until the specified getter function returns a non-null value. The getter
-/// is called each frame.
-/// </para>
-/// <para>
-/// This is useful for waiting for an object to be created, loaded, or
-/// initialized, such as waiting for a resource to load or an entity to spawn.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Wait for a player object to be created
-/// var waitForPlayer = new WaitUntilNotNull&lt;Player&gt;(() => playerInstance);
-/// yield return waitForPlayer;
-/// 
-/// // Access the value after the wait
-/// var player = waitForPlayer.Value;
-/// player.Move();
-/// 
-/// // In a sequence
-/// var sequence = new Sequence(
-///     new WaitUntilNotNull&lt;Texture&gt;(() => AssetManager.Instance.Get&lt;Texture&gt;("player")),
-///     new Tween&lt;float&gt;(0f, 100f, 1f, EaseType.QuadOut, Lerp, value => x = value)
-/// );
-/// CoroutineManager.Instance.Run(sequence);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// The getter is evaluated each time the coroutine advances. When the getter
+/// first returns a non-null value, that value is stored in <see cref="Value"/>
+/// and the coroutine completes.
 /// </remarks>
 public sealed class WaitUntilNotNull<T> : IEnumerator where T : class
 {
@@ -56,29 +27,38 @@ public sealed class WaitUntilNotNull<T> : IEnumerator where T : class
     private T _value;
 
     /// <summary>
-    /// Gets the current value of the coroutine. Always returns null.
+    /// Gets the value yielded by the coroutine, which is always <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Gets the value once it becomes non-null.
+    /// Gets the most recently observed value.
     /// </summary>
+    /// <remarks>
+    /// This remains <see langword="null"/> until the getter returns a non-null
+    /// value. When the wait completes normally, this property contains that value.
+    /// </remarks>
     public T Value => _value;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="WaitUntilNotNull{T}"/> class.
+    /// Initializes a wait for the specified getter to return a non-null value.
     /// </summary>
-    /// <param name="getter">A function that returns the value to wait for.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="getter"/> is null.</exception>
+    /// <param name="getter">The function that provides the value to observe.</param>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="getter"/> is <see langword="null"/>.
+    /// </exception>
     public WaitUntilNotNull(Func<T> getter)
     {
         _getter = getter ?? throw new ArgumentNullException(nameof(getter));
     }
 
     /// <summary>
-    /// Advances the coroutine by one frame.
+    /// Reads the current value and advances the wait.
     /// </summary>
-    /// <returns><see langword="true"/> if still waiting; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the observed value is <see langword="null"/>;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool MoveNext()
     {
         _value = _getter();
@@ -86,12 +66,13 @@ public sealed class WaitUntilNotNull<T> : IEnumerator where T : class
     }
 
     /// <summary>
-    /// Resets the coroutine to its initial state. Not supported.
+    /// Resetting this coroutine is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 
     /// <summary>
-    /// Disposes the coroutine. Does nothing.
+    /// Releases the coroutine. This implementation performs no work.
     /// </summary>
     public void Dispose() { }
 }

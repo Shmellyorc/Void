@@ -1,9 +1,9 @@
 // ============================================================================
 //  Tween.cs
 // ============================================================================
-//  A generic coroutine-based tween for animating values over time with easing.
+//  Generic coroutine-based interpolation with easing.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,71 +13,29 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A generic coroutine-based tween for animating values over time with easing.
+/// Interpolates a value from one state to another over a fixed duration.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
 /// <para>
-/// The <see cref="Tween{T}"/> class provides a flexible and performant way to
-/// animate values over time using coroutines. It supports all easing types
-/// from the <see cref="EaseType"/> enumeration and can be used with any type
-/// that has a corresponding interpolation function.
+/// <see cref="Tween{T}"/> implements <see cref="IEnumerator"/> so it can be run
+/// directly by <see cref="CoroutineManager"/>. Each update reads
+/// <see cref="Game.FrameTime"/>, applies the selected <see cref="EaseType"/>,
+/// interpolates through the supplied function, and passes the result to the
+/// update callback.
 /// </para>
-/// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Common Use Cases:</b>
-/// <list type="bullet">
-///   <item><description>Position, rotation, and scale animations</description></item>
-///   <item><description>Color transitions</description></item>
-///   <item><description>UI element animations</description></item>
-///   <item><description>Camera movement</description></item>
-///   <item><description>Any numeric or vector-based interpolation</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Create a float tween
+/// float opacity = 0f;
 /// var tween = new Tween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value
-/// );
-/// 
-/// // Create a Vect2 tween
-/// var tween2 = new Tween&lt;Vect2&gt;(
-///     from: Vect2.Zero,
-///     to: new Vect2(100f, 50f),
-///     duration: 0.5f,
-///     type: EaseType.SineInOut,
-///     lerpFunc: (a, b, t) => Vect2.Lerp(a, b, t),
-///     onUpdate: value => entity.Position = value
-/// );
-/// 
-/// // Create a Color tween
-/// var tween3 = new Tween&lt;Color&gt;(
-///     from: Color.Red,
-///     to: Color.Blue,
-///     duration: 2f,
-///     type: EaseType.QuadInOut,
-///     lerpFunc: (a, b, t) => Color.Lerp(a, b, t),
-///     onUpdate: value => sprite.Color = value
-/// );
-/// 
-/// // Run the tween
+///     0f,
+///     1f,
+///     0.25f,
+///     EaseType.QuadOut,
+///     static (a, b, t) =&gt; a + ((b - a) * t),
+///     value =&gt; opacity = value);
+///
 /// CoroutineManager.Instance.Run(tween);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
 /// </remarks>
 public sealed class Tween<T> : IEnumerator
 {
@@ -89,19 +47,20 @@ public sealed class Tween<T> : IEnumerator
     private float _elapsed;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Tweens do not yield a value,
+    /// so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Tween{T}"/> class.
+    /// Initializes a tween between two values.
     /// </summary>
     /// <param name="from">The starting value.</param>
     /// <param name="to">The ending value.</param>
-    /// <param name="duration">The duration of the tween in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
+    /// <param name="duration">The tween duration in seconds.</param>
+    /// <param name="type">The easing function to apply to normalized progress.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
     public Tween(T from, T to, float duration, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate)
     {
         _from = from;
@@ -114,9 +73,12 @@ public sealed class Tween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the tween using the current frame delta time.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the tween should continue running;
+    /// otherwise, <see langword="false"/> after applying the ending value.
+    /// </returns>
     public bool MoveNext()
     {
         float deltaTime = Game.Instance.FrameTime.DeltaTime;
@@ -138,7 +100,8 @@ public sealed class Tween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }

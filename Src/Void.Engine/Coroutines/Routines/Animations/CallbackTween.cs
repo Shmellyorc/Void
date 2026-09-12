@@ -1,9 +1,9 @@
 // ============================================================================
 //  CallbackTween.cs
 // ============================================================================
-//  A tween that invokes a completion callback when the animation finishes.
+//  Tween wrapper that invokes a callback when the tween completes.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -13,41 +13,12 @@ using System.Collections;
 namespace Void.Engine.Coroutines.Routines.Animations;
 
 /// <summary>
-/// A tween that invokes a completion callback when the animation finishes.
+/// Runs a <see cref="Tween{T}"/> and invokes a callback when it completes.
 /// </summary>
-/// <typeparam name="T">The type of value being tweened.</typeparam>
+/// <typeparam name="T">The value type being interpolated.</typeparam>
 /// <remarks>
-/// <para>
-/// The <see cref="CallbackTween{T}"/> class wraps a <see cref="Tween{T}"/>
-/// and adds a callback that is invoked when the tween completes. This allows
-/// for chaining actions or triggering events after an animation finishes.
-/// </para>
-/// <para>
-/// This class implements <see cref="IEnumerator"/> and can be used directly
-/// with the <see cref="CoroutineManager"/> or within other coroutines.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a callback tween
-/// var tween = new CallbackTween&lt;float&gt;(
-///     from: 0f,
-///     to: 100f,
-///     duration: 1f,
-///     type: EaseType.QuadOut,
-///     lerpFunc: (a, b, t) => MathHelper.Lerp(a, b, t),
-///     onUpdate: value => position.X = value,
-///     onComplete: () => Console.WriteLine("Animation complete!")
-/// );
-/// 
-/// // Run the tween as a coroutine
-/// CoroutineManager.Instance.Run(tween);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be used on the main thread.
-/// </para>
+/// The completion callback is invoked when the wrapped tween first reports that
+/// it has finished during normal coroutine execution.
 /// </remarks>
 public sealed class CallbackTween<T> : IEnumerator
 {
@@ -55,20 +26,21 @@ public sealed class CallbackTween<T> : IEnumerator
     private readonly Action _onComplete;
 
     /// <summary>
-    /// Gets the current value of the tween. Always returns null.
+    /// Gets the value yielded by the enumerator. Callback tweens do not yield a
+    /// value, so this property returns <see langword="null"/>.
     /// </summary>
     public object Current => null!;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CallbackTween{T}"/> class.
+    /// Initializes a tween with a completion callback.
     /// </summary>
     /// <param name="from">The starting value.</param>
     /// <param name="to">The ending value.</param>
-    /// <param name="duration">The duration of the tween in seconds.</param>
-    /// <param name="type">The easing type to use.</param>
-    /// <param name="lerpFunc">The interpolation function for the type T.</param>
-    /// <param name="onUpdate">The action to invoke with the current tween value.</param>
-    /// <param name="onComplete">The action to invoke when the tween completes.</param>
+    /// <param name="duration">The tween duration in seconds.</param>
+    /// <param name="type">The easing function to apply to normalized progress.</param>
+    /// <param name="lerpFunc">The interpolation function used to produce values of type <typeparamref name="T"/>.</param>
+    /// <param name="onUpdate">The callback that receives each interpolated value.</param>
+    /// <param name="onComplete">The callback invoked when the wrapped tween completes.</param>
     public CallbackTween(T from, T to, float duration, EaseType type, Func<T, T, float, T> lerpFunc, Action<T> onUpdate, Action onComplete)
     {
         _inner = new Tween<T>(from, to, duration, type, lerpFunc, onUpdate);
@@ -76,9 +48,12 @@ public sealed class CallbackTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Advances the tween by one frame.
+    /// Advances the wrapped tween and invokes the completion callback when it finishes.
     /// </summary>
-    /// <returns><see langword="true"/> if the tween is still running; otherwise, <see langword="false"/>.</returns>
+    /// <returns>
+    /// <see langword="true"/> while the wrapped tween is running;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool MoveNext()
     {
         bool running = _inner.MoveNext();
@@ -88,7 +63,8 @@ public sealed class CallbackTween<T> : IEnumerator
     }
 
     /// <summary>
-    /// Resets the tween to its initial state. Not supported.
+    /// Resetting a callback tween is not supported.
     /// </summary>
+    /// <exception cref="NotSupportedException">Always thrown.</exception>
     public void Reset() => throw new NotSupportedException();
 }
