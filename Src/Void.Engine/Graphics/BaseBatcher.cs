@@ -296,7 +296,7 @@ public abstract class BaseBatcher : IBatcher
         if (_cmdCount == 0)
             return;
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 
         if (_sortMode is not SortMode.Immediate and not SortMode.Deferred)
             SortCommands();
@@ -327,9 +327,7 @@ public abstract class BaseBatcher : IBatcher
             drawCalls++;
         }
 
-        sw.Stop();
-
-        _stats.GPUTime = (float)sw.Elapsed.TotalMilliseconds;
+        _stats.CPUTime = (float)System.Diagnostics.Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
         _stats.DrawCalls = drawCalls;
         _stats.Vertices = totalVertices;
         _stats.Triangles = GetTriangleCount(totalVertices);

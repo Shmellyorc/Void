@@ -158,7 +158,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
     {
         if (_cmdCount == 0) return;
 
-        var sw = System.Diagnostics.Stopwatch.StartNew();
+        long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 
         bool requiresSorting = _sortMode != SortMode.Immediate && _sortMode != SortMode.Deferred;
         ReadOnlySpan<RenderVertex> uploadVertices = _vertexData;
@@ -172,6 +172,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
         _vertexBuffer.Update(uploadVertices, (uint)_vertexIndex, 0);
 
         _renderStates.Texture = null;
+        _renderStates.Shader = _currentShader;
 
         int drawCalls = 0;
         int index = 0;
@@ -191,9 +192,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
             _vertexBuffer.Draw(_renderTarget, (uint)vertexStart, (uint)vertexCount, _renderStates);
             drawCalls++;
         }
-
-        sw.Stop();
-        _stats.GPUTime = (float)sw.Elapsed.TotalMilliseconds;
+        _stats.CPUTime = (float)System.Diagnostics.Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds;
         _stats.DrawCalls = drawCalls;
         _stats.Vertices = _vertexIndex;
         _stats.Triangles = 0;

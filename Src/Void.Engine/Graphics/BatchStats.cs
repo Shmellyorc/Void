@@ -2,7 +2,7 @@
 //  BatchStats.cs
 // ============================================================================
 //  Contains performance statistics for batch rendering, including draw calls,
-//  vertex counts, texture and blend mode switches, and CPU/GPU timing data.
+//  vertex counts, texture and blend mode switches, and timing data.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
@@ -20,7 +20,7 @@ namespace Void.Engine.Graphics;
 /// <list type="bullet">
 ///   <item><description>Draw calls and vertex counts</description></item>
 ///   <item><description>Texture and blend mode switches</description></item>
-///   <item><description>CPU and GPU timing data</description></item>
+///   <item><description>CPU-side batch processing time</description></item>
 ///   <item><description>Command counts for batched operations</description></item>
 /// </list>
 /// </para>
@@ -32,11 +32,11 @@ namespace Void.Engine.Graphics;
 /// <b>Usage Example:</b>
 /// <code>
 /// var stats = batcher.Stats;
-/// 
+///
 /// Console.WriteLine($"Draw Calls: {stats.DrawCalls}");
 /// Console.WriteLine($"Vertices: {stats.Vertices}");
-/// Console.WriteLine($"GPU Time: {stats.GPUTime:F2}ms");
-/// 
+/// Console.WriteLine($"CPU Batch Time: {stats.CPUTime:F2}ms");
+///
 /// if (stats.DrawCalls > 100)
 /// {
 ///     // Consider optimizing batching or texture atlasing
@@ -64,7 +64,7 @@ public struct BatchStats
     /// <summary>
     /// Gets or sets the total number of triangles rendered during the batch.
     /// </summary>
-    /// <value>The total triangle count (vertices / 3 for triangle primitives).</value>
+    /// <value>The total triangle count.</value>
     public int Triangles;
 
     /// <summary>
@@ -93,15 +93,24 @@ public struct BatchStats
     public int BlendModeSwitches;
 
     /// <summary>
-    /// Gets or sets the CPU time spent processing the batch.
+    /// Gets or sets the CPU time spent processing and submitting the batch.
     /// </summary>
-    /// <value>The CPU time in milliseconds.</value>
+    /// <value>The calling-thread wall-clock time in milliseconds.</value>
+    /// <remarks>
+    /// This includes CPU-side sorting, geometry preparation, buffer upload calls,
+    /// and draw submission. It does not measure asynchronous GPU execution time.
+    /// </remarks>
     public float CPUTime;
 
     /// <summary>
-    /// Gets or sets the GPU time spent rendering the batch.
+    /// Reserved for actual backend-reported GPU execution time.
     /// </summary>
-    /// <value>The GPU time in milliseconds.</value>
+    /// <value>The GPU execution time in milliseconds when supported; otherwise zero.</value>
+    /// <remarks>
+    /// VOID does not currently issue GPU timer queries for batch statistics, so
+    /// built-in batchers leave this value at zero. It is retained to preserve the
+    /// existing public statistics surface while backend-neutral GPU timing is evaluated.
+    /// </remarks>
     public float GPUTime;
 
     /// <summary>

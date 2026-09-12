@@ -118,6 +118,8 @@ public sealed class SpriteBatcher : BaseBatcher
     private DrawCommand[] _cmds;
     private readonly DrawCommandComparer _comparer;
     private IndexBuffer _indexBuffer;
+    private Rect2 _batchViewBounds;
+    private bool _hasBatchViewBounds;
 
     /// <summary>
     /// Gets the name of the batcher.
@@ -151,6 +153,10 @@ public sealed class SpriteBatcher : BaseBatcher
     /// </summary>
     protected override void OnBegin()
     {
+        _hasBatchViewBounds = _currentCamera != null;
+        _batchViewBounds = _hasBatchViewBounds ? _currentCamera.ViewBounds : default;
+
+        AtlasManager.Instance.BeginBatchUsage();
         AtlasManager.Instance.ProcessPendingDefragMoves(
             GameSettings.Instance.AtlasDefragMovesPerFrame);
 
@@ -740,7 +746,7 @@ public sealed class SpriteBatcher : BaseBatcher
     }
 
     private bool IsVisible(Rect2 dstRect)
-        => _currentCamera == null || dstRect.Intersects(_currentCamera.ViewBounds);
+        => !_hasBatchViewBounds || dstRect.Intersects(_batchViewBounds);
 
     private sealed class DrawCommandComparer : IComparer<DrawCommand>
     {
@@ -1031,7 +1037,7 @@ public sealed class SpriteBatcher : BaseBatcher
         float srcTop = cmd.SrcRect.Top;
         float srcBottom = cmd.SrcRect.Bottom;
 
-        if (GameSettings.Instance.UseHalfTexelOffset)
+        if (GameSettings.Instance.UseHalfTexelOffset && cmd.Texture != null)
         {
             float texWidth = cmd.Texture.Size.X;
             float texHeight = cmd.Texture.Size.Y;

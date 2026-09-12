@@ -22,6 +22,7 @@ public sealed class AtlasManager
         public int PageId;
         public Rect2 PackedRect;
         public LinkedListNode<(uint, Rect2)> LruNode;
+        public ulong LastUsedBatch;
     }
 
     private readonly struct PendingDefragMove
@@ -73,6 +74,7 @@ public sealed class AtlasManager
     private int _pageSize;
     private int _pageCount;
     private int _evictionCount;
+    private ulong _usageBatch;
     private bool _isDefragging;
 
     public static AtlasManager Instance => _instance.Value;
@@ -100,6 +102,14 @@ public sealed class AtlasManager
                 : new SkylinePacker(_pageSize, _pageSize);
 
             _pages.Add(new AtlasPage(pagePacker));
+        }
+    }
+
+    internal void BeginBatchUsage()
+    {
+        unchecked
+        {
+            _usageBatch++;
         }
     }
 
@@ -161,8 +171,15 @@ public sealed class AtlasManager
 
             packedRect = slot.PackedRect;
             pageId = slot.PageId;
-            _lruList.Remove(slot.LruNode);
-            _lruList.AddFirst(slot.LruNode);
+
+            if (slot.LastUsedBatch != _usageBatch)
+            {
+                _lruList.Remove(slot.LruNode);
+                _lruList.AddFirst(slot.LruNode);
+                slot.LastUsedBatch = _usageBatch;
+                _packedMap[key] = slot;
+            }
+
             return true;
         }
 
@@ -294,7 +311,8 @@ public sealed class AtlasManager
         {
             PageId = pageIndex,
             PackedRect = rect,
-            LruNode = lruNode
+            LruNode = lruNode,
+            LastUsedBatch = _usageBatch
         };
 
         Logger.Instance.DebugWithCategory("Atlas", "Packed {0}x{1} into renderer page {2} (total: {3})",
@@ -576,6 +594,7 @@ public sealed class AtlasManager
         _lruList.Clear();
         _pendingDefragMoves.Clear();
         _pagesWithPendingMoves.Clear();
+        _usageBatch = 0;
         _isDefragging = false;
 
         foreach (var page in _pages)

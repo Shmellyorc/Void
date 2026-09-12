@@ -534,7 +534,6 @@ public sealed class GameSettings
     /// <summary>
     /// Enables half-texel offset for pixel-perfect rendering. Default is false.
     /// </summary>
-    [Obsolete("No longer needed. May cause gaps in rendering. Will be removed in a future version.")]
     public GameSettings SetHalfTexelOffset(bool value)
     {
         UseHalfTexelOffset = value;
