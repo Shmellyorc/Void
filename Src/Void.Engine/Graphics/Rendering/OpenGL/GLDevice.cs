@@ -6,9 +6,25 @@ namespace Void.Engine.Graphics.Rendering.OpenGL;
 internal sealed class GLDevice : IGraphicsDevice
 {
     private GL _gl;
+    private readonly GLStateCache _state;
     private GLRenderTarget _activeRenderTarget;
     private int _backbufferWidth;
     private int _backbufferHeight;
+
+    private bool _hasClearColor;
+    private Color _clearColor;
+
+    private bool? _blendEnabled;
+    private bool _hasBlendFunction;
+    private BlendFactor _colorSrcFactor;
+    private BlendFactor _colorDstFactor;
+    private BlendFactor _alphaSrcFactor;
+    private BlendFactor _alphaDstFactor;
+
+    private bool _hasBlendEquation;
+    private BlendEquation _colorEquation;
+    private BlendEquation _alphaEquation;
+
     private bool _disposed;
 
     public RendererCapabilities Capabilities { get; private set; }
@@ -16,6 +32,7 @@ internal sealed class GLDevice : IGraphicsDevice
     internal GLDevice(GL gl, Vect2 initialSize)
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+        _state = new GLStateCache(_gl);
         Capabilities = default;
         Resize((int)initialSize.X, (int)initialSize.Y);
     }
@@ -26,10 +43,12 @@ internal sealed class GLDevice : IGraphicsDevice
         if (width <= 0 || height <= 0)
             return;
 
+        bool sizeChanged = _backbufferWidth != width || _backbufferHeight != height;
+
         _backbufferWidth = width;
         _backbufferHeight = height;
 
-        if (_activeRenderTarget == null)
+        if (sizeChanged && _activeRenderTarget == null)
             _gl.Viewport(0, 0, (uint)width, (uint)height);
     }
 
@@ -37,33 +56,47 @@ internal sealed class GLDevice : IGraphicsDevice
     {
         ThrowIfDisposed();
 
-        const float InvByte = 1f / 255f;
-        _gl.ClearColor(color.R * InvByte, color.G * InvByte, color.B * InvByte, color.A * InvByte);
+        if (!_hasClearColor || !SameColor(_clearColor, color))
+        {
+            const float InvByte = 1f / 255f;
+            _gl.ClearColor(color.R * InvByte, color.G * InvByte, color.B * InvByte, color.A * InvByte);
+            _clearColor = color;
+            _hasClearColor = true;
+        }
+
         _gl.Clear(ClearBufferMask.ColorBufferBit);
     }
 
     public IGraphicsBuffer CreateBuffer(in BufferDescription description)
     {
         ThrowIfDisposed();
-        return new GLBuffer(_gl, description);
+        return new GLBuffer(_gl, _state, description);
     }
 
     public IGraphicsTexture CreateTexture(in TextureDescription description, ReadOnlySpan<byte> initialData = default)
     {
         ThrowIfDisposed();
-        return new GLTexture(_gl, description, initialData);
+        return new GLTexture(_gl, _state, description, initialData);
     }
 
     public IGraphicsShaderProgram CreateShaderProgram(in ShaderProgramDescription description)
     {
         ThrowIfDisposed();
-        return new GLShaderProgram(_gl, description);
+        return new GLShaderProgram(_gl, _state, description);
     }
 
     public IGraphicsRenderTarget CreateRenderTarget(in RenderTargetDescription description)
     {
         ThrowIfDisposed();
-        return new GLRenderTarget(_gl, description);
+
+        GLRenderTarget target = new(_gl, _state, description);
+
+        // GLRenderTarget creation temporarily binds its framebuffer and restores
+        // framebuffer zero. Restore the device's logical target so creating an
+        // off-screen target during rendering cannot desynchronize GLDevice state.
+        RestoreActiveRenderTarget();
+
+        return target;
     }
 
     public void UpdateBuffer<T>(IGraphicsBuffer buffer, ReadOnlySpan<T> data, int byteOffset = 0)
@@ -100,6 +133,9 @@ internal sealed class GLDevice : IGraphicsDevice
 
         if (target == null)
         {
+            if (_activeRenderTarget == null)
+                return;
+
             _activeRenderTarget = null;
             _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
 
@@ -111,6 +147,9 @@ internal sealed class GLDevice : IGraphicsDevice
 
         if (target is not GLRenderTarget glTarget)
             throw new ArgumentException("The render target was not created by the VOID OpenGL backend.", nameof(target));
+
+        if (ReferenceEquals(_activeRenderTarget, glTarget))
+            return;
 
         glTarget.Bind();
         _activeRenderTarget = glTarget;
@@ -141,7 +180,7 @@ internal sealed class GLDevice : IGraphicsDevice
         }
 
         uint vao = vertexBuffer.GetOrCreateVertexArray();
-        _gl.BindVertexArray(vao);
+        _state.BindVertexArray(vao);
 
         GLEnum primitive = ToPrimitiveType(command.PrimitiveType);
 
@@ -150,7 +189,7 @@ internal sealed class GLDevice : IGraphicsDevice
             if (command.IndexBuffer is not GLBuffer indexBuffer || indexBuffer.Description.Type != BufferType.Index)
                 throw new ArgumentException("The indexed draw command requires an OpenGL index buffer.", nameof(command));
 
-            _gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, indexBuffer.Handle);
+            _state.BindElementArrayBuffer(indexBuffer.Handle);
 
             int indexSize = indexBuffer.Description.IndexElementType == IndexElementType.UInt16 ? sizeof(ushort) : sizeof(uint);
             int byteOffset = checked(command.IndexStart * indexSize);
@@ -169,7 +208,6 @@ internal sealed class GLDevice : IGraphicsDevice
                 checked((uint)command.VertexCount));
         }
 
-        _gl.BindVertexArray(0);
     }
 
     public void WaitIdle()
@@ -193,31 +231,95 @@ internal sealed class GLDevice : IGraphicsDevice
     {
         blendMode ??= global::Void.Engine.Graphics.BlendMode.Alpha;
 
+        BlendFactor colorSrc = blendMode.ColorSrcFactor;
+        BlendFactor colorDst = blendMode.ColorDstFactor;
+        BlendEquation colorEquation = blendMode.ColorEquation;
+        BlendFactor alphaSrc = blendMode.AlphaSrcFactor;
+        BlendFactor alphaDst = blendMode.AlphaDstFactor;
+        BlendEquation alphaEquation = blendMode.AlphaEquation;
+
         bool opaque =
-            blendMode.ColorSrcFactor == BlendFactor.One &&
-            blendMode.ColorDstFactor == BlendFactor.Zero &&
-            blendMode.ColorEquation == BlendEquation.Add &&
-            blendMode.AlphaSrcFactor == BlendFactor.One &&
-            blendMode.AlphaDstFactor == BlendFactor.Zero &&
-            blendMode.AlphaEquation == BlendEquation.Add;
+            colorSrc == BlendFactor.One &&
+            colorDst == BlendFactor.Zero &&
+            colorEquation == BlendEquation.Add &&
+            alphaSrc == BlendFactor.One &&
+            alphaDst == BlendFactor.Zero &&
+            alphaEquation == BlendEquation.Add;
 
         if (opaque)
         {
-            _gl.Disable(EnableCap.Blend);
+            if (_blendEnabled != false)
+            {
+                _gl.Disable(EnableCap.Blend);
+                _blendEnabled = false;
+            }
+
             return;
         }
 
-        _gl.Enable(EnableCap.Blend);
-        _gl.BlendFuncSeparate(
-            ToBlendFactor(blendMode.ColorSrcFactor),
-            ToBlendFactor(blendMode.ColorDstFactor),
-            ToBlendFactor(blendMode.AlphaSrcFactor),
-            ToBlendFactor(blendMode.AlphaDstFactor));
+        if (_blendEnabled != true)
+        {
+            _gl.Enable(EnableCap.Blend);
+            _blendEnabled = true;
+        }
 
-        _gl.BlendEquationSeparate(
-            ToBlendEquation(blendMode.ColorEquation),
-            ToBlendEquation(blendMode.AlphaEquation));
+        if (!_hasBlendFunction ||
+            _colorSrcFactor != colorSrc ||
+            _colorDstFactor != colorDst ||
+            _alphaSrcFactor != alphaSrc ||
+            _alphaDstFactor != alphaDst)
+        {
+            _gl.BlendFuncSeparate(
+                ToBlendFactor(colorSrc),
+                ToBlendFactor(colorDst),
+                ToBlendFactor(alphaSrc),
+                ToBlendFactor(alphaDst));
+
+            _colorSrcFactor = colorSrc;
+            _colorDstFactor = colorDst;
+            _alphaSrcFactor = alphaSrc;
+            _alphaDstFactor = alphaDst;
+            _hasBlendFunction = true;
+        }
+
+        if (!_hasBlendEquation ||
+            _colorEquation != colorEquation ||
+            _alphaEquation != alphaEquation)
+        {
+            _gl.BlendEquationSeparate(
+                ToBlendEquation(colorEquation),
+                ToBlendEquation(alphaEquation));
+
+            _colorEquation = colorEquation;
+            _alphaEquation = alphaEquation;
+            _hasBlendEquation = true;
+        }
     }
+
+    private void RestoreActiveRenderTarget()
+    {
+        if (_activeRenderTarget != null)
+        {
+            _activeRenderTarget.Bind();
+            _gl.Viewport(
+                0,
+                0,
+                (uint)_activeRenderTarget.Description.Width,
+                (uint)_activeRenderTarget.Description.Height);
+            return;
+        }
+
+        _gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+
+        if (_backbufferWidth > 0 && _backbufferHeight > 0)
+            _gl.Viewport(0, 0, (uint)_backbufferWidth, (uint)_backbufferHeight);
+    }
+
+    private static bool SameColor(in Color left, in Color right)
+        => left.R == right.R &&
+           left.G == right.G &&
+           left.B == right.B &&
+           left.A == right.A;
 
     private static GLEnum ToPrimitiveType(global::Void.Engine.Graphics.Rendering.PrimitiveType primitiveType)
         => primitiveType switch

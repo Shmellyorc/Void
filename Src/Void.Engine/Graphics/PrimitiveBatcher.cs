@@ -90,11 +90,8 @@ public sealed class PrimitiveBatcher : BaseBatcher
     /// <param name="capacity">The initial capacity of the batch.</param>
     public PrimitiveBatcher(int capacity = 0) : base(capacity)
     {
-        if (capacity <= 0)
-            _capacity = GetDefaultCapacity();
-
         _cmds = new PrimitiveCommand[_capacity];
-        _sortedVertexData = new RenderVertex[_capacity];
+        _sortedVertexData = new RenderVertex[_vertexBufferSize];
         _comparer = new PrimitiveCommandComparer(_sortMode);
         _vertexIndex = 0;
     }
@@ -120,7 +117,7 @@ public sealed class PrimitiveBatcher : BaseBatcher
     protected override void OnFlush() => _vertexIndex = 0;
 
     /// <summary>
-    /// Sorts the commands for optimal rendering.
+    /// Sorts the commands and rebuilds the vertex stream in sorted order.
     /// </summary>
     protected override void SortCommands()
     {
@@ -132,26 +129,21 @@ public sealed class PrimitiveBatcher : BaseBatcher
     private void RebuildSortedVertices()
     {
         if (_sortedVertexData.Length < _vertexIndex)
-        {
             Array.Resize(ref _sortedVertexData, _vertexIndex);
-        }
 
         int sortedIndex = 0;
 
         for (int i = 0; i < _cmdCount; i++)
         {
-            var cmd = _cmds[i];
-            int sourceOffset = cmd.VertexOffset;
+            PrimitiveCommand cmd = _cmds[i];
 
-            for (int j = 0; j < cmd.VertexCount; j++)
-            {
-                _sortedVertexData[sortedIndex++] = _vertexData[sourceOffset + j];
-            }
+            _vertexData
+                .AsSpan(cmd.VertexOffset, cmd.VertexCount)
+                .CopyTo(_sortedVertexData.AsSpan(sortedIndex, cmd.VertexCount));
 
-            _cmds[i].VertexOffset = sortedIndex - cmd.VertexCount;
+            _cmds[i].VertexOffset = sortedIndex;
+            sortedIndex += cmd.VertexCount;
         }
-
-        Array.Copy(_sortedVertexData, _vertexData, sortedIndex);
     }
 
     /// <summary>
@@ -168,10 +160,16 @@ public sealed class PrimitiveBatcher : BaseBatcher
 
         var sw = System.Diagnostics.Stopwatch.StartNew();
 
-        if (_sortMode != SortMode.Immediate && _sortMode != SortMode.Deferred)
-            SortCommands();
+        bool requiresSorting = _sortMode != SortMode.Immediate && _sortMode != SortMode.Deferred;
+        ReadOnlySpan<RenderVertex> uploadVertices = _vertexData;
 
-        _vertexBuffer.Update(_vertexData, (uint)_vertexIndex, 0);
+        if (requiresSorting)
+        {
+            SortCommands();
+            uploadVertices = _sortedVertexData;
+        }
+
+        _vertexBuffer.Update(uploadVertices, (uint)_vertexIndex, 0);
 
         _renderStates.Texture = null;
 

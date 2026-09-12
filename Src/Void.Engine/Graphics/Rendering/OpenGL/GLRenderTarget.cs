@@ -5,6 +5,7 @@ namespace Void.Engine.Graphics.Rendering.OpenGL;
 internal sealed class GLRenderTarget : IGraphicsRenderTarget
 {
     private readonly GL _gl;
+    private readonly GLStateCache _state;
     private uint _framebuffer;
     private GLTexture _colorTexture;
     private bool _disposed;
@@ -15,9 +16,10 @@ internal sealed class GLRenderTarget : IGraphicsRenderTarget
 
     internal uint Handle => _framebuffer;
 
-    internal GLRenderTarget(GL gl, in RenderTargetDescription description)
+    internal GLRenderTarget(GL gl, GLStateCache state, in RenderTargetDescription description)
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+        _state = state ?? throw new ArgumentNullException(nameof(state));
         Description = description;
 
         if (description.SampleCount != 1)
@@ -41,7 +43,7 @@ internal sealed class GLRenderTarget : IGraphicsRenderTarget
             sampleCount: 1,
             generateMipmaps: false);
 
-        _colorTexture = new GLTexture(_gl, textureDescription, default);
+        _colorTexture = new GLTexture(_gl, _state, textureDescription, default);
 
         try
         {

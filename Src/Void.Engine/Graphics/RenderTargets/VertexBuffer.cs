@@ -7,11 +7,18 @@ namespace Void.Engine.Graphics.RenderTargets;
 /// <summary>Renderer-neutral vertex buffer used by VOID's batching layer.</summary>
 internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
 {
-    private readonly RenderVertex[] _vertices;
     private readonly int _capacity;
 
     private IGraphicsDevice _graphicsDevice;
     private IGraphicsBuffer _graphicsBuffer;
+
+    // Only allocated when Update is called before a renderer is available.
+    // During normal rendering the batcher's own vertex array is uploaded directly.
+    private RenderVertex[] _pendingVertices;
+    private int _pendingStart = int.MaxValue;
+    private int _pendingEnd;
+    private bool _hasGpuData;
+
     private RenderPrimitiveType _primitiveType = RenderPrimitiveType.Triangles;
     private bool _disposed;
 
@@ -31,7 +38,6 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             throw new ArgumentOutOfRangeException(nameof(vertexCount));
 
         _capacity = vertexCount;
-        _vertices = new RenderVertex[vertexCount];
     }
 
     public void Update(ReadOnlySpan<RenderVertex> vertices, uint vertexCount, uint offset)
@@ -44,23 +50,23 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             throw new ArgumentOutOfRangeException(nameof(offset), "Vertex update exceeds the buffer capacity.");
 
         int count = checked((int)vertexCount);
+        if (count == 0)
+            return;
+
         int destinationOffset = checked((int)offset);
         ReadOnlySpan<RenderVertex> source = vertices[..count];
-        source.CopyTo(_vertices.AsSpan(destinationOffset, count));
 
-        if (_graphicsBuffer != null)
+        if (!RendererRuntime.TryGetDevice(out IGraphicsDevice activeDevice))
         {
-            if (!RendererRuntime.TryGetDevice(out IGraphicsDevice activeDevice) ||
-                !ReferenceEquals(activeDevice, _graphicsDevice))
-            {
-                ReleaseGraphicsBuffer();
-            }
-            else
-            {
-                int byteOffset = checked(destinationOffset * RenderVertex.Layout.Stride);
-                _graphicsDevice.UpdateBuffer(_graphicsBuffer, source, byteOffset);
-            }
+            StagePendingUpdate(source, destinationOffset);
+            return;
         }
+
+        EnsureGraphicsBuffer(activeDevice);
+
+        int byteOffset = checked(destinationOffset * RenderVertex.Layout.Stride);
+        activeDevice.UpdateBuffer(_graphicsBuffer, source, byteOffset);
+        _hasGpuData = true;
     }
 
     public bool TryGetGraphicsBuffer(out IGraphicsBuffer buffer)
@@ -73,20 +79,12 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             return false;
         }
 
-        if (_graphicsBuffer != null && !ReferenceEquals(activeDevice, _graphicsDevice))
-            ReleaseGraphicsBuffer();
+        EnsureGraphicsBuffer(activeDevice);
 
-        if (_graphicsBuffer == null)
+        if (!_hasGpuData)
         {
-            var description = new BufferDescription(
-                checked(_capacity * RenderVertex.Layout.Stride),
-                BufferType.Vertex,
-                BufferUsage.Stream,
-                RenderVertex.Layout);
-
-            _graphicsDevice = activeDevice;
-            _graphicsBuffer = activeDevice.CreateBuffer(description);
-            activeDevice.UpdateBuffer(_graphicsBuffer, _vertices, 0);
+            buffer = null;
+            return false;
         }
 
         buffer = _graphicsBuffer;
@@ -95,9 +93,71 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
 
     public void Draw(IRenderTarget target, uint vertexStart, uint vertexCount, BatchRenderState states)
     {
+        DrawInternal(
+            target,
+            vertexStart,
+            vertexCount,
+            states,
+            indexBuffer: null,
+            indexStart: 0,
+            indexCount: 0);
+    }
+
+    internal void DrawIndexed(
+        IRenderTarget target,
+        IndexBuffer indexBuffer,
+        uint vertexStart,
+        uint vertexCount,
+        uint indexStart,
+        uint indexCount,
+        BatchRenderState states)
+    {
+        ArgumentNullException.ThrowIfNull(indexBuffer);
+
+        if ((ulong)indexStart + indexCount > (ulong)indexBuffer.IndexCount)
+            throw new ArgumentOutOfRangeException(nameof(indexCount), "Indexed draw exceeds the index buffer capacity.");
+
+        if (!indexBuffer.TryGetGraphicsBuffer(out IGraphicsBuffer graphicsIndexBuffer))
+            throw new InvalidOperationException("Unable to resolve the renderer-owned index buffer.");
+
+        DrawInternal(
+            target,
+            vertexStart,
+            vertexCount,
+            states,
+            graphicsIndexBuffer,
+            indexStart,
+            indexCount);
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        ReleaseGraphicsBuffer();
+        _pendingVertices = null;
+        _pendingStart = int.MaxValue;
+        _pendingEnd = 0;
+        _disposed = true;
+        GC.SuppressFinalize(this);
+    }
+
+    private void DrawInternal(
+        IRenderTarget target,
+        uint vertexStart,
+        uint vertexCount,
+        BatchRenderState states,
+        IGraphicsBuffer indexBuffer,
+        uint indexStart,
+        uint indexCount)
+    {
         ThrowIfDisposed();
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(states);
+
+        if ((ulong)vertexStart + vertexCount > (ulong)_capacity)
+            throw new ArgumentOutOfRangeException(nameof(vertexCount), "Draw exceeds the vertex buffer capacity.");
 
         if (target is not TextureRenderTarget textureTarget)
             throw new InvalidOperationException($"Unsupported render target type: {target.GetType().Name}");
@@ -109,7 +169,7 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             throw new InvalidOperationException("Vertex buffer and render target belong to different graphics devices.");
 
         if (!TryGetGraphicsBuffer(out IGraphicsBuffer vertexBuffer))
-            throw new InvalidOperationException("Unable to resolve the renderer-owned vertex buffer.");
+            throw new InvalidOperationException("Unable to resolve the renderer-owned vertex buffer. Upload vertex data before drawing.");
 
         if (!Renderer2DState.TryPrepareShader(states, out IGraphicsShaderProgram shader, out IGraphicsTexture texture))
         {
@@ -132,19 +192,59 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             checked((int)vertexCount),
             states.BlendMode,
             texture,
-            shader);
+            shader,
+            indexBuffer,
+            checked((int)indexStart),
+            checked((int)indexCount));
 
         device.Draw(command);
     }
 
-    public void Dispose()
+    private void EnsureGraphicsBuffer(IGraphicsDevice activeDevice)
     {
-        if (_disposed)
+        if (_graphicsBuffer != null && !ReferenceEquals(activeDevice, _graphicsDevice))
+            ReleaseGraphicsBuffer();
+
+        if (_graphicsBuffer != null)
             return;
 
-        ReleaseGraphicsBuffer();
-        _disposed = true;
-        GC.SuppressFinalize(this);
+        var description = new BufferDescription(
+            checked(_capacity * RenderVertex.Layout.Stride),
+            BufferType.Vertex,
+            BufferUsage.Stream,
+            RenderVertex.Layout);
+
+        _graphicsDevice = activeDevice;
+        _graphicsBuffer = activeDevice.CreateBuffer(description);
+        _hasGpuData = false;
+
+        UploadPendingData();
+    }
+
+    private void StagePendingUpdate(ReadOnlySpan<RenderVertex> source, int destinationOffset)
+    {
+        _pendingVertices ??= new RenderVertex[_capacity];
+        source.CopyTo(_pendingVertices.AsSpan(destinationOffset, source.Length));
+
+        _pendingStart = Math.Min(_pendingStart, destinationOffset);
+        _pendingEnd = Math.Max(_pendingEnd, destinationOffset + source.Length);
+    }
+
+    private void UploadPendingData()
+    {
+        if (_pendingVertices == null || _pendingStart >= _pendingEnd)
+            return;
+
+        int count = _pendingEnd - _pendingStart;
+        ReadOnlySpan<RenderVertex> pending = _pendingVertices.AsSpan(_pendingStart, count);
+        int byteOffset = checked(_pendingStart * RenderVertex.Layout.Stride);
+
+        _graphicsDevice.UpdateBuffer(_graphicsBuffer, pending, byteOffset);
+        _hasGpuData = true;
+
+        _pendingVertices = null;
+        _pendingStart = int.MaxValue;
+        _pendingEnd = 0;
     }
 
     private void ReleaseGraphicsBuffer()
@@ -152,6 +252,7 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
         _graphicsBuffer?.Dispose();
         _graphicsBuffer = null;
         _graphicsDevice = null;
+        _hasGpuData = false;
     }
 
     private void ThrowIfDisposed()

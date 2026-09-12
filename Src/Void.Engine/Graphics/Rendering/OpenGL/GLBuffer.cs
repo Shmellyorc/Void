@@ -9,6 +9,7 @@ namespace Void.Engine.Graphics.Rendering.OpenGL;
 internal sealed class GLBuffer : IGraphicsBuffer
 {
     private readonly GL _gl;
+    private readonly GLStateCache _state;
     private readonly BufferTargetARB _target;
     private uint _handle;
     private uint _vertexArray;
@@ -20,9 +21,10 @@ internal sealed class GLBuffer : IGraphicsBuffer
     internal uint Handle => _handle;
     internal BufferTargetARB Target => _target;
 
-    internal unsafe GLBuffer(GL gl, in BufferDescription description)
+    internal unsafe GLBuffer(GL gl, GLStateCache state, in BufferDescription description)
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+        _state = state ?? throw new ArgumentNullException(nameof(state));
         Description = description;
         _target = ToTarget(description.Type);
 
@@ -30,9 +32,14 @@ internal sealed class GLBuffer : IGraphicsBuffer
         if (_handle == 0)
             throw new InvalidOperationException("OpenGL failed to create a buffer object.");
 
-        _gl.BindBuffer(_target, _handle);
-        _gl.BufferData(_target, (nuint)description.SizeInBytes, null, ToUsage(description.Usage));
-        _gl.BindBuffer(_target, 0);
+        // Use the copy-write binding for storage allocation so index-buffer
+        // creation never mutates the element-buffer state of the active VAO.
+        _state.BindCopyWriteBuffer(_handle);
+        _gl.BufferData(
+            BufferTargetARB.CopyWriteBuffer,
+            (nuint)description.SizeInBytes,
+            null,
+            ToUsage(description.Usage));
     }
 
     internal void Bind()
@@ -58,7 +65,7 @@ internal sealed class GLBuffer : IGraphicsBuffer
         if (_vertexArray == 0)
             throw new InvalidOperationException("OpenGL failed to create a vertex array object.");
 
-        _gl.BindVertexArray(_vertexArray);
+        _state.BindVertexArray(_vertexArray);
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _handle);
 
         foreach (VertexAttributeDescription attribute in layout.Attributes.Span)
@@ -77,7 +84,7 @@ internal sealed class GLBuffer : IGraphicsBuffer
         }
 
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
-        _gl.BindVertexArray(0);
+        _state.BindVertexArray(0);
         return _vertexArray;
     }
 
@@ -96,12 +103,32 @@ internal sealed class GLBuffer : IGraphicsBuffer
         if (byteCount == 0)
             return;
 
-        _gl.BindBuffer(_target, _handle);
+        // Copy-write is a global buffer binding rather than VAO state, so an
+        // index-buffer upload cannot accidentally replace a VAO's EBO binding.
+        _state.BindCopyWriteBuffer(_handle);
+
         fixed (T* ptr = data)
         {
-            _gl.BufferSubData(_target, (nint)byteOffset, (nuint)byteCount, ptr);
+            // A true full-buffer update is a replacement, not a patch. BufferData
+            // lets the driver provide fresh storage instead of synchronizing with
+            // an older store that may still be in flight on the GPU.
+            if (byteOffset == 0 && byteCount == Description.SizeInBytes)
+            {
+                _gl.BufferData(
+                    BufferTargetARB.CopyWriteBuffer,
+                    (nuint)Description.SizeInBytes,
+                    ptr,
+                    ToUsage(Description.Usage));
+                return;
+            }
+
+            // Partial writes must preserve bytes outside the updated range.
+            _gl.BufferSubData(
+                BufferTargetARB.CopyWriteBuffer,
+                (nint)byteOffset,
+                (nuint)byteCount,
+                ptr);
         }
-        _gl.BindBuffer(_target, 0);
     }
 
     public void Dispose()
@@ -111,12 +138,14 @@ internal sealed class GLBuffer : IGraphicsBuffer
 
         if (_vertexArray != 0)
         {
+            _state.ForgetVertexArray(_vertexArray);
             _gl.DeleteVertexArray(_vertexArray);
             _vertexArray = 0;
         }
 
         if (_handle != 0)
         {
+            _state.ForgetBuffer(_handle);
             _gl.DeleteBuffer(_handle);
             _handle = 0;
         }

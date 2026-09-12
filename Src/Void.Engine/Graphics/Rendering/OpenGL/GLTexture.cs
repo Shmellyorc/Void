@@ -9,6 +9,7 @@ namespace Void.Engine.Graphics.Rendering.OpenGL;
 internal sealed class GLTexture : IGraphicsTexture
 {
     private readonly GL _gl;
+    private readonly GLStateCache _state;
     private uint _handle;
     private bool _disposed;
 
@@ -17,9 +18,14 @@ internal sealed class GLTexture : IGraphicsTexture
 
     internal uint Handle => _handle;
 
-    internal unsafe GLTexture(GL gl, in TextureDescription description, ReadOnlySpan<byte> initialData)
+    internal unsafe GLTexture(
+        GL gl,
+        GLStateCache state,
+        in TextureDescription description,
+        ReadOnlySpan<byte> initialData)
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+        _state = state ?? throw new ArgumentNullException(nameof(state));
         Description = description;
 
         if (description.SampleCount != 1)
@@ -36,7 +42,7 @@ internal sealed class GLTexture : IGraphicsTexture
 
         try
         {
-            _gl.BindTexture(TextureTarget.Texture2D, _handle);
+            _state.BindTexture2D(0, _handle);
             _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
             SetParameters(description);
@@ -75,8 +81,6 @@ internal sealed class GLTexture : IGraphicsTexture
 
             if (description.GenerateMipmaps)
                 _gl.GenerateMipmap(TextureTarget.Texture2D);
-
-            _gl.BindTexture(TextureTarget.Texture2D, 0);
         }
         catch
         {
@@ -92,8 +96,7 @@ internal sealed class GLTexture : IGraphicsTexture
         if (textureUnit < 0)
             throw new ArgumentOutOfRangeException(nameof(textureUnit));
 
-        _gl.ActiveTexture((TextureUnit)((int)TextureUnit.Texture0 + textureUnit));
-        _gl.BindTexture(TextureTarget.Texture2D, _handle);
+        _state.BindTexture2D(textureUnit, _handle);
     }
 
     internal unsafe void Update(
@@ -119,7 +122,7 @@ internal sealed class GLTexture : IGraphicsTexture
         var sourceFormats = ToFormats(sourceFormat);
         PixelFormat pixelFormat = sourceFormats.Pixel;
 
-        _gl.BindTexture(TextureTarget.Texture2D, _handle);
+        _state.BindTexture2D(0, _handle);
         _gl.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
 
         fixed (byte* ptr = data)
@@ -138,8 +141,6 @@ internal sealed class GLTexture : IGraphicsTexture
 
         if (Description.GenerateMipmaps)
             _gl.GenerateMipmap(TextureTarget.Texture2D);
-
-        _gl.BindTexture(TextureTarget.Texture2D, 0);
     }
 
     public void Dispose()
@@ -149,6 +150,7 @@ internal sealed class GLTexture : IGraphicsTexture
 
         if (_handle != 0)
         {
+            _state.ForgetTexture(_handle);
             _gl.DeleteTexture(_handle);
             _handle = 0;
         }

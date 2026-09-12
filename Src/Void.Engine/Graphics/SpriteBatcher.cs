@@ -1,3 +1,4 @@
+using Void.Engine.Graphics.RenderTargets;
 using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
 
 // ============================================================================
@@ -111,11 +112,12 @@ public sealed class SpriteBatcher : BaseBatcher
         public TextureEffects Effects;
     }
 
-    private const int VerticesPerQuad = 6;
-    private const int InitialCapacity = 1024;
+    private const int VerticesPerQuad = 4;
+    private const int IndicesPerQuad = 6;
 
     private DrawCommand[] _cmds;
     private readonly DrawCommandComparer _comparer;
+    private IndexBuffer _indexBuffer;
 
     /// <summary>
     /// Gets the name of the batcher.
@@ -123,7 +125,7 @@ public sealed class SpriteBatcher : BaseBatcher
     public override string Name => "SpriteBatcher";
 
     /// <summary>
-    /// Gets the number of vertices per command (6 for a quad).
+    /// Gets the number of unique vertices per command (4 for an indexed quad).
     /// </summary>
     protected override int VerticesPerCommand => VerticesPerQuad;
 
@@ -133,9 +135,9 @@ public sealed class SpriteBatcher : BaseBatcher
     /// <param name="capacity">The initial capacity of the batch.</param>
     public SpriteBatcher(int capacity = 0) : base(capacity)
     {
-        _capacity = capacity > 0 ? capacity : GetDefaultCapacity();
         _cmds = new DrawCommand[_capacity];
         _comparer = new DrawCommandComparer(_sortMode);
+        _indexBuffer = new IndexBuffer(_capacity);
     }
 
     #region Protected
@@ -149,8 +151,6 @@ public sealed class SpriteBatcher : BaseBatcher
     /// </summary>
     protected override void OnBegin()
     {
-        _currentTexture = null;
-
         AtlasManager.Instance.ProcessPendingDefragMoves(
             GameSettings.Instance.AtlasDefragMovesPerFrame);
 
@@ -199,6 +199,29 @@ public sealed class SpriteBatcher : BaseBatcher
     protected override bool CanBatchTogether(int indexA, int indexB)
         => GetTextureKey(_cmds[indexA]) == GetTextureKey(_cmds[indexB]);
 
+    protected override int GetTriangleCount(int totalVertices)
+        => totalVertices / 2;
+
+    protected override void SubmitGroup(int commandStart, int commandCount)
+    {
+        if (_vertexBuffer is not VertexBuffer vertexBuffer)
+            throw new InvalidOperationException("SpriteBatcher requires the renderer-neutral VertexBuffer implementation.");
+
+        int vertexStart = checked(commandStart * VerticesPerQuad);
+        int vertexCount = checked(commandCount * VerticesPerQuad);
+        int indexStart = checked(commandStart * IndicesPerQuad);
+        int indexCount = checked(commandCount * IndicesPerQuad);
+
+        vertexBuffer.DrawIndexed(
+            _renderTarget,
+            _indexBuffer,
+            checked((uint)vertexStart),
+            checked((uint)vertexCount),
+            checked((uint)indexStart),
+            checked((uint)indexCount),
+            _renderStates);
+    }
+
     /// <summary>
     /// Sets the render state for a group of commands.
     /// </summary>
@@ -229,6 +252,10 @@ public sealed class SpriteBatcher : BaseBatcher
 
         _vertexBuffer?.Dispose();
         _vertexBuffer = new VertexBuffer(newVertexSize);
+
+        _indexBuffer?.Dispose();
+        _indexBuffer = new IndexBuffer(newSize);
+
         _capacity = newSize;
     }
     #endregion
@@ -1027,9 +1054,7 @@ public sealed class SpriteBatcher : BaseBatcher
         ptr[0] = new RenderVertex(corners[0], color, new(srcLeft, srcTop));
         ptr[1] = new RenderVertex(corners[1], color, new(srcRight, srcTop));
         ptr[2] = new RenderVertex(corners[2], color, new(srcLeft, srcBottom));
-        ptr[3] = new RenderVertex(corners[1], color, new(srcRight, srcTop));
-        ptr[4] = new RenderVertex(corners[3], color, new(srcRight, srcBottom));
-        ptr[5] = new RenderVertex(corners[2], color, new(srcLeft, srcBottom));
+        ptr[3] = new RenderVertex(corners[3], color, new(srcRight, srcBottom));
     }
 
     #endregion
@@ -1044,6 +1069,9 @@ public sealed class SpriteBatcher : BaseBatcher
 
         if (_cmds != null)
             Array.Clear(_cmds, 0, _cmds.Length);
+
+        _indexBuffer?.Dispose();
+        _indexBuffer = null;
 
         base.OnDispose();
     }
