@@ -1,24 +1,25 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    
+
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Packer</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.0.1</Version>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
-    <Description>Asset packing library with encryption and compression for Void Engine.</Description>
+    <Description>Asset packing library for VOID Engine with AES-GCM authenticated encryption, compression, integrity verification, chunked streaming reads, and incremental updates.</Description>
     <Copyright>Copyright (c) 2026 Void Engine</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
-    <PackageTags>void;packer;asset-packing;encryption;aes-gcm;compression;game-framework;dotnet</PackageTags>
+    <PackageTags>void;packer;asset-packing;encryption;aes-gcm;authenticated-encryption;compression;streaming;integrity;game-framework;dotnet</PackageTags>
+    <PackageReleaseNotes>1.0.1 refreshes the package documentation and NuGet metadata to accurately describe authenticated encryption, compression, integrity checking, streaming reads, and update behavior. No pack-format breaking changes are introduced by this metadata/documentation release.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

@@ -8,7 +8,7 @@
 
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Engine</PackageId>
-    <Version>1.2.1</Version>
+    <Version>2.0.0</Version>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
     <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
@@ -18,38 +18,29 @@
     <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>game-engine;2d;game-framework;dotnet;sdl3;silk-net;opengl;rendering;pluggable-renderer;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
+    <PackageTags>game-engine;2d;game-framework;dotnet;sdl3;silk-net;opengl;rendering;pluggable-renderer;renderer-api;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageReleaseNotes>
-    [1.2.1] 2026.9.8
-      Hotfix:
-      * Critical fix for DiscoverableHelper stack overflow caused by infinite recursion when scanning assemblies
-      * DiscoverableHelper could crash the engine at startup or during mod loading when ExcludeFramework mode was active
+    [2.0.0] 2026.9.12
 
-      Added:
-      * Added TryFindManyByName, TryFindManyByCategory, and TryFindManyByNameAndCategory for bool-based collection queries
-      * Added TryFindAll for bool-based retrieval of all discoverable types
-      * Added string and enum overloads for all new TryFindMany methods
+      Major architecture update:
+      * Removed the SFML.Net dependency from VOID Engine
+      * SDL3-CS now owns windowing, displays, fullscreen modes, events, keyboard, mouse, gamepads, and OpenGL context creation
+      * Added the built-in renderer using Silk.NET.OpenGL
+      * Added public renderer-neutral contracts for external Vulkan, Direct3D, Metal, OpenGL, or custom renderer backends
+      * Added native window-handle access through IRendererContext for renderer plugins where the active platform supports it
+      * Reworked textures, shaders, render targets, atlas handling, and graphics resources around renderer-neutral APIs
+      * Replaced SFML audio with Silk.NET.OpenAL and NAudio.SoundFile decoding
+      * Added multi-monitor/display APIs and Linux X11/XWayland/Wayland backend selection
+      * Preserved the high-level SpriteBatcher, PrimitiveBatcher, asset, camera, font, and game lifecycle workflows
+      * Refreshed public documentation, wiki pages, and runnable examples for the new architecture
 
-      Fixed:
-      * Fixed infinite recursion in IsGameAssembly that caused stack overflow during assembly scanning
-      * Fixed DiscoverableHelper not respecting AssemblyScanMode.ExcludeFramework due to recursive method call
-      * Fixed DiscoverableHelper inspecting assembly metadata inside AssemblyLoad events, which could trigger recursive assembly loading and cause stack overflow
-
-      Removed:
-      * Removed IsGameAssembly method entirely to eliminate recursion and consolidate assembly filtering
-
-      Changed:
-      * Replaced IsGameAssembly with ShouldScanAssembly and IsDefaultAllowed for safer assembly scanning
-      * Updated OnAssemblyLoad to only increment the load version counter without touching assembly metadata
-      * Wrapped ShouldScanAssembly in try/catch to gracefully skip assemblies that cannot be inspected
-
-      Impact:
-      * Any project using DiscoverableHelper with default settings could experience stack overflow crashes
-      * Mod loading or assembly scanning could crash the engine at runtime
-      * This hotfix is recommended for all users on 1.2.0 or below.
+      Breaking changes:
+      * SFML-specific public types and dependencies are no longer part of VOID
+      * Custom platform, renderer, shader, texture, render-target, or audio integrations may need to migrate to the new public contracts
+      * Renderer plugins should use IRendererBackend, IGraphicsDevice, and IRendererContext instead of depending on VOID's internal SDL implementation
     </PackageReleaseNotes>
   </PropertyGroup>
 

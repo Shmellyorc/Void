@@ -1,11 +1,11 @@
-﻿<!-- 
+<!--
   Build the asset pack:
   Packs all files from Content/ except:
     - All .aseprite source files
     - Unused font PNGs (Dialog, Knowledge, Messagebox)
-  
+
   Output: GameAssets.pack + GameAssets.key in the Content folder.
-  
+
   Test Compile:
   /home/<user>/Documents/Void/Src/Void.Packer.CLI/bin/Debug/net10.0/Void.Packer.CLI build \
   -c "/home/<user>/Documents/Void/Examples/FlappyBirb/Content" \
@@ -23,9 +23,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>packer</ToolCommandName>
-    <Version>1.0.0</Version>
-    <Description>Asset packer for Void Engine games. Packs content files into .pack format with optional encryption and compression.</Description>
-    
+    <Version>1.0.1</Version>
+    <Description>Command-line tool for building, verifying, inspecting, extracting, and updating VOID asset packs with authenticated encryption and compression.</Description>
+
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Packer.CLI</PackageId>
     <Authors>Shmellyorc</Authors>
@@ -36,9 +36,9 @@
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
-    <PackageTags>void;packer;cli;asset-packing;encryption;game-framework;dotnet</PackageTags>
+    <PackageTags>void;packer;cli;dotnet-tool;asset-packing;encryption;aes-gcm;compression;integrity;game-framework;dotnet</PackageTags>
+    <PackageReleaseNotes>1.0.1 refreshes the CLI documentation and NuGet metadata, including the installed command name (`packer`). Runtime pack behavior is unchanged by this documentation/metadata release.</PackageReleaseNotes>
   </PropertyGroup>
-
 
   <ItemGroup>
     <PackageReference Include="CommandLineParser" Version="2.9.1" />
