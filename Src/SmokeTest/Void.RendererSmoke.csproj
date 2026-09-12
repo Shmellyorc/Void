@@ -7,10 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SDL3-CS" Version="3.4.16" />
-    <PackageReference Include="SDL3-CS.Linux" Version="3.4.16" />
-    <PackageReference Include="SDL3-CS.Windows" Version="3.4.16" />
-    <PackageReference Include="SDL3-CS.MacOS" Version="3.4.16" />
-    <PackageReference Include="Silk.NET.OpenGL" Version="2.23.0" />
+    <ProjectReference Include="..\Void.Engine\Void.Engine.csproj" />
   </ItemGroup>
 </Project>

@@ -437,6 +437,86 @@ internal sealed class SdlWindowHost : IDisposable
         return SDL3.SDL.GLSetSwapInterval(interval);
     }
 
+    /// <summary>
+    /// Attempts to retrieve a borrowed platform-native handle for an external
+    /// renderer backend. Unsupported handle kinds return false and zero.
+    /// </summary>
+    public bool TryGetNativeHandle(NativeWindowHandleKind kind, out nint handle)
+    {
+        handle = 0;
+
+        if (_disposed || _window == IntPtr.Zero)
+            return false;
+
+        uint windowProperties = SDL3.SDL.GetWindowProperties(_window);
+        if (windowProperties == 0)
+            return false;
+
+        handle = (Capabilities.Backend, kind) switch
+        {
+            // Win32
+            (NativeWindowBackend.Windows, NativeWindowHandleKind.Window)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowWin32HWNDPointer),
+
+            (NativeWindowBackend.Windows, NativeWindowHandleKind.Display)
+                => GetCurrentDisplayPointer(SDL3.SDL.Props.DisplayWindowsHMonitorPointer),
+
+            (NativeWindowBackend.Windows, NativeWindowHandleKind.Instance)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowWin32InstancePointer),
+
+            (NativeWindowBackend.Windows, NativeWindowHandleKind.Surface)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowWin32HDCPointer),
+
+            // X11 / XWayland
+            (NativeWindowBackend.X11, NativeWindowHandleKind.Window)
+                => GetNumber(windowProperties, SDL3.SDL.Props.WindowX11WindowNumber),
+
+            (NativeWindowBackend.X11, NativeWindowHandleKind.Display)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowX11DisplayPointer),
+
+            // Native Wayland
+            (NativeWindowBackend.Wayland, NativeWindowHandleKind.Window)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowWaylandSurfacePointer),
+
+            (NativeWindowBackend.Wayland, NativeWindowHandleKind.Display)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowWaylandDisplayPointer),
+
+            (NativeWindowBackend.Wayland, NativeWindowHandleKind.Surface)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowWaylandSurfacePointer),
+
+            // Cocoa
+            (NativeWindowBackend.Cocoa, NativeWindowHandleKind.Window)
+                => GetPointer(windowProperties, SDL3.SDL.Props.WindowCocoaWindowPointer),
+
+            _ => 0
+        };
+
+        return handle != 0;
+    }
+
+    private static nint GetPointer(uint properties, string name)
+        => SDL3.SDL.GetPointerProperty(properties, name, IntPtr.Zero);
+
+    private static nint GetNumber(uint properties, string name)
+    {
+        long value = SDL3.SDL.GetNumberProperty(properties, name, 0);
+        return value == 0 ? 0 : unchecked((nint)value);
+    }
+
+    private nint GetCurrentDisplayPointer(string name)
+    {
+        DisplayId display = Display;
+        if (!display.IsValid)
+            return 0;
+
+        uint displayProperties = SDL3.SDL.GetDisplayProperties(display.NativeValue);
+        if (displayProperties == 0)
+            return 0;
+
+        return SDL3.SDL.GetPointerProperty(displayProperties, name, IntPtr.Zero);
+    }
+
+
     public void GetMouseState(Span<bool> buttons, out int x, out int y)
     {
         ThrowIfDisposed();

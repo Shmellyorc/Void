@@ -28,12 +28,5 @@ internal sealed class RendererContext : IRendererContext
     public bool TrySetSwapInterval(int interval) => _window.TrySetSwapInterval(interval);
 
     public bool TryGetNativeHandle(NativeWindowHandleKind kind, out nint handle)
-    {
-        // Native platform-handle extraction will be added when the first non-OpenGL
-        // backend needs it. The SDL window pointer itself is already available via
-        // WindowSystemHandle and is sufficient for the built-in OpenGL path.
-        handle = 0;
-        
-        return false;
-    }
+        => _window.TryGetNativeHandle(kind, out handle);
 }

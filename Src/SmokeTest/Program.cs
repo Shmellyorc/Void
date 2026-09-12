@@ -1,69 +1,196 @@
-using SDL3;
-using Silk.NET.OpenGL;
+// Renderer API regression test.
+// Verifies that external renderer backends can retrieve platform-native handles
+// through IRendererContext without depending on VOID's internal SDL implementation.
+//
+// This intentionally exercises the same public path available to third-party
+// renderer plugins through GameSettings.SetRenderer().
+//
+// Added during VOID's migration from SFML to SDL3 + Silk.NET.
 
-if (!SDL.Init(SDL.InitFlags.Video))
-    throw new InvalidOperationException($"SDL init failed: {SDL.GetError()}");
+using Void.Engine;
+using Void.Engine.Graphics.Rendering;
+using Void.Engine.Systems;
 
-IntPtr window = IntPtr.Zero;
-IntPtr context = IntPtr.Zero;
-GL? gl = null;
+Console.WriteLine("VOID Native Handle Bridge Smoke Test");
+Console.WriteLine();
+
+var settings = GameSettings.Instance
+    .SetRenderer(() => new NativeHandleProbeRenderer());
+
+// On Linux, force the exact backend we want to verify. On a Wayland desktop
+// this intentionally exercises VOID through XWayland/X11.
+if (OperatingSystem.IsLinux())
+    settings.SetLinuxWindowBackend(LinuxWindowBackend.X11);
 
 try
 {
-    SDL.GLResetAttributes();
-    SDL.GLSetAttribute(SDL.GLAttr.ContextMajorVersion, 3);
-    SDL.GLSetAttribute(SDL.GLAttr.ContextMinorVersion, 3);
-    SDL.GLSetAttribute(SDL.GLAttr.ContextProfileMask, (int)SDL.GLProfile.Core);
-    SDL.GLSetAttribute(SDL.GLAttr.DoubleBuffer, 1);
+    // The probe renderer throws ProbeSucceededException from Initialize()
+    // after validating the native handles. Window catches it, cleans up the
+    // SDL host, and rethrows it to us here.
+    using var window = new Window(
+        640,
+        360,
+        "VOID Native Handle Bridge Smoke Test",
+        WindowMode.Windowed,
+        vsync: false);
 
-    window = SDL.CreateWindow(
-        "VOID SDL3-CS + Silk.NET OpenGL Smoke Test",
-        1280,
-        720,
-        SDL.WindowFlags.OpenGL | SDL.WindowFlags.Resizable);
+    Console.Error.WriteLine("FAIL: probe renderer initialized without completing the probe.");
+    return 1;
+}
+catch (ProbeSucceededException)
+{
+    Console.WriteLine();
+    Console.WriteLine("PASS: native handle bridge returned the expected non-zero handles.");
+    return 0;
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine();
+    Console.Error.WriteLine($"FAIL: {ex.Message}");
+    Console.Error.WriteLine(ex);
+    return 1;
+}
 
-    if (window == IntPtr.Zero)
-        throw new InvalidOperationException($"SDL_CreateWindow failed: {SDL.GetError()}");
+sealed class NativeHandleProbeRenderer : IRendererBackend
+{
+    public string Name => "VOID Native Handle Probe";
+    public GraphicsApi Api => GraphicsApi.Custom;
+    public GraphicsVersion Version => default;
+    public RendererWindowFlags RequiredWindowFlags => RendererWindowFlags.None;
+    public RendererCapabilities Capabilities => default;
 
-    context = SDL.GLCreateContext(window);
-    if (context == IntPtr.Zero)
-        throw new InvalidOperationException($"SDL_GL_CreateContext failed: {SDL.GetError()}");
+    // These are intentionally never reached. The probe completes during
+    // Initialize(), before Window asks for rendering resources.
+    public IGraphicsDevice Device
+        => throw new NotSupportedException("The native-handle probe does not create a graphics device.");
 
-    if (!SDL.GLMakeCurrent(window, context))
-        throw new InvalidOperationException($"SDL_GL_MakeCurrent failed: {SDL.GetError()}");
+    public IGraphicsShaderProgram Default2DShader
+        => throw new NotSupportedException("The native-handle probe does not create shaders.");
 
-    if (!SDL.GLSetSwapInterval(1))
-        Console.WriteLine($"VSync could not be enabled: {SDL.GetError()}");
+    public bool IsInitialized { get; private set; }
 
-    gl = GL.GetApi(name => SDL.GLGetProcAddress(name));
-    gl.Viewport(0, 0, 1280, 720);
-
-    bool running = true;
-    while (running)
+    public void Initialize(IRendererContext context)
     {
-        while (SDL.PollEvent(out var e))
+        ArgumentNullException.ThrowIfNull(context);
+
+        IsInitialized = true;
+
+        Console.WriteLine($"Platform backend: {context.PlatformBackend}");
+        Console.WriteLine($"VOID window-system handle: {Format(context.WindowSystemHandle)}");
+        Console.WriteLine();
+
+        switch (context.PlatformBackend)
         {
-            SDL.EventType type = (SDL.EventType)e.Type;
-            if (type is SDL.EventType.Quit or SDL.EventType.WindowCloseRequested)
-                running = false;
+            case NativeWindowBackend.X11:
+                ProbeX11(context);
+                break;
+
+            case NativeWindowBackend.Windows:
+                ProbeWindows(context);
+                break;
+
+            case NativeWindowBackend.Wayland:
+                ProbeWayland(context);
+                break;
+
+            case NativeWindowBackend.Cocoa:
+                ProbeCocoa(context);
+                break;
+
+            default:
+                throw new PlatformNotSupportedException(
+                    $"Native-handle smoke test does not have assertions for " +
+                    $"{context.PlatformBackend}.");
         }
 
-        gl.ClearColor(100f / 255f, 149f / 255f, 237f / 255f, 1f);
-        gl.Clear(ClearBufferMask.ColorBufferBit);
+        throw new ProbeSucceededException();
+    }
 
-        if (!SDL.GLSwapWindow(window))
-            throw new InvalidOperationException($"SDL_GL_SwapWindow failed: {SDL.GetError()}");
+    private static void ProbeX11(IRendererContext context)
+    {
+        nint window = RequireHandle(context, NativeWindowHandleKind.Window);
+        nint display = RequireHandle(context, NativeWindowHandleKind.Display);
+
+        Console.WriteLine("X11 bridge:");
+        Console.WriteLine($"  Window/XID : {Format(window)}");
+        Console.WriteLine($"  Display*   : {Format(display)}");
+    }
+
+    private static void ProbeWindows(IRendererContext context)
+    {
+        nint hwnd = RequireHandle(context, NativeWindowHandleKind.Window);
+        nint monitor = RequireHandle(context, NativeWindowHandleKind.Display);
+        nint instance = RequireHandle(context, NativeWindowHandleKind.Instance);
+        nint hdc = RequireHandle(context, NativeWindowHandleKind.Surface);
+
+        Console.WriteLine("Win32 bridge:");
+        Console.WriteLine($"  HWND       : {Format(hwnd)}");
+        Console.WriteLine($"  HMONITOR   : {Format(monitor)}");
+        Console.WriteLine($"  HINSTANCE  : {Format(instance)}");
+        Console.WriteLine($"  HDC        : {Format(hdc)}");
+    }
+
+    private static void ProbeWayland(IRendererContext context)
+    {
+        nint surface = RequireHandle(context, NativeWindowHandleKind.Window);
+        nint display = RequireHandle(context, NativeWindowHandleKind.Display);
+        nint renderSurface = RequireHandle(context, NativeWindowHandleKind.Surface);
+
+        if (surface != renderSurface)
+        {
+            throw new InvalidOperationException(
+                "Wayland Window and Surface handles were expected to resolve to the same wl_surface*.");
+        }
+
+        Console.WriteLine("Wayland bridge:");
+        Console.WriteLine($"  wl_surface*: {Format(surface)}");
+        Console.WriteLine($"  wl_display*: {Format(display)}");
+    }
+
+    private static void ProbeCocoa(IRendererContext context)
+    {
+        nint window = RequireHandle(context, NativeWindowHandleKind.Window);
+
+        Console.WriteLine("Cocoa bridge:");
+        Console.WriteLine($"  NSWindow*  : {Format(window)}");
+        Console.WriteLine("  Metal View/Surface are tested only by a renderer requesting RendererWindowFlags.Metal.");
+    }
+
+    private static nint RequireHandle(
+        IRendererContext context,
+        NativeWindowHandleKind kind)
+    {
+        bool success = context.TryGetNativeHandle(kind, out nint handle);
+
+        Console.WriteLine(
+            $"TryGetNativeHandle({kind}) -> {success}, {Format(handle)}");
+
+        if (!success)
+            throw new InvalidOperationException(
+                $"TryGetNativeHandle({kind}) returned false.");
+
+        if (handle == 0)
+            throw new InvalidOperationException(
+                $"TryGetNativeHandle({kind}) returned a zero handle.");
+
+        return handle;
+    }
+
+    private static string Format(nint handle)
+        => $"0x{unchecked((nuint)handle):X}";
+
+    public void BeginFrame(Color clearColor)
+        => throw new NotSupportedException();
+
+    public void EndFrame()
+        => throw new NotSupportedException();
+
+    public void Resize(int width, int height)
+        => throw new NotSupportedException();
+
+    public void Dispose()
+    {
     }
 }
-finally
-{
-    gl?.Dispose();
 
-    if (context != IntPtr.Zero)
-        SDL.GLDestroyContext(context);
-
-    if (window != IntPtr.Zero)
-        SDL.DestroyWindow(window);
-
-    SDL.Quit();
-}
+sealed class ProbeSucceededException : Exception;
