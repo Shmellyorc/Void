@@ -1,83 +1,60 @@
 // ============================================================================
 //  RenderTarget.cs
 // ============================================================================
-//  Provides a factory and pooling system for render target creation,
-//  retrieval, and recycling. Manages a pool of render targets to reduce
-//  allocations and improve performance.
+//  Provides pooled renderer-owned off-screen render targets.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics.RenderTargets;
 
 /// <summary>
-/// Provides a factory and pooling system for render target creation,
-/// retrieval, and recycling.
+/// Provides pooled off-screen render targets backed by the active renderer.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="RenderTarget"/> static class manages a pool of render targets
-/// to reduce allocations and improve performance. It provides methods for:
-/// <list type="bullet">
-///   <item><description>Creating or retrieving render targets from the pool</description></item>
-///   <item><description>Returning render targets to the pool for reuse</description></item>
-///   <item><description>Resizing render targets with automatic pool management</description></item>
-/// </list>
+/// Targets are pooled by width, height, and sRGB setting. A target borrowed with
+/// <see cref="Get(int,int,bool)"/> is exclusively owned by the caller until it is
+/// returned with <see cref="Return"/>.
 /// </para>
 /// <para>
-/// <b>How It Works:</b>
-/// <list type="number">
-///   <item><description>Call <see cref="Get(int,int,bool)"/> to obtain a render target</description></item>
-///   <item><description>If a target with matching size and sRGB settings exists in the pool, it is reused</description></item>
-///   <item><description>If no target is available, a new one is created</description></item>
-///   <item><description>Call <see cref="Return(IRenderTarget)"/> to return the target to the pool when done</description></item>
-///   <item><description>The pool automatically clears returned targets to a transparent state</description></item>
-/// </list>
+/// Always clear a target before relying on its initial contents. Returned targets
+/// are cleared to transparent before entering the pool, but a newly created target
+/// does not promise any initial pixel value.
 /// </para>
 /// <para>
-/// <b>Usage Example:</b>
+/// Return each borrowed target exactly once and do not continue using the target,
+/// or a texture obtained from it, after returning it to the pool. Another caller may
+/// immediately receive and modify the same render target.
+/// </para>
 /// <code>
-/// // Get a render target from the pool
-/// var renderTarget = RenderTarget.Get(1920, 1080, sRGB: true);
-/// 
-/// // Use the render target for rendering
-/// renderTarget.Clear(Color.Transparent);
-/// // ... draw operations ...
-/// renderTarget.Display();
-/// 
-/// // Return the render target to the pool
-/// RenderTarget.Return(renderTarget);
-/// 
-/// // Resize an existing render target
-/// var resized = RenderTarget.Resize(renderTarget, 1280, 720);
+/// IRenderTarget target = RenderTarget.Get(320, 180);
+/// target.Clear(Color.Transparent);
+/// // Draw into target.
+/// target.Display();
+/// Texture renderedTexture = target.GetTexture();
+/// // Use renderedTexture before returning target.
+/// RenderTarget.Return(target);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe and should be accessed from the main thread.
-/// </para>
 /// </remarks>
 public static class RenderTarget
 {
     private static readonly Dictionary<(int Width, int Height, bool Srgb), Queue<IRenderTarget>> _pool = [];
 
     /// <summary>
-    /// Gets a render target from the pool or creates a new one.
+    /// Gets a pooled render target with the requested size and color format.
     /// </summary>
-    /// <param name="size">The size of the render target in pixels.</param>
-    /// <param name="sRGB">Whether the render target should use sRGB color space.</param>
-    /// <returns>A render target of the specified size and sRGB setting.</returns>
-    /// <remarks>
-    /// <para>
-    /// This method first checks the pool for an available render target matching
-    /// the requested size and sRGB setting. If found, it is returned. Otherwise,
-    /// a new render target is created.
-    /// </para>
-    /// <para>
-    /// The returned render target is cleared to transparent and ready for use.
-    /// </para>
-    /// </remarks>
+    /// <param name="size">
+    /// Requested size in pixels. The vector components are converted to integer dimensions.
+    /// </param>
+    /// <param name="sRGB">
+    /// <see langword="true"/> to request an sRGB color target; otherwise, <see langword="false"/>.
+    /// </param>
+    /// <returns>A render target matching the requested dimensions and sRGB setting.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when a new target must be created but no renderer is initialized.
+    /// </exception>
     public static IRenderTarget Get(Vect2 size, bool sRGB = false)
     {
         var key = ((int)size.X, (int)size.Y, sRGB);
@@ -89,31 +66,31 @@ public static class RenderTarget
     }
 
     /// <summary>
-    /// Gets a render target from the pool or creates a new one.
+    /// Gets a pooled render target with the requested size and color format.
     /// </summary>
-    /// <param name="width">The width of the render target in pixels.</param>
-    /// <param name="height">The height of the render target in pixels.</param>
-    /// <param name="sRGB">Whether the render target should use sRGB color space.</param>
-    /// <returns>A render target of the specified size and sRGB setting.</returns>
+    /// <param name="width">Requested width in pixels.</param>
+    /// <param name="height">Requested height in pixels.</param>
+    /// <param name="sRGB">
+    /// <see langword="true"/> to request an sRGB color target; otherwise, <see langword="false"/>.
+    /// </param>
+    /// <returns>A render target matching the requested dimensions and sRGB setting.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when a new target must be created but no renderer is initialized.
+    /// </exception>
     /// <remarks>
-    /// This is a convenience overload for <see cref="Get(Vect2,bool)"/>.
+    /// This overload is equivalent to <see cref="Get(Vect2,bool)"/>.
     /// </remarks>
     public static IRenderTarget Get(int width, int height, bool sRGB = false)
         => Get(new(width, height), sRGB);
 
     /// <summary>
-    /// Returns a render target to the pool for reuse.
+    /// Returns a render target to the pool for later reuse.
     /// </summary>
-    /// <param name="target">The render target to return to the pool.</param>
+    /// <param name="target">The borrowed target to return, or null to do nothing.</param>
     /// <remarks>
-    /// <para>
-    /// The render target is cleared to transparent before being added to the pool
-    /// to ensure it is in a clean state for future use.
-    /// </para>
-    /// <para>
-    /// The target is pooled by its size and sRGB setting. Future calls to
-    /// <see cref="Get(Vect2, bool)"/> with matching settings may reuse this target.
-    /// </para>
+    /// The target is cleared to transparent before it is queued under its current
+    /// width, height, and sRGB setting. The caller must stop using the target and its
+    /// exposed texture after this method returns.
     /// </remarks>
     public static void Return(IRenderTarget target)
     {
@@ -129,25 +106,22 @@ public static class RenderTarget
     }
 
     /// <summary>
-    /// Resizes a render target, returning the existing one to the pool if needed.
+    /// Gets a render target matching new dimensions, returning the current target
+    /// to the pool when replacement is required.
     /// </summary>
-    /// <param name="current">The current render target to resize.</param>
-    /// <param name="newWidth">The new width in pixels.</param>
-    /// <param name="newHeight">The new height in pixels.</param>
-    /// <param name="sRGB">Whether the render target should use sRGB color space.</param>
+    /// <param name="current">The current target, or null when no target has been allocated.</param>
+    /// <param name="newWidth">Requested width in pixels.</param>
+    /// <param name="newHeight">Requested height in pixels.</param>
+    /// <param name="sRGB">
+    /// <see langword="true"/> to request an sRGB color target; otherwise, <see langword="false"/>.
+    /// </param>
     /// <returns>
-    /// A render target with the new size and sRGB setting. If the existing target
-    /// already matches the requested settings, it is returned unchanged.
+    /// <paramref name="current"/> when its dimensions and sRGB setting already match;
+    /// otherwise, a target borrowed from the matching pool.
     /// </returns>
     /// <remarks>
-    /// <para>
-    /// If the current render target's size or sRGB setting does not match the
-    /// requested values, it is returned to the pool and a new target is retrieved.
-    /// </para>
-    /// <para>
-    /// This method is useful for handling window resize events or changing
-    /// render target sizes dynamically.
-    /// </para>
+    /// When replacement occurs, <paramref name="current"/> has been returned to the
+    /// pool and must no longer be used. Continue with the target returned by this method.
     /// </remarks>
     public static IRenderTarget Resize(IRenderTarget current, int newWidth, int newHeight, bool sRGB = false)
     {

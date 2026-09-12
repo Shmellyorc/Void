@@ -1,10 +1,16 @@
+// ============================================================================
+//  RendererRuntime.cs
+// ============================================================================
+//  Internal access to the renderer currently owned by VOID.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Graphics.Rendering;
 
-/// <summary>
-/// Internal access point for the renderer currently owned by the engine.
-/// Game code and renderer plugins continue to use the public renderer contracts;
-/// this class only lets VOID's built-in systems discover the active device.
-/// </summary>
+// Game code and renderer plugins use the public renderer contracts. This type only
+// lets VOID's built-in systems discover the active backend and shared 2D shader.
 internal static class RendererRuntime
 {
     private static IRendererBackend _backend;

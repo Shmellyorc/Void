@@ -1,12 +1,16 @@
+// ============================================================================
+//  IGraphicsBufferSource.cs
+// ============================================================================
+//  Internal access to renderer-owned graphics buffers used by draw submission.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Graphics.RenderTargets;
 
-/// <summary>
-/// Internal bridge used while VOID transitions its legacy render-target path to
-/// the pluggable graphics device. It deliberately does not expand the public
-/// IVertexBuffer contract.
-/// </summary>
 internal interface IGraphicsBufferSource
 {
     bool TryGetGraphicsBuffer(out IGraphicsBuffer buffer);

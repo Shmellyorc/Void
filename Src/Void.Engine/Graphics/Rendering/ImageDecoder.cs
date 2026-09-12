@@ -1,10 +1,17 @@
+// ============================================================================
+//  ImageDecoder.cs
+// ============================================================================
+//  Renderer-independent image decoding before GPU upload.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using StbImageSharp;
 
 namespace Void.Engine.Graphics.Rendering;
 
-/// <summary>
-/// Renderer-independent decoded image data used before GPU upload.
-/// </summary>
+// Decoded image data stays renderer-neutral so backends only receive raw RGBA8 pixels.
 internal readonly struct DecodedImage
 {
     internal int Width { get; }
@@ -29,10 +36,8 @@ internal readonly struct DecodedImage
     }
 }
 
-/// <summary>
-/// Central image decoder. Encoded PNG/JPG/etc. data is decoded here so renderer
-/// backends only ever receive raw pixel bytes.
-/// </summary>
+// Encoded PNG, JPG, and other supported image data is decoded here rather than
+// inside a renderer backend.
 internal static class ImageDecoder
 {
     internal static DecodedImage DecodeRgba(byte[] encodedData)

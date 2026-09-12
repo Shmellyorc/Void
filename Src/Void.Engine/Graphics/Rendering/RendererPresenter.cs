@@ -1,9 +1,14 @@
+// ============================================================================
+//  RendererPresenter.cs
+// ============================================================================
+//  Renderer-neutral final blit from VOID's game surface to the native backbuffer.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Graphics.Rendering;
 
-/// <summary>
-/// Renderer-neutral final blit used by Window to scale the engine render target
-/// into the native backbuffer. It uses the backend's built-in 2D program.
-/// </summary>
 internal sealed class RendererPresenter : IDisposable
 {
     private readonly IGraphicsDevice _device;

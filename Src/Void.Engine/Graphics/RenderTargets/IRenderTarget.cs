@@ -1,156 +1,137 @@
 // ============================================================================
 //  IRenderTarget.cs
 // ============================================================================
-//  Defines the contract for render targets that can be drawn to, cleared,
-//  and displayed. Supports custom views, vertex buffer rendering, and
-//  texture retrieval for post-processing and atlas management.
+//  Defines the renderer-neutral contract for drawing into a render surface.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
+
+using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Graphics.RenderTargets;
 
 /// <summary>
-/// Defines the contract for render targets that can be drawn to, cleared,
-/// and displayed.
+/// Represents a renderer-neutral destination that can receive vertex-buffer
+/// submissions and optionally expose its rendered color texture.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="IRenderTarget"/> interface provides a unified abstraction
-/// for renderable surfaces including the main window, render textures, and
-/// custom render targets. It supports:
-/// <list type="bullet">
-///   <item><description>Clearing with a specified color</description></item>
-///   <item><description>Drawing vertex buffers with render states</description></item>
-///   <item><description>Displaying the rendered content</description></item>
-///   <item><description>View/camera management</description></item>
-///   <item><description>Texture retrieval for post-processing and atlas management</description></item>
-/// </list>
+/// VOID's built-in off-screen targets are obtained from <see cref="RenderTarget"/>.
+/// Custom render-target implementations participate in the same batching path by
+/// exposing the renderer-neutral graphics device and graphics render target that
+/// back the surface through <see cref="GraphicsDevice"/> and
+/// <see cref="GraphicsRenderTarget"/>.
 /// </para>
 /// <para>
-/// <b>Usage Example:</b>
+/// The graphics resources returned by those properties must belong to the same
+/// active renderer backend. This lets VOID's built-in vertex-buffer path submit
+/// to third-party render surfaces without depending on a concrete VOID target type.
+/// </para>
+/// <para>
+/// Camera transforms used by VOID's built-in rendering path are carried through
+/// <see cref="BatchRenderState"/>. <see cref="SetView"/> remains part of the target
+/// contract so an implementation can react to camera changes when it needs to.
+/// </para>
 /// <code>
-/// // Get the main render target (game window)
-/// IRenderTarget target = Game.Instance.Window;
-/// 
-/// // Clear and draw
-/// target.Clear(Color.CornflowerBlue);
-/// target.Draw(vertexBuffer, 0, 100, renderStates);
+/// IRenderTarget target = RenderTarget.Get(320, 180);
+/// target.Clear(Color.Transparent);
+/// // Submit drawing commands to target.
 /// target.Display();
-/// 
-/// // Create a render texture for post-processing
-/// var renderTexture = RenderTarget.Get(1920, 1080);
-/// renderTexture.Clear(Color.Transparent);
-/// // ... draw to it ...
-/// var texture = renderTexture.GetTexture();
+/// Texture texture = target.GetTexture();
+/// RenderTarget.Return(target);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// Implementations are not thread-safe and should be accessed from the main thread.
-/// </para>
 /// </remarks>
 public interface IRenderTarget
 {
     /// <summary>
-    /// Clears the render target with the specified color.
+    /// Gets the renderer-neutral graphics device that owns this render target.
     /// </summary>
-    /// <param name="color">The color to clear the render target with.</param>
     /// <remarks>
-    /// This method fills the entire render target with the specified color,
-    /// clearing any previously rendered content.
+    /// The returned device must be the active device used to create
+    /// <see cref="GraphicsRenderTarget"/> and any graphics resources submitted to it.
     /// </remarks>
+    IGraphicsDevice GraphicsDevice { get; }
+
+    /// <summary>
+    /// Gets the renderer-owned render-target resource used for draw submission.
+    /// </summary>
+    /// <remarks>
+    /// The resource must belong to <see cref="GraphicsDevice"/> and remain valid
+    /// while the target is available for drawing.
+    /// </remarks>
+    IGraphicsRenderTarget GraphicsRenderTarget { get; }
+
+    /// <summary>
+    /// Clears the render target to the specified color.
+    /// </summary>
+    /// <param name="color">The color written across the target.</param>
     void Clear(Color color);
 
     /// <summary>
-    /// Draws a vertex buffer to the render target.
+    /// Draws a range of vertices from a vertex buffer.
     /// </summary>
-    /// <param name="buffer">The vertex buffer to draw.</param>
-    /// <param name="vertexStart">The starting vertex index in the buffer.</param>
-    /// <param name="vertexCount">The number of vertices to draw.</param>
-    /// <param name="states">The backend-neutral batch render state to apply.</param>
+    /// <param name="buffer">The vertex buffer that owns the geometry.</param>
+    /// <param name="vertexStart">The zero-based first vertex to submit.</param>
+    /// <param name="vertexCount">The number of vertices to submit.</param>
+    /// <param name="states">The renderer-neutral state used for the submission.</param>
     /// <remarks>
-    /// <para>
-    /// This method renders the specified range of vertices from the vertex buffer
-    /// using the provided render states. The buffer's primitive type determines
-    /// how the vertices are rendered (points, lines, triangles, etc.).
-    /// </para>
+    /// Implementations using VOID's normal batching path can delegate the submission
+    /// to <paramref name="buffer"/>. The buffer uses this target's public graphics
+    /// resources rather than requiring a specific concrete target implementation.
     /// </remarks>
     void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, BatchRenderState states);
 
     /// <summary>
-    /// Displays the rendered content to the target surface.
+    /// Completes target-specific work required after drawing.
     /// </summary>
     /// <remarks>
-    /// <para>
-    /// For render textures, this method updates the underlying texture with
-    /// the rendered content. For the main window, it presents the frame to
-    /// the display.
-    /// </para>
-    /// <para>
-    /// This method must be called after drawing operations to make the
-    /// rendered content visible.
-    /// </para>
+    /// VOID's built-in texture render target exposes rendered pixels immediately,
+    /// so this operation is a no-op for that implementation. Other targets may use
+    /// it to resolve, present, or otherwise finalize their rendered content.
     /// </remarks>
     void Display();
 
     /// <summary>
-    /// Sets the view (camera) for the render target.
+    /// Notifies the render target that the active camera has changed.
     /// </summary>
-    /// <param name="camera">The camera to use for rendering.</param>
+    /// <param name="camera">The camera selected for rendering.</param>
     /// <remarks>
-    /// <para>
-    /// The view defines the coordinate system and projection for rendering.
-    /// Setting a camera applies its view and projection matrices to the
-    /// render target.
-    /// </para>
-    /// <para>
-    /// This is used for 2D camera systems with scrolling, zooming, and rotation.
-    /// </para>
+    /// VOID's built-in target does not store a separate camera view because its
+    /// view-projection matrix is supplied through <see cref="BatchRenderState"/>.
     /// </remarks>
     void SetView(Camera camera);
 
     /// <summary>
-    /// Gets the texture associated with this render target.
+    /// Gets the texture containing this target's rendered color output, when available.
     /// </summary>
-    /// <returns>The render target texture, or <see langword="null"/> if the target does not support texture retrieval.</returns>
+    /// <returns>
+    /// The target's color texture, or <see langword="null"/> when the implementation
+    /// does not expose one.
+    /// </returns>
     /// <remarks>
-    /// <para>
-    /// For render textures, this returns the underlying texture that contains
-    /// the rendered content. For the main window, this may return <see langword="null"/>
-    /// or the back buffer texture.
-    /// </para>
-    /// <para>
-    /// The returned texture can be used for post-processing, effects, or
-    /// as input to other rendering operations.
-    /// </para>
+    /// The returned texture remains owned by the render target. Do not dispose it
+    /// independently unless the implementation explicitly documents different ownership.
     /// </remarks>
     Texture GetTexture();
 
     /// <summary>
-    /// Gets the size of the render target in pixels.
+    /// Gets the render target size in pixels.
     /// </summary>
-    /// <value>A vector containing the width and height of the render target.</value>
     Vect2 Size { get; }
 
     /// <summary>
-    /// Gets the width of the render target in pixels.
+    /// Gets the render target width in pixels.
     /// </summary>
     int Width { get; }
 
     /// <summary>
-    /// Gets the height of the render target in pixels.
+    /// Gets the render target height in pixels.
     /// </summary>
     int Height { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the render target uses sRGB color space.
+    /// Gets whether the target was created for sRGB color output.
     /// </summary>
-    /// <value><see langword="true"/> if the render target uses sRGB; otherwise, <see langword="false"/>.</value>
-    /// <remarks>
-    /// sRGB render targets apply gamma correction to rendered content,
-    /// providing more accurate color representation.
-    /// </remarks>
     bool Srgb { get; }
 }

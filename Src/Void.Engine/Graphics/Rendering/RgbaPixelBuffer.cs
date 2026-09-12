@@ -1,8 +1,14 @@
+// ============================================================================
+//  RgbaPixelBuffer.cs
+// ============================================================================
+//  Small helpers for tightly packed renderer-neutral RGBA8 pixel buffers.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Graphics.Rendering;
 
-/// <summary>
-/// Small renderer-neutral helpers for working with tightly packed RGBA8 pixel buffers.
-/// </summary>
 internal static class RgbaPixelBuffer
 {
     private const int BytesPerPixel = 4;

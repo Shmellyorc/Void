@@ -1,11 +1,18 @@
+// ============================================================================
+//  RendererContext.cs
+// ============================================================================
+//  VOID-owned renderer context backed by the active SDL platform window.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Void.Engine.Platform.SDL;
 
 namespace Void.Engine.Graphics.Rendering;
 
-/// <summary>
-/// VOID-owned renderer context backed by the active platform window.
-/// SDL remains internal and is never exposed through this public contract.
-/// </summary>
+// SDL stays behind IRendererContext so renderer plugins do not depend on VOID's
+// internal window-host implementation.
 internal sealed class RendererContext : IRendererContext
 {
     private readonly SdlWindowHost _window;

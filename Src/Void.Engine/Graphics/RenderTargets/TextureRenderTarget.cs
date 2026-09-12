@@ -1,7 +1,10 @@
 // ============================================================================
 //  TextureRenderTarget.cs
 // ============================================================================
-//  Renderer-owned off-screen target. No SFML render texture is involved.
+//  Internal renderer-owned off-screen target used by the render-target pool.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 using Void.Engine.Graphics.Rendering;
@@ -21,8 +24,8 @@ internal sealed class TextureRenderTarget : IRenderTarget
     public bool Srgb => _sRGB;
     public Vect2 Size => new(Width, Height);
 
-    internal IGraphicsDevice GraphicsDevice => _device;
-    internal IGraphicsRenderTarget GraphicsRenderTarget => _graphicsTarget;
+    public IGraphicsDevice GraphicsDevice => _device;
+    public IGraphicsRenderTarget GraphicsRenderTarget => _graphicsTarget;
     internal IGraphicsTexture GraphicsTexture => _graphicsTarget.ColorTexture;
 
     internal TextureRenderTarget(int width, int height, bool sRGB = false)
@@ -57,7 +60,7 @@ internal sealed class TextureRenderTarget : IRenderTarget
     public void Display()
     {
         ThrowIfDisposed();
-        // Renderer-owned FBO textures are immediately available after drawing.
+        // Renderer-owned render-target textures are immediately available after drawing.
     }
 
     public void Draw(IVertexBuffer buffer, uint vertexStart, uint vertexCount, BatchRenderState states)

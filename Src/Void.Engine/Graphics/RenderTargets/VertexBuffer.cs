@@ -1,10 +1,18 @@
+// ============================================================================
+//  VertexBuffer.cs
+// ============================================================================
+//  Internal renderer-neutral vertex buffer used by VOID's batching layer.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Void.Engine.Graphics.Rendering;
 using RenderPrimitiveType = Void.Engine.Graphics.Rendering.PrimitiveType;
 using RenderVertex = Void.Engine.Graphics.Rendering.Vertex;
 
 namespace Void.Engine.Graphics.RenderTargets;
 
-/// <summary>Renderer-neutral vertex buffer used by VOID's batching layer.</summary>
 internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
 {
     private readonly int _capacity;
@@ -159,14 +167,31 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
         if ((ulong)vertexStart + vertexCount > (ulong)_capacity)
             throw new ArgumentOutOfRangeException(nameof(vertexCount), "Draw exceeds the vertex buffer capacity.");
 
-        if (target is not TextureRenderTarget textureTarget)
-            throw new InvalidOperationException($"Unsupported render target type: {target.GetType().Name}");
-
         if (!RendererRuntime.TryGetDevice(out IGraphicsDevice device))
             throw new InvalidOperationException("No active graphics device is available.");
 
-        if (!ReferenceEquals(device, textureTarget.GraphicsDevice))
+        IGraphicsDevice targetDevice = target.GraphicsDevice;
+        if (targetDevice == null)
+        {
+            throw new InvalidOperationException(
+                $"Render target '{target.GetType().Name}' returned no graphics device.");
+        }
+
+        IGraphicsRenderTarget graphicsTarget = target.GraphicsRenderTarget;
+        if (graphicsTarget == null)
+        {
+            throw new InvalidOperationException(
+                $"Render target '{target.GetType().Name}' returned no graphics render target.");
+        }
+
+        if (!ReferenceEquals(device, targetDevice))
             throw new InvalidOperationException("Vertex buffer and render target belong to different graphics devices.");
+
+        if (!graphicsTarget.IsValid)
+        {
+            throw new InvalidOperationException(
+                $"Render target '{target.GetType().Name}' returned an invalid graphics render target.");
+        }
 
         if (!TryGetGraphicsBuffer(out IGraphicsBuffer vertexBuffer))
             throw new InvalidOperationException("Unable to resolve the renderer-owned vertex buffer. Upload vertex data before drawing.");
@@ -183,7 +208,7 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             throw new InvalidOperationException("The active renderer did not provide a usable 2D shader.");
         }
 
-        device.SetRenderTarget(textureTarget.GraphicsRenderTarget);
+        device.SetRenderTarget(graphicsTarget);
 
         var command = new RenderCommand(
             vertexBuffer,

@@ -1,9 +1,17 @@
+// ============================================================================
+//  RendererBootstrap.cs
+// ============================================================================
+//  Internal construction path for the selected renderer and SDL window.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Void.Engine.Graphics.Rendering.OpenGL;
 using Void.Engine.Platform.SDL;
 
 namespace Void.Engine.Graphics.Rendering;
 
-/// <summary>Internal construction path for the selected renderer and its SDL window.</summary>
 internal static class RendererBootstrap
 {
     public static IRendererBackend CreateBackend(GameSettings settings)

@@ -1,8 +1,10 @@
 // ============================================================================
 //  Renderer2DState.cs
 // ============================================================================
-//  Resolves either a custom renderer-neutral shader or the backend default 2D
-//  shader for a batch draw.
+//  Resolves custom or backend-default 2D shader state for batch submission.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics.Rendering;

@@ -1,10 +1,16 @@
+// ============================================================================
+//  IndexBuffer.cs
+// ============================================================================
+//  Internal renderer-neutral index buffer used for batched quad submission.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Graphics.RenderTargets;
 
-/// <summary>
-/// Renderer-neutral, immutable 32-bit index buffer used by VOID's batching layer.
-/// </summary>
 internal sealed class IndexBuffer : IDisposable
 {
     private const int IndicesPerQuad = 6;
