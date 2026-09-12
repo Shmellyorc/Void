@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 //  Program.cs
 // ============================================================================
 //  Entry point for the FlappyBirb example game.
@@ -13,6 +13,19 @@
 //  See LICENSE file in the project root for full license information.
 // ============================================================================
 
+
+// ----------------------------------------------------------------------------
+// EXAMPLE TOUR
+// ----------------------------------------------------------------------------
+// New to VOID? Read this example in this order:
+//   1. Program.cs          - GameSettings and starting the Game
+//   2. FlappyBirbGame.cs   - asset loading and the update/draw lifecycle
+//   3. Birb.cs             - input, movement, physics, and animation
+//   4. Pipe.cs             - collision, scrolling obstacles, and scoring
+//   5. Globals.cs          - shared assets and tuning values
+//
+// See README.md next to this file for a guided walkthrough and experiments.
+// ----------------------------------------------------------------------------
 
 // ----------------------------------------------------------------------------
 // Game Settings

@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 //  Program.cs - Scavengers Demo Entry Point
 // ============================================================================
 //  This file contains the global usings, enums, data classes, and the main
@@ -9,6 +9,23 @@
 //  - Define custom input actions and beacon topics
 //  - Launch the game
 // ============================================================================
+
+// ----------------------------------------------------------------------------
+// EXAMPLE TOUR
+// ----------------------------------------------------------------------------
+// Suggested reading order:
+//   1. Program.cs               - settings, shared actions/topics, startup
+//   2. ScavengersGame.cs        - assets, input actions, cameras, scene startup
+//   3. Scenes/SceneGame.cs      - LDtk, pathfinding, entities, update/draw
+//   4. EntityManager.cs         - example-owned entity architecture
+//   5. Entities/Player.cs       - input, beacons, movement, camera, animation
+//   6. Other Entities/          - enemy, food, wall, sign, tile behaviors
+//   7. Animator.cs              - example-owned sprite animation helper
+//   8. SceneTransition/GameOver - scene layering and coroutines
+//   9. Globals.cs               - shared tuning, assets, and audio coroutines
+//
+// See README.md next to this file for a guided walkthrough.
+// ----------------------------------------------------------------------------
 
 // Global usings - these are available in every file without needing to import
 global using System.Collections;

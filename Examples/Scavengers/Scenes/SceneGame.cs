@@ -5,6 +5,11 @@
 //  AStar pathfinding graph, manages all game entities, and handles the
 //  game loop.
 //
+//  EXPLORATION TIP:
+//  Read OnEnter() as three stages: load LDtk data, create game entities, then
+//  construct the AStar graph. After that, Update() and Draw() show how those
+//  systems participate in the normal frame loop.
+//
 //  The demo shows how to:
 //  - Load and parse LDtk levels
 //  - Build a pathfinding graph from level data

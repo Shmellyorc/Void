@@ -9,6 +9,11 @@
 //  - Set up input actions
 //  - Initialize the scene manager
 //  - Handle the game loop (OnEnter, OnUpdate, OnDraw, OnExit)
+//
+//  READING TIP:
+//  Read this file after Program.cs, then continue into Scenes/SceneGame.cs.
+//  This class is the composition root that connects engine services to the
+//  game-owned scene/entity architecture.
 // ============================================================================
 
 namespace Scavengers;

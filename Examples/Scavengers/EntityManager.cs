@@ -1,6 +1,10 @@
 // ============================================================================
-//  Entity.cs - Scavengers Demo Entity System
+//  EntityManager.cs - Scavengers Demo Entity System
 // ============================================================================
+//  NOTE FOR EXPLORERS:
+//  Entity and EntityManager are game-owned example classes. They demonstrate one
+//  way to organize gameplay on top of VOID; they are not required engine types.
+//
 //  This file contains the base Entity class and EntityManager for managing
 //  all game entities (Player, Enemy, Food, Wall, etc.).
 //
