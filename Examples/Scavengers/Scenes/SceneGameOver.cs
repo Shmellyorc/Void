@@ -110,15 +110,14 @@ public sealed class SceneGameOver : Scene
         // Game over text with stats
         // The text fades in separately from the overlay
         _batch.DrawText(
-            Globals.Font,
-            $"Game Over!\n\nLasted {PlayTime()}\nLooted {Looted()}\n\nPress Interact Key\nto continue",
-            GameSettings.Instance.Viewport / 2,
-            Color.WithAlpha(Color.White, _textFade),
-            Vect2.One,
-            TextAlignment.Center,
-            1f,
-            TextAlignment.CenterLeft, 0f
-        );
+           Globals.Font,
+           $"Game Over!\n\nLasted {PlayTime()}\nLooted {Looted()}\n\nPress Interact Key\nto continue",
+           GameSettings.Instance.Viewport / 2,
+           Color.WithAlpha(Color.White, _textFade),
+           Vect2.One,
+           TextAlignment.CenterLeft,
+           0f
+       );
 
         _batch.End();
 

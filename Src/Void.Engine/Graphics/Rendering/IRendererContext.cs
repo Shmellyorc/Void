@@ -11,8 +11,20 @@ public interface IRendererContext
     Vect2 RenderSize { get; }
 
     /// <summary>
-    /// Opaque handle owned by VOID's window system.
+    /// Gets the native window-system backend SDL actually initialized.
+    /// Renderer plugins should use this to interpret handles returned by
+    /// <see cref="TryGetNativeHandle"/>.
     /// </summary>
+    NativeWindowBackend PlatformBackend { get; }
+
+    /// <summary>
+    /// Opaque VOID platform-window handle.
+    /// </summary>
+    /// <remarks>
+    /// This is the SDL window pointer owned by VOID, not an HWND, X11 Window,
+    /// wl_surface, NSWindow, or other native operating-system handle.
+    /// Custom renderers should normally use <see cref="TryGetNativeHandle"/>.
+    /// </remarks>
     nint WindowSystemHandle { get; }
 
     /// <summary>
@@ -32,7 +44,14 @@ public interface IRendererContext
     bool TrySetSwapInterval(int interval);
 
     /// <summary>
-    /// Attempts to retrieve a platform-native handle for custom renderers.
+    /// Attempts to retrieve a borrowed platform-native handle for custom renderers.
     /// </summary>
+    /// <remarks>
+    /// Returned handles remain owned by VOID/SDL and must never be freed or destroyed
+    /// by the renderer plugin. They are valid only while the renderer context/window
+    /// remains alive. Unsupported handle kinds return <c>false</c> and zero.
+    ///
+    /// Use <see cref="PlatformBackend"/> to determine the concrete native type.
+    /// </remarks>
     bool TryGetNativeHandle(NativeWindowHandleKind kind, out nint handle);
 }

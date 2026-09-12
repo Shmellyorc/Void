@@ -14,6 +14,7 @@ internal sealed class RendererContext : IRendererContext
     public Vect2 WindowSize => _window.Size;
     public Vect2 RenderSize { get; }
     public nint WindowSystemHandle => _window.Handle;
+    public NativeWindowBackend PlatformBackend => _window.Capabilities.Backend;
 
     internal RendererContext(GameSettings settings, SdlWindowHost window)
     {
