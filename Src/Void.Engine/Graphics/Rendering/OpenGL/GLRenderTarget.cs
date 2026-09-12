@@ -1,3 +1,12 @@
+// ============================================================================
+//  GLRenderTarget.cs
+// ============================================================================
+//  OpenGL framebuffer and color-texture implementation for off-screen targets.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Silk.NET.OpenGL;
 
 namespace Void.Engine.Graphics.Rendering.OpenGL;
@@ -23,10 +32,10 @@ internal sealed class GLRenderTarget : IGraphicsRenderTarget
         Description = description;
 
         if (description.SampleCount != 1)
-            throw new NotSupportedException("Multisampled OpenGL render targets are not enabled yet.");
+            throw new NotSupportedException("Multisampled render targets are not supported by the built-in OpenGL renderer.");
 
         if (description.DepthFormat.HasValue)
-            throw new NotSupportedException("Depth/stencil attachments are not enabled yet for VOID OpenGL render targets.");
+            throw new NotSupportedException("Depth/stencil attachments are not supported by the built-in OpenGL renderer.");
 
         var textureDescription = new TextureDescription(
             description.Width,

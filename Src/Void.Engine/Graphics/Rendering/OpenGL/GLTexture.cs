@@ -1,11 +1,16 @@
+// ============================================================================
+//  GLTexture.cs
+// ============================================================================
+//  OpenGL 2D texture implementation for renderer-owned GPU textures.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Silk.NET.OpenGL;
 
 namespace Void.Engine.Graphics.Rendering.OpenGL;
 
-/// <summary>
-/// OpenGL 2D texture implementation. It receives already-decoded pixel data;
-/// image file decoding remains outside the renderer backend.
-/// </summary>
 internal sealed class GLTexture : IGraphicsTexture
 {
     private readonly GL _gl;
@@ -29,7 +34,7 @@ internal sealed class GLTexture : IGraphicsTexture
         Description = description;
 
         if (description.SampleCount != 1)
-            throw new NotSupportedException("Multisampled OpenGL textures land with the render-target phase.");
+            throw new NotSupportedException("Multisampled textures are not supported by the built-in OpenGL renderer.");
 
         ValidateColorFormat(description.Format);
 
@@ -174,7 +179,7 @@ internal sealed class GLTexture : IGraphicsTexture
         TextureFormat.RGB8 => (InternalFormat.Rgb8, PixelFormat.Rgb),
         TextureFormat.RGBA8 => (InternalFormat.Rgba8, PixelFormat.Rgba),
         TextureFormat.SRgba8 => (InternalFormat.Srgb8Alpha8, PixelFormat.Rgba),
-        _ => throw new NotSupportedException($"OpenGL color texture format '{format}' is not supported in this phase.")
+        _ => throw new NotSupportedException($"OpenGL color texture format '{format}' is not supported by the built-in renderer.")
     };
 
     private static GLEnum ToFilter(TextureFilter filter) => filter switch
@@ -198,7 +203,7 @@ internal sealed class GLTexture : IGraphicsTexture
         TextureFormat.RG8 => 2,
         TextureFormat.RGB8 => 3,
         TextureFormat.RGBA8 or TextureFormat.SRgba8 => 4,
-        _ => throw new NotSupportedException($"Pixel size for texture format '{format}' is not supported in this phase.")
+        _ => throw new NotSupportedException($"Pixel size for texture format '{format}' is not supported by the built-in OpenGL renderer.")
     };
 
     private static void ValidateDataLength(int width, int height, TextureFormat format, int actualLength)

@@ -1,3 +1,12 @@
+// ============================================================================
+//  GLDevice.cs
+// ============================================================================
+//  OpenGL implementation of VOID's renderer-neutral graphics device contract.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Silk.NET.OpenGL;
 using Void.Engine.Graphics;
 
@@ -29,11 +38,29 @@ internal sealed class GLDevice : IGraphicsDevice
 
     public RendererCapabilities Capabilities { get; private set; }
 
-    internal GLDevice(GL gl, Vect2 initialSize)
+    internal GLDevice(GL gl, Vect2 initialSize, GraphicsVersion version)
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
-        _state = new GLStateCache(_gl);
-        Capabilities = default;
+
+        int maxTextureSize = QueryPositiveInteger(
+            GLEnum.MaxTextureSize,
+            "maximum texture size");
+        int maxTextureUnits = QueryPositiveInteger(
+            GLEnum.MaxCombinedTextureImageUnits,
+            "combined texture image units");
+
+        _state = new GLStateCache(_gl, maxTextureUnits);
+
+        Capabilities = new RendererCapabilities(
+            maxTextureSize,
+            maxTextureUnits,
+            maxRenderTargets: 1,
+            maxSamples: 1,
+            supportsInstancing: false,
+            supportsGeometryShaders: version >= new GraphicsVersion(3, 2),
+            supportsComputeShaders: false,
+            supportsDebugOutput: false);
+
         Resize((int)initialSize.X, (int)initialSize.Y);
     }
 
@@ -367,6 +394,18 @@ internal sealed class GLDevice : IGraphicsDevice
             BlendEquation.Max => BlendEquationModeEXT.Max,
             _ => throw new ArgumentOutOfRangeException(nameof(equation))
         };
+
+    private int QueryPositiveInteger(GLEnum parameter, string capabilityName)
+    {
+        _gl.GetInteger(parameter, out int value);
+        if (value <= 0)
+        {
+            throw new InvalidOperationException(
+                $"OpenGL reported an invalid {capabilityName} value: {value}.");
+        }
+
+        return value;
+    }
 
     private void ThrowIfDisposed()
         => ObjectDisposedException.ThrowIf(_disposed, this);

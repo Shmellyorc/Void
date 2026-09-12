@@ -3,6 +3,9 @@
 // ============================================================================
 //  Renderer-neutral shader program wrapper. Sources and uniform values belong
 //  to VOID; the active renderer owns the actual GPU program implementation.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 using Void.Engine.Graphics.Rendering;
@@ -10,9 +13,23 @@ using Void.Engine.Graphics.Rendering;
 namespace Void.Engine.Graphics.Shaders;
 
 /// <summary>
-/// Stores renderer-neutral shader sources and uniforms, creating the backend
-/// <see cref="IGraphicsShaderProgram"/> lazily on the active graphics device.
+/// Stores renderer-neutral shader sources and uniform values and lazily creates the
+/// backend-owned <see cref="IGraphicsShaderProgram"/> on the active graphics device.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Shader sources are retained independently of any renderer. The backend program is created
+/// only when an active graphics device is available and the program is needed for drawing or
+/// explicit binding. If the active graphics device changes, the previous backend program is
+/// released and recreated on the new device.
+/// </para>
+/// <para>
+/// Uniform values are cached by name and replayed when a backend program is created. Replacing
+/// or clearing a texture uniform also clears any stale backend texture assignment for that name.
+/// During VOID's 2D draw path, custom programs receive the conventional <c>uViewProjection</c>,
+/// <c>uUseTexture</c>, <c>uTextureSize</c>, and <c>uTexture</c> values when applicable.
+/// </para>
+/// </remarks>
 public sealed class ShaderProgram : IDisposable
 {
     private readonly ShaderSource[] _sources;
@@ -31,21 +48,32 @@ public sealed class ShaderProgram : IDisposable
     private IGraphicsShaderProgram _graphicsProgram;
     private bool _disposed;
 
-    /// <summary>Gets the shader sources used to create backend programs.</summary>
+    /// <summary>
+    /// Gets the renderer-neutral shader sources used to create backend programs.
+    /// </summary>
     public ReadOnlyMemory<ShaderSource> Sources => _sources;
 
     /// <summary>
-    /// Gets whether this program has valid sources and is not disposed. When a
-    /// renderer is active this also verifies that the backend program can be created.
+    /// Gets whether this program has at least one source, has not been disposed, and has no
+    /// known invalid backend program.
     /// </summary>
+    /// <remarks>
+    /// Before a backend program has been created, this property validates renderer-neutral state
+    /// only. Shader compilation and backend-specific validation occur lazily when the active
+    /// renderer creates the underlying program.
+    /// </remarks>
     public bool IsValid
         => !_disposed && _sources.Length > 0 && (_graphicsProgram?.IsValid ?? true);
 
     /// <summary>
-    /// Creates a text shader program with vertex and fragment stages.
-    /// Existing .shader assets default to GLSL; custom shader types can choose
-    /// another language for renderer plugins that support it.
+    /// Creates a renderer-neutral program containing vertex and fragment shader stages.
     /// </summary>
+    /// <param name="vertexSource">The non-empty vertex shader source text.</param>
+    /// <param name="fragmentSource">The non-empty fragment shader source text.</param>
+    /// <param name="language">The shader language understood by the target renderer backend.</param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="vertexSource"/> or <paramref name="fragmentSource"/> is empty or whitespace.
+    /// </exception>
     public ShaderProgram(
         string vertexSource,
         string fragmentSource,
@@ -64,10 +92,14 @@ public sealed class ShaderProgram : IDisposable
     }
 
     /// <summary>
-    /// Creates a program from arbitrary renderer-neutral shader stages. This is
-    /// the path custom shader implementations can use for GLSL, HLSL, SPIR-V,
-    /// DXIL, MSL, or another backend-supported language.
+    /// Creates a renderer-neutral program from an arbitrary set of shader stages.
     /// </summary>
+    /// <param name="sources">The non-empty shader sources to retain for backend creation.</param>
+    /// <remarks>
+    /// The active renderer may reject unsupported languages, stages, or stage combinations when
+    /// the backend program is created.
+    /// </remarks>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="sources"/> is empty.</exception>
     public ShaderProgram(ReadOnlyMemory<ShaderSource> sources)
     {
         if (sources.IsEmpty)
@@ -76,6 +108,12 @@ public sealed class ShaderProgram : IDisposable
         _sources = sources.ToArray();
     }
 
+    /// <summary>Sets and caches a floating-point uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The value to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, float value)
     {
         PrepareUniformName(name);
@@ -85,6 +123,12 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>Sets and caches an integer uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The value to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, int value)
     {
         PrepareUniformName(name);
@@ -94,6 +138,12 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>Sets and caches a two-component vector uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The value to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, Vect2 value)
     {
         PrepareUniformName(name);
@@ -103,6 +153,12 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>Sets and caches a three-component vector uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The value to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, Vect3 value)
     {
         PrepareUniformName(name);
@@ -112,6 +168,12 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>Sets and caches a four-component vector uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The value to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, Vect4 value)
     {
         PrepareUniformName(name);
@@ -121,6 +183,12 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>Sets and caches a color uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The color to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, Color value)
     {
         PrepareUniformName(name);
@@ -130,6 +198,12 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>Sets and caches a 4x4 matrix uniform value.</summary>
+    /// <param name="name">The non-empty shader uniform name.</param>
+    /// <param name="value">The matrix to assign.</param>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, Matrix4x4 value)
     {
         PrepareUniformName(name);
@@ -139,19 +213,50 @@ public sealed class ShaderProgram : IDisposable
             _graphicsProgram.SetUniform(name, value);
     }
 
+    /// <summary>
+    /// Sets and caches a game-facing texture for a named sampler uniform.
+    /// </summary>
+    /// <param name="name">The non-empty sampler uniform name.</param>
+    /// <param name="texture">The texture to assign, or <see langword="null"/> to clear the existing texture assignment.</param>
+    /// <remarks>
+    /// Texture resources are resolved against the active graphics device at draw time so an
+    /// unloaded, reloaded, or device-recreated texture can supply its current backend resource.
+    /// Passing <see langword="null"/> removes the cached value and clears any existing backend texture binding for
+    /// the same sampler name. If a retained texture cannot currently resolve a backend resource,
+    /// the stale backend binding is cleared until that texture becomes available again.
+    /// </remarks>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetUniform(string name, Texture texture)
     {
         PrepareUniformName(name);
-        ClearUniform(name);
 
         if (texture == null)
+        {
+            ClearUniform(name);
             return;
+        }
 
+        // A replacement texture is applied immediately, so avoid an unnecessary
+        // unbind/rebind cycle while still clearing every other cached uniform type.
+        ClearUniform(name, clearBackendTexture: false);
         _textureUniforms[name] = texture;
         ApplyTextureUniform(name, texture);
     }
 
-    /// <summary>Uses the current draw command texture for a named sampler.</summary>
+    /// <summary>
+    /// Marks a sampler uniform as using the texture supplied by the current draw operation.
+    /// </summary>
+    /// <param name="name">The non-empty sampler uniform name.</param>
+    /// <remarks>
+    /// Setting this mode replaces any cached value of another supported uniform type with the same name.
+    /// VOID already supplies the conventional <c>uTexture</c> sampler automatically. If a draw has
+    /// no texture, VOID clears the backend assignment instead of reusing the previous draw texture.
+    /// </remarks>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void SetCurrentTexture(string name)
     {
         PrepareUniformName(name);
@@ -160,9 +265,16 @@ public sealed class ShaderProgram : IDisposable
     }
 
     /// <summary>
-    /// Explicitly binds this renderer-neutral program for code that uses the
-    /// legacy Bind/Unbind style. Batch-level SetShader still takes precedence.
+    /// Makes this program the explicitly bound renderer-neutral shader program.
     /// </summary>
+    /// <remarks>
+    /// If a renderer is active, the backend program is created before binding. Batch-level shader
+    /// selection still takes precedence over explicitly bound shader state.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when a renderer is reported as available but no usable graphics device or backend program can be obtained.
+    /// </exception>
+    /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
     public void Bind()
     {
         ThrowIfDisposed();
@@ -173,6 +285,10 @@ public sealed class ShaderProgram : IDisposable
         ShaderState.Bind(this);
     }
 
+    /// <summary>
+    /// Removes this program from explicitly bound renderer-neutral shader state.
+    /// </summary>
+    /// <remarks>Calling this method after disposal is a harmless no-op.</remarks>
     public void Unbind()
     {
         if (_disposed)
@@ -213,10 +329,7 @@ public sealed class ShaderProgram : IDisposable
         return program?.IsValid == true;
     }
 
-    /// <summary>
-    /// Applies per-draw VOID state and returns the backend-owned program.
-    /// The conventional uniforms are optional; backends ignore missing names.
-    /// </summary>
+    // Applies VOID's conventional per-draw 2D state before returning the backend program.
     internal bool TryPrepareForDraw(
         IGraphicsTexture drawTexture,
         Matrix4x4 viewProjection,
@@ -246,10 +359,22 @@ public sealed class ShaderProgram : IDisposable
             foreach (string name in _currentTextureUniforms)
                 program.SetTexture(name, drawTexture);
         }
+        else
+        {
+            // Prevent a texture from the previous draw from remaining visible to
+            // the conventional or current-draw samplers on an untextured draw.
+            program.SetTexture("uTexture", null);
+
+            foreach (string name in _currentTextureUniforms)
+                program.SetTexture(name, null);
+        }
 
         return true;
     }
 
+    /// <summary>
+    /// Releases the backend shader program and all cached uniform state owned by this instance.
+    /// </summary>
     public void Dispose()
     {
         if (_disposed)
@@ -313,9 +438,11 @@ public sealed class ShaderProgram : IDisposable
     {
         if (texture != null && texture.TryGetGraphicsTexture(out IGraphicsTexture graphicsTexture))
             program.SetTexture(name, graphicsTexture);
+        else
+            program.SetTexture(name, null);
     }
 
-    private void ClearUniform(string name)
+    private void ClearUniform(string name, bool clearBackendTexture = true)
     {
         _floatUniforms.Remove(name);
         _intUniforms.Remove(name);
@@ -324,8 +451,16 @@ public sealed class ShaderProgram : IDisposable
         _vect4Uniforms.Remove(name);
         _colorUniforms.Remove(name);
         _matrixUniforms.Remove(name);
-        _textureUniforms.Remove(name);
-        _currentTextureUniforms.Remove(name);
+
+        bool hadTextureUniform = _textureUniforms.Remove(name);
+        bool hadCurrentTextureUniform = _currentTextureUniforms.Remove(name);
+
+        if (clearBackendTexture &&
+            (hadTextureUniform || hadCurrentTextureUniform) &&
+            _graphicsProgram?.IsValid == true)
+        {
+            _graphicsProgram.SetTexture(name, null);
+        }
     }
 
     private void PrepareUniformName(string name)

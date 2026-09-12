@@ -2,6 +2,9 @@
 //  ShaderState.cs
 // ============================================================================
 //  Renderer-neutral explicit shader binding state.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Graphics.Shaders;

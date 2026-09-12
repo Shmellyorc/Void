@@ -1,12 +1,17 @@
+// ============================================================================
+//  OpenGLRenderer.cs
+// ============================================================================
+//  Built-in OpenGL renderer wired to VOID's public renderer contracts.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Silk.NET.OpenGL;
 using Void.Engine.Resources;
 
 namespace Void.Engine.Graphics.Rendering.OpenGL;
 
-/// <summary>
-/// Built-in OpenGL renderer. Internal because game/backend authors target the
-/// public renderer contracts, not VOID's concrete OpenGL implementation.
-/// </summary>
 internal sealed class OpenGLRenderer : RendererBackend
 {
     private readonly GraphicsVersion _requestedVersion;
@@ -32,7 +37,7 @@ internal sealed class OpenGLRenderer : RendererBackend
         _context = context;
 
         GL gl = GL.GetApi(context.GetProcAddress);
-        _device = new GLDevice(gl, context.WindowSize);
+        _device = new GLDevice(gl, context.WindowSize, _requestedVersion);
         _default2DShader = CreateDefault2DShader(_device);
 
         if (!context.TrySetSwapInterval(context.Settings.VSync ? 1 : 0))

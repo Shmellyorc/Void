@@ -113,13 +113,14 @@ public interface IGraphicsShaderProgram : IGraphicsResource
     /// <param name="value">The value to assign.</param>
     void SetUniform(string name, Matrix4x4 value);
 
-    /// <summary>Binds a renderer-owned texture to a named shader input.</summary>
+    /// <summary>Binds or clears a renderer-owned texture for a named shader input.</summary>
     /// <param name="name">The shader texture or sampler name.</param>
-    /// <param name="texture">The texture to bind.</param>
+    /// <param name="texture">The texture to bind, or <see langword="null"/> to clear the existing texture assignment.</param>
     /// <remarks>
-    /// The texture is borrowed for the binding and remains owned by its original owner.
-    /// It should belong to the same graphics device as the shader program. A missing or
-    /// inactive texture name should be treated as a harmless no-op.
+    /// A non-null texture is borrowed for the binding and remains owned by its original owner.
+    /// It should belong to the same graphics device as the shader program. Passing <see langword="null"/> must
+    /// remove the previous texture assignment for that name so later draws cannot observe a
+    /// stale texture. A missing or inactive texture name should be treated as a harmless no-op.
     /// </remarks>
     void SetTexture(string name, IGraphicsTexture texture);
 }

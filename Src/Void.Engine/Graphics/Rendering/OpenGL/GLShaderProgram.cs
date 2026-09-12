@@ -1,17 +1,21 @@
+// ============================================================================
+//  GLShaderProgram.cs
+// ============================================================================
+//  OpenGL shader-program implementation and uniform-state cache.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using System.Numerics;
 using System.Text;
 using Silk.NET.OpenGL;
 
 namespace Void.Engine.Graphics.Rendering.OpenGL;
 
-/// <summary>
-/// OpenGL implementation of a renderer-owned shader program.
-/// The built-in OpenGL backend consumes GLSL source text; other renderer
-/// plugins remain free to consume their own ShaderLanguage formats.
-/// </summary>
 internal sealed class GLShaderProgram : IGraphicsShaderProgram
 {
-    private const int MaxTrackedTextureUnits = 32;
+    private const string PrimaryTextureUniformName = "uTexture";
 
     private enum UniformValueKind : byte
     {
@@ -42,6 +46,7 @@ internal sealed class GLShaderProgram : IGraphicsShaderProgram
     private readonly Dictionary<string, int> _uniformLocations = new(StringComparer.Ordinal);
     private readonly Dictionary<int, UniformValueCache> _uniformValues = [];
     private readonly Dictionary<string, int> _textureUnits = new(StringComparer.Ordinal);
+    private int _nextCustomTextureUnit = 1;
     private uint _handle;
     private bool _disposed;
 
@@ -252,7 +257,11 @@ internal sealed class GLShaderProgram : IGraphicsShaderProgram
 
     public void SetTexture(string name, IGraphicsTexture texture)
     {
-        ArgumentNullException.ThrowIfNull(texture);
+        if (texture == null)
+        {
+            ClearTexture(name);
+            return;
+        }
 
         if (texture is not GLTexture glTexture)
             throw new ArgumentException("The texture was not created by the VOID OpenGL backend.", nameof(texture));
@@ -263,14 +272,41 @@ internal sealed class GLShaderProgram : IGraphicsShaderProgram
 
         if (!_textureUnits.TryGetValue(name, out int unit))
         {
-            unit = _textureUnits.Count;
-            if (unit >= MaxTrackedTextureUnits)
-                throw new InvalidOperationException($"A shader program cannot bind more than {MaxTrackedTextureUnits} tracked textures.");
+            if (string.Equals(name, PrimaryTextureUniformName, StringComparison.Ordinal))
+            {
+                unit = 0;
+            }
+            else
+            {
+                unit = _nextCustomTextureUnit;
+                if (unit >= _state.MaxTextureUnits)
+                {
+                    throw new InvalidOperationException(
+                        "The OpenGL backend exposes " + _state.MaxTextureUnits +
+                        " texture unit(s). Texture unit 0 is reserved for '" +
+                        PrimaryTextureUniformName +
+                        "', so this shader cannot bind another custom texture sampler.");
+                }
+
+                _nextCustomTextureUnit++;
+            }
 
             _textureUnits.Add(name, unit);
         }
 
         glTexture.Bind(unit);
+        SetIntUniform(location, unit);
+    }
+
+    private void ClearTexture(string name)
+    {
+        int location = GetUniformLocation(name);
+        if (location < 0 || !_textureUnits.TryGetValue(name, out int unit))
+            return;
+
+        // Keep the sampler-to-unit assignment stable. Reusing this unit for a
+        // different sampler would let the cleared sampler observe that texture.
+        _state.BindTexture2D(unit, 0);
         SetIntUniform(location, unit);
     }
 

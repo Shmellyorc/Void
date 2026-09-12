@@ -1,11 +1,16 @@
+// ============================================================================
+//  GLBuffer.cs
+// ============================================================================
+//  Built-in OpenGL buffer implementation used by the renderer-neutral device.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Silk.NET.OpenGL;
 
 namespace Void.Engine.Graphics.Rendering.OpenGL;
 
-/// <summary>
-/// OpenGL buffer implementation. Backend-only; game code and custom renderers
-/// use IGraphicsBuffer instead.
-/// </summary>
 internal sealed class GLBuffer : IGraphicsBuffer
 {
     private readonly GL _gl;

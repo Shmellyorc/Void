@@ -1,18 +1,21 @@
+// ============================================================================
+//  GLStateCache.cs
+// ============================================================================
+//  Tracks OpenGL bindings owned by the built-in backend to avoid redundant state changes.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Silk.NET.OpenGL;
 
 namespace Void.Engine.Graphics.Rendering.OpenGL;
 
-/// <summary>
-/// Tracks OpenGL bindings owned by the built-in backend so repeated draw calls
-/// can avoid issuing state changes that are already active.
-/// </summary>
 internal sealed class GLStateCache
 {
-    private const int MaxTrackedTextureUnits = 32;
-
     private readonly GL _gl;
-    private readonly uint[] _texture2DBindings = new uint[MaxTrackedTextureUnits];
-    private readonly bool[] _hasTexture2DBinding = new bool[MaxTrackedTextureUnits];
+    private readonly uint[] _texture2DBindings;
+    private readonly bool[] _hasTexture2DBinding;
 
     private bool _hasProgram;
     private uint _program;
@@ -29,9 +32,16 @@ internal sealed class GLStateCache
     private bool _hasActiveTextureUnit;
     private int _activeTextureUnit;
 
-    internal GLStateCache(GL gl)
+    internal int MaxTextureUnits => _texture2DBindings.Length;
+
+    internal GLStateCache(GL gl, int maxTextureUnits)
     {
         _gl = gl ?? throw new ArgumentNullException(nameof(gl));
+        if (maxTextureUnits <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxTextureUnits));
+
+        _texture2DBindings = new uint[maxTextureUnits];
+        _hasTexture2DBinding = new bool[maxTextureUnits];
     }
 
     internal void UseProgram(uint handle)
@@ -80,7 +90,7 @@ internal sealed class GLStateCache
 
     internal void BindTexture2D(int textureUnit, uint handle)
     {
-        if ((uint)textureUnit >= MaxTrackedTextureUnits)
+        if ((uint)textureUnit >= (uint)MaxTextureUnits)
             throw new ArgumentOutOfRangeException(nameof(textureUnit));
 
         if (!_hasActiveTextureUnit || _activeTextureUnit != textureUnit)
