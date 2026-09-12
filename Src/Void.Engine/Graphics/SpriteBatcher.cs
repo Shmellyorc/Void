@@ -60,6 +60,10 @@ public enum TextWrapMode
 /// Sprites are uploaded as indexed quads. Compatible commands are grouped by
 /// texture source after any requested depth sort.
 /// </para>
+/// <para>
+/// Text rendering ignores carriage returns. Tab characters advance by four spaces
+/// so drawing and <see cref="Font.Measure"/> use the same whitespace semantics.
+/// </para>
 /// <para><code>
 /// using var batcher = new SpriteBatcher();
 /// batcher.Begin(camera: camera);
@@ -82,6 +86,18 @@ public sealed class SpriteBatcher : BaseBatcher
         public Vect2 Scale;
         public Vect2 Origin;
         public TextureEffects Effects;
+    }
+
+    private readonly struct TextLineLayout
+    {
+        internal string Text { get; }
+        internal float Width { get; }
+
+        internal TextLineLayout(string text, float width)
+        {
+            Text = text;
+            Width = width;
+        }
     }
 
     private const int VerticesPerQuad = 4;
@@ -260,15 +276,15 @@ public sealed class SpriteBatcher : BaseBatcher
         => EngineDraw(texture, new(position, srcRect.Size), srcRect, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
     /// <summary>Draws a transformed source rectangle into a destination rectangle.</summary>
-    public void Draw(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
+    public void Draw(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, Vect2 scale, float rotation, Vect2 origin, TextureEffects effects, float depth)
         => EngineDraw(texture, dstRect, srcRect, color, rotation, scale, origin, effects, depth, texture.Type == AssetType.Normal);
 
     /// <summary>Draws the transformed full texture into a destination rectangle.</summary>
-    public void Draw(Texture texture, Rect2 rect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
+    public void Draw(Texture texture, Rect2 rect, Color color, Vect2 scale, float rotation, Vect2 origin, TextureEffects effects, float depth)
         => EngineDraw(texture, rect, texture.Bounds, color, rotation, scale, origin, effects, depth, texture.Type == AssetType.Normal);
 
     /// <summary>Draws a transformed source rectangle at the supplied position.</summary>
-    public void Draw(Texture texture, Vect2 position, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
+    public void Draw(Texture texture, Vect2 position, Rect2 srcRect, Color color, Vect2 scale, float rotation, Vect2 origin, TextureEffects effects, float depth)
         => EngineDraw(texture, new(position, srcRect.Size), srcRect, color, rotation, scale, origin, effects, depth, texture.Type == AssetType.Normal);
 
     /// <summary>Draws the full texture at its natural size.</summary>
@@ -283,9 +299,9 @@ public sealed class SpriteBatcher : BaseBatcher
     public void Draw(Texture texture, Rect2 dstRect, Color color, float rotation, float depth = 0f)
         => EngineDraw(texture, dstRect, texture.Bounds, color, rotation, Vect2.One, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
-    /// <summary>Draws the full texture with rotation and scale.</summary>
-    public void Draw(Texture texture, Vect2 position, Color color, float rotation, Vect2 scale, float depth = 0f)
-        => EngineDraw(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
+    /// <summary>Draws the full texture with scale and rotation.</summary>
+    public void Draw(Texture texture, Vect2 position, Color color, Vect2 scale, float rotation, float depth = 0f)
+        => EngineDraw(texture, new Rect2(position.X, position.Y, texture.Size.X, texture.Size.Y), texture.Bounds, color, rotation, scale, Vect2.Zero, TextureEffects.None, depth, texture.Type == AssetType.Normal);
 
     #endregion
 
@@ -304,15 +320,15 @@ public sealed class SpriteBatcher : BaseBatcher
         => EngineDrawBypassAtlas(texture, new(position, srcRect.Size), srcRect, color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
     /// <summary>Draws transformed texture data without attempting atlas packing.</summary>
-    public void DrawBypassAtlas(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
+    public void DrawBypassAtlas(Texture texture, Rect2 dstRect, Rect2 srcRect, Color color, Vect2 scale, float rotation, Vect2 origin, TextureEffects effects, float depth)
         => EngineDrawBypassAtlas(texture, dstRect, srcRect, color, rotation, scale, origin, effects, depth);
 
     /// <summary>Draws the transformed full texture without attempting atlas packing.</summary>
-    public void DrawBypassAtlas(Texture texture, Rect2 rect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
+    public void DrawBypassAtlas(Texture texture, Rect2 rect, Color color, Vect2 scale, float rotation, Vect2 origin, TextureEffects effects, float depth)
         => EngineDrawBypassAtlas(texture, rect, texture.Bounds, color, rotation, scale, origin, effects, depth);
 
     /// <summary>Draws a transformed source rectangle at a position without atlas packing.</summary>
-    public void DrawBypassAtlas(Texture texture, Vect2 position, Rect2 srcRect, Color color, float rotation, Vect2 scale, Vect2 origin, TextureEffects effects, float depth)
+    public void DrawBypassAtlas(Texture texture, Vect2 position, Rect2 srcRect, Color color, Vect2 scale, float rotation, Vect2 origin, TextureEffects effects, float depth)
         => EngineDrawBypassAtlas(texture, new(position, srcRect.Size), srcRect, color, rotation, scale, origin, effects, depth);
 
     /// <summary>Draws the full texture at natural size without atlas packing.</summary>
@@ -327,9 +343,9 @@ public sealed class SpriteBatcher : BaseBatcher
     public void DrawBypassAtlas(Texture texture, Rect2 dstRect, Color color, float rotation, float depth = 0f)
         => EngineDrawBypassAtlas(texture, dstRect, texture.Bounds, color, rotation, Vect2.One, Vect2.Zero, TextureEffects.None, depth);
 
-    /// <summary>Draws the full texture with rotation and scale without atlas packing.</summary>
-    public void DrawBypassAtlas(Texture texture, Vect2 position, Color color, float rotation, Vect2 scale, float depth = 0f)
-        => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X * scale.X, texture.Size.Y * scale.Y), texture.Bounds, color, rotation, scale,
+    /// <summary>Draws the full texture with scale and rotation without atlas packing.</summary>
+    public void DrawBypassAtlas(Texture texture, Vect2 position, Color color, Vect2 scale, float rotation, float depth = 0f)
+        => EngineDrawBypassAtlas(texture, new Rect2(position.X, position.Y, texture.Size.X, texture.Size.Y), texture.Bounds, color, rotation, scale,
             Vect2.Zero, TextureEffects.None, depth);
 
     #endregion
@@ -390,9 +406,10 @@ public sealed class SpriteBatcher : BaseBatcher
 
     /// <summary>Draws scaled text inside bounds with alignment and wrapping.</summary>
     /// <remarks>
-    /// Word and character wrapping currently start each generated wrapped line at
-    /// the left edge of <paramref name="bounds"/>. Horizontal alignment is applied
-    /// by the unwrapped line path.
+    /// Wrapped lines are measured before glyph submission so horizontal alignment
+    /// applies to each generated line and vertical alignment uses the final visible
+    /// wrapped block. Once there is no room for another wrapped line, remaining
+    /// lines are not submitted.
     /// </remarks>
     public void DrawText(Font font, string text, Rect2 bounds, Color color, Vect2 scale, TextAlignment alignment, TextWrapMode wrapMode)
         => DrawTextBounds(font, text, bounds, color, 0f, scale, alignment, wrapMode);
@@ -466,8 +483,6 @@ public sealed class SpriteBatcher : BaseBatcher
             font.Load();
 
         var textSize = font.Measure(text) * scale;
-        var textRect = new Rect2(position, textSize);
-        if (!IsVisible(textRect)) return;
 
         Vect2 topLeft = alignment switch
         {
@@ -493,144 +508,321 @@ public sealed class SpriteBatcher : BaseBatcher
         if (string.IsNullOrEmpty(text) || font == null) return;
         if (!IsVisible(bounds)) return;
 
+        text = RemoveCarriageReturns(text);
+        if (text.Length == 0) return;
+
         if (!font.IsValid)
             font.Load();
 
-        string[] lines = text.Split('\n');
         float lineHeight = (font.LineHeight + font.LineSpacing) * scale.Y;
-        float totalHeight = lines.Length * lineHeight;
 
-        float startY = bounds.Y;
-        if (alignment is TextAlignment.CenterLeft or TextAlignment.Center or TextAlignment.CenterRight)
-            startY = bounds.Y + (bounds.Height - totalHeight) / 2f;
-        else if (alignment is TextAlignment.BottomLeft or TextAlignment.BottomCenter or TextAlignment.BottomRight)
-            startY = bounds.Y + bounds.Height - totalHeight;
-
-        float currentY = startY;
-        for (int i = 0; i < lines.Length; i++)
+        if (wrapMode == TextWrapMode.None)
         {
-            string line = lines[i];
-            if (string.IsNullOrEmpty(line))
-            {
-                currentY += lineHeight;
-                continue;
-            }
+            string[] lines = text.Split('\n');
+            float totalHeight = lines.Length * lineHeight;
+            float currentY = GetAlignedStartY(bounds, alignment, totalHeight);
 
-            switch (wrapMode)
+            for (int i = 0; i < lines.Length; i++)
             {
-                case TextWrapMode.Word:
-                    ProcessWordWrappedLine(line, font, bounds, color, depth, scale, alignment, ref currentY, lineHeight);
-                    break;
-                case TextWrapMode.Character:
-                    ProcessCharWrappedLine(line, font, bounds, color, depth, scale, alignment, ref currentY, lineHeight);
-                    break;
-                default:
+                string line = lines[i];
+                if (!string.IsNullOrEmpty(line))
                     ProcessLine(line, font, bounds, color, depth, scale, alignment, currentY);
-                    currentY += lineHeight;
-                    break;
+
+                currentY += lineHeight;
             }
+
+            return;
+        }
+
+        List<TextLineLayout> layout = BuildWrappedTextLayout(text, font, bounds.Width, scale, wrapMode);
+        int visibleLineCount = GetVisibleWrappedLineCount(layout.Count, bounds.Height, lineHeight);
+        if (visibleLineCount == 0)
+            return;
+
+        float wrappedHeight = visibleLineCount * lineHeight;
+        float startY = GetAlignedStartY(bounds, alignment, wrappedHeight);
+
+        for (int i = 0; i < visibleLineCount; i++)
+        {
+            float y = startY + i * lineHeight;
+            TextLineLayout line = layout[i];
+
+            ProcessLayoutLine(line, font, bounds, color, depth, scale, alignment, y);
         }
     }
 
-    private void ProcessLine(string line, Font font, Rect2 bounds, Color color, float depth, Vect2 scale, TextAlignment alignment, float y)
+    private static float GetAlignedStartY(Rect2 bounds, TextAlignment alignment, float totalHeight)
     {
-        float lineWidth = 0;
-        for (int i = 0; i < line.Length; i++)
-        {
-            char c = line[i];
-            lineWidth += c == '\t' ? font.GetGlyph(' ').Advance * 4 * scale.X : font.GetGlyph(c).Advance * scale.X;
-        }
+        if (alignment is TextAlignment.CenterLeft or TextAlignment.Center or TextAlignment.CenterRight)
+            return bounds.Y + (bounds.Height - totalHeight) / 2f;
 
-        float startX = bounds.X;
-        if (alignment is TextAlignment.TopCenter or TextAlignment.Center or TextAlignment.BottomCenter)
-            startX = bounds.X + (bounds.Width - lineWidth) / 2f;
-        else if (alignment is TextAlignment.TopRight or TextAlignment.CenterRight or TextAlignment.BottomRight)
-            startX = bounds.X + bounds.Width - lineWidth;
+        if (alignment is TextAlignment.BottomLeft or TextAlignment.BottomCenter or TextAlignment.BottomRight)
+            return bounds.Y + bounds.Height - totalHeight;
 
-        float currentX = startX;
-        for (int i = 0; i < line.Length; i++)
-        {
-            char c = line[i];
-            if (c == '\t')
-            {
-                currentX += font.GetGlyph(' ').Advance * 4 * scale.X;
-                continue;
-            }
-
-            Glyph glyph = font.GetGlyph(c);
-            if (glyph.IsEmpty) continue;
-
-            Rect2 dstRect = new(currentX + glyph.Offset.X * scale.X, y + glyph.Offset.Y * scale.Y, glyph.Size.X * scale.X, glyph.Size.Y * scale.Y);
-            EngineDraw(font, dstRect, new Rect2(glyph.Position.X, glyph.Position.Y, glyph.Size.X, glyph.Size.Y), color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, font.Type == AssetType.Normal);
-            currentX += glyph.Advance * scale.X;
-        }
+        return bounds.Y;
     }
 
-    private void ProcessWordWrappedLine(string line, Font font, Rect2 bounds, Color color, float depth, Vect2 scale, TextAlignment alignment, ref float y, float lineHeight)
+    private static int GetVisibleWrappedLineCount(int lineCount, float boundsHeight, float lineHeight)
+    {
+        if (lineCount <= 0 || boundsHeight <= 0f)
+            return 0;
+
+        if (lineHeight <= 0f)
+            return lineCount;
+
+        int maxLines = Math.Max(1, (int)MathF.Floor(boundsHeight / lineHeight));
+        return Math.Min(lineCount, maxLines);
+    }
+
+    private static string RemoveCarriageReturns(string text)
+        => text.IndexOf('\r') < 0 ? text : text.Replace("\r", string.Empty);
+
+    private static List<TextLineLayout> BuildWrappedTextLayout(
+        string text,
+        Font font,
+        float maxWidth,
+        Vect2 scale,
+        TextWrapMode wrapMode)
+    {
+        string[] sourceLines = text.Split('\n');
+        var layout = new List<TextLineLayout>(sourceLines.Length);
+
+        for (int i = 0; i < sourceLines.Length; i++)
+        {
+            if (wrapMode == TextWrapMode.Word)
+                AddWordWrappedLayoutLines(layout, sourceLines[i], font, maxWidth, scale.X);
+            else
+                AddCharWrappedLayoutLines(layout, sourceLines[i], font, maxWidth, scale.X);
+        }
+
+        return layout;
+    }
+
+    private static void AddWordWrappedLayoutLines(
+        List<TextLineLayout> layout,
+        string line,
+        Font font,
+        float maxWidth,
+        float scaleX)
     {
         string[] words = line.Split(' ');
-        float currentX = bounds.X;
-        float currentY = y;
-        float spaceWidth = font.GetGlyph(' ').Advance * scale.X;
+        float spaceWidth = GetTextAdvance(font, ' ', scaleX);
+        var currentLine = new System.Text.StringBuilder();
+        float cursorWidth = 0f;
+        float visibleWidth = 0f;
 
         for (int i = 0; i < words.Length; i++)
         {
             string word = words[i];
-            if (string.IsNullOrEmpty(word)) continue;
+            if (string.IsNullOrEmpty(word))
+                continue;
 
-            float wordWidth = 0;
-            for (int j = 0; j < word.Length; j++)
-                wordWidth += font.GetGlyph(word[j]).Advance * scale.X;
+            float wordWidth = MeasureLineWidth(word, font, scaleX);
 
-            if (currentX + wordWidth > bounds.X + bounds.Width && i > 0)
+            if (currentLine.Length > 0 && cursorWidth + wordWidth > maxWidth)
             {
-                currentY += lineHeight;
-                currentX = bounds.X;
-                if (currentY + lineHeight > bounds.Y + bounds.Height) break;
+                layout.Add(new TextLineLayout(currentLine.ToString(), visibleWidth));
+                currentLine.Clear();
+                cursorWidth = 0f;
+                visibleWidth = 0f;
             }
 
-            for (int j = 0; j < word.Length; j++)
-            {
-                Glyph glyph = font.GetGlyph(word[j]);
-                if (glyph.IsEmpty) continue;
-                Rect2 dstRect = new(currentX + glyph.Offset.X * scale.X, currentY + glyph.Offset.Y * scale.Y, glyph.Size.X * scale.X, glyph.Size.Y * scale.Y);
-                EngineDraw(font, dstRect, new Rect2(glyph.Position.X, glyph.Position.Y, glyph.Size.X, glyph.Size.Y), color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, font.Type == AssetType.Normal);
-                currentX += glyph.Advance * scale.X;
-            }
-            currentX += spaceWidth;
+            if (currentLine.Length > 0)
+                currentLine.Append(' ');
+
+            currentLine.Append(word);
+            visibleWidth = cursorWidth + wordWidth;
+            cursorWidth = visibleWidth + spaceWidth;
         }
 
-        y = currentY + lineHeight;
+        if (currentLine.Length > 0 || string.IsNullOrWhiteSpace(line))
+            layout.Add(new TextLineLayout(currentLine.ToString(), visibleWidth));
     }
 
-    private void ProcessCharWrappedLine(string line, Font font, Rect2 bounds, Color color, float depth, Vect2 scale, TextAlignment alignment, ref float y, float lineHeight)
+    private static void AddCharWrappedLayoutLines(
+        List<TextLineLayout> layout,
+        string line,
+        Font font,
+        float maxWidth,
+        float scaleX)
     {
-        float currentX = bounds.X;
-        float currentY = y;
+        if (line.Length == 0)
+        {
+            layout.Add(new TextLineLayout(string.Empty, 0f));
+            return;
+        }
+
+        int lineStart = 0;
+        float lineWidth = 0f;
 
         for (int i = 0; i < line.Length; i++)
         {
-            Glyph glyph = font.GetGlyph(line[i]);
-            if (glyph.IsEmpty) continue;
+            float characterWidth = GetTextAdvance(font, line[i], scaleX);
 
-            float charWidth = glyph.Advance * scale.X;
-            if (currentX + charWidth > bounds.X + bounds.Width)
+            if (lineWidth > 0f && lineWidth + characterWidth > maxWidth)
             {
-                currentY += lineHeight;
-                currentX = bounds.X;
-                if (currentY + lineHeight > bounds.Y + bounds.Height) break;
+                layout.Add(new TextLineLayout(
+                    line.Substring(lineStart, i - lineStart),
+                    lineWidth));
+
+                lineStart = i;
+                lineWidth = 0f;
             }
 
-            Rect2 dstRect = new(currentX + glyph.Offset.X * scale.X, currentY + glyph.Offset.Y * scale.Y, glyph.Size.X * scale.X, glyph.Size.Y * scale.Y);
-            EngineDraw(font, dstRect, new Rect2(glyph.Position.X, glyph.Position.Y, glyph.Size.X, glyph.Size.Y), color, 0f, Vect2.One, Vect2.Zero, TextureEffects.None, depth, font.Type == AssetType.Normal);
-            currentX += charWidth;
+            lineWidth += characterWidth;
         }
 
-        y = currentY + lineHeight;
+        layout.Add(new TextLineLayout(line.Substring(lineStart), lineWidth));
+    }
+
+    private void ProcessLine(string line, Font font, Rect2 bounds, Color color, float depth, Vect2 scale, TextAlignment alignment, float y)
+    {
+        float lineWidth = MeasureLineWidth(line, font, scale.X);
+        ProcessLayoutLine(new TextLineLayout(line, lineWidth), font, bounds, color, depth, scale, alignment, y);
+    }
+
+    private void ProcessLayoutLine(
+        TextLineLayout line,
+        Font font,
+        Rect2 bounds,
+        Color color,
+        float depth,
+        Vect2 scale,
+        TextAlignment alignment,
+        float y)
+    {
+        float currentX = GetAlignedStartX(bounds, alignment, line.Width);
+
+        for (int i = 0; i < line.Text.Length; i++)
+        {
+            char character = line.Text[i];
+            if (character == '\r')
+                continue;
+
+            float advance = GetTextAdvance(font, character, scale.X);
+
+            if (character is ' ' or '\t')
+            {
+                currentX += advance;
+                continue;
+            }
+
+            Glyph glyph = font.GetGlyph(character);
+            if (!glyph.IsEmpty)
+            {
+                Rect2 dstRect = new(
+                    currentX + glyph.Offset.X * scale.X,
+                    y + glyph.Offset.Y * scale.Y,
+                    glyph.Size.X * scale.X,
+                    glyph.Size.Y * scale.Y);
+
+                EngineDraw(
+                    font,
+                    dstRect,
+                    new Rect2(glyph.Position.X, glyph.Position.Y, glyph.Size.X, glyph.Size.Y),
+                    color,
+                    0f,
+                    Vect2.One,
+                    Vect2.Zero,
+                    TextureEffects.None,
+                    depth,
+                    font.Type == AssetType.Normal);
+            }
+
+            currentX += advance;
+        }
+    }
+
+    private static float MeasureLineWidth(string line, Font font, float scaleX)
+    {
+        float width = 0f;
+
+        for (int i = 0; i < line.Length; i++)
+            width += GetTextAdvance(font, line[i], scaleX);
+
+        return width;
+    }
+
+    private static float GetTextAdvance(Font font, char character, float scaleX)
+    {
+        if (character == '\r')
+            return 0f;
+
+        if (character == '\t')
+            return font.GetGlyph(' ').Advance * Font.TabSpaces * scaleX;
+
+        return font.GetGlyph(character).Advance * scaleX;
+    }
+
+    private static float GetAlignedStartX(Rect2 bounds, TextAlignment alignment, float lineWidth)
+    {
+        if (alignment is TextAlignment.TopCenter or TextAlignment.Center or TextAlignment.BottomCenter)
+            return bounds.X + (bounds.Width - lineWidth) / 2f;
+
+        if (alignment is TextAlignment.TopRight or TextAlignment.CenterRight or TextAlignment.BottomRight)
+            return bounds.X + bounds.Width - lineWidth;
+
+        return bounds.X;
     }
 
     private bool IsVisible(Rect2 dstRect)
         => !_hasBatchViewBounds || dstRect.Intersects(_batchViewBounds);
+
+    private static Rect2 GetTransformedBounds(Rect2 dstRect, Vect2 scale, Vect2 origin, float rotation)
+    {
+        float width = dstRect.Width * scale.X;
+        float height = dstRect.Height * scale.Y;
+        float left = dstRect.X - origin.X * scale.X;
+        float top = dstRect.Y - origin.Y * scale.Y;
+        float right = left + width;
+        float bottom = top + height;
+
+        if (rotation == 0f)
+        {
+            float minX = MathF.Min(left, right);
+            float minY = MathF.Min(top, bottom);
+            float maxX = MathF.Max(left, right);
+            float maxY = MathF.Max(top, bottom);
+            return new Rect2(minX, minY, maxX - minX, maxY - minY);
+        }
+
+        Span<Vect2> corners = stackalloc Vect2[4]
+        {
+            new(left, top),
+            new(right, top),
+            new(left, bottom),
+            new(right, bottom)
+        };
+
+        float cos = MathF.Cos(rotation);
+        float sin = MathF.Sin(rotation);
+        float centerX = dstRect.X;
+        float centerY = dstRect.Y;
+
+        float boundsLeft = float.PositiveInfinity;
+        float boundsTop = float.PositiveInfinity;
+        float boundsRight = float.NegativeInfinity;
+        float boundsBottom = float.NegativeInfinity;
+
+        for (int i = 0; i < corners.Length; i++)
+        {
+            float dx = corners[i].X - centerX;
+            float dy = corners[i].Y - centerY;
+            float x = centerX + dx * cos - dy * sin;
+            float y = centerY + dx * sin + dy * cos;
+
+            boundsLeft = MathF.Min(boundsLeft, x);
+            boundsTop = MathF.Min(boundsTop, y);
+            boundsRight = MathF.Max(boundsRight, x);
+            boundsBottom = MathF.Max(boundsBottom, y);
+        }
+
+        return new Rect2(
+            boundsLeft,
+            boundsTop,
+            boundsRight - boundsLeft,
+            boundsBottom - boundsTop);
+    }
 
     private sealed class DrawCommandComparer : IComparer<DrawCommand>
     {
@@ -745,10 +937,7 @@ public sealed class SpriteBatcher : BaseBatcher
         if (!font.IsValid)
             font.Load();
 
-        var scaleWidth = dstRect.Width * scale.X;
-        var scaleHeight = dstRect.Height * scale.Y;
-        var actualPos = new Vect2(dstRect.X - origin.X * scale.X, dstRect.Y - origin.Y * scale.Y);
-        var visibleRect = new Rect2(actualPos, new Vect2(scaleWidth, scaleHeight));
+        Rect2 visibleRect = GetTransformedBounds(dstRect, scale, origin, rotation);
 
         if (!IsVisible(visibleRect)) return;
         if (_cmdCount >= _cmds.Length) ResizeBuffers();
@@ -804,10 +993,7 @@ public sealed class SpriteBatcher : BaseBatcher
         if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
         if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
 
-        var scaleWidth = dstRect.Width * scale.X;
-        var scaleHeight = dstRect.Height * scale.Y;
-        var actualPos = new Vect2(dstRect.X - origin.X * scale.X, dstRect.Y - origin.Y * scale.Y);
-        var visibleRect = new Rect2(actualPos, new Vect2(scaleWidth, scaleHeight));
+        Rect2 visibleRect = GetTransformedBounds(dstRect, scale, origin, rotation);
 
         if (!IsVisible(visibleRect)) return;
         if (_cmdCount >= _cmds.Length) ResizeBuffers();
@@ -855,10 +1041,7 @@ public sealed class SpriteBatcher : BaseBatcher
         if (_isDisposed) throw new ObjectDisposedException(nameof(SpriteBatcher));
         if (!_isDrawing) throw new InvalidOperationException("Cannot draw outside Begin/End");
 
-        var scaleWidth = dstRect.Width * scale.X;
-        var scaleHeight = dstRect.Height * scale.Y;
-        var actualPos = new Vect2(dstRect.X - origin.X * scale.X, dstRect.Y - origin.Y * scale.Y);
-        var visibleRect = new Rect2(actualPos, new Vect2(scaleWidth, scaleHeight));
+        Rect2 visibleRect = GetTransformedBounds(dstRect, scale, origin, rotation);
 
         if (!IsVisible(visibleRect)) return;
         if (_cmdCount >= _cmds.Length) ResizeBuffers();
@@ -921,17 +1104,16 @@ public sealed class SpriteBatcher : BaseBatcher
         float srcTop = cmd.SrcRect.Top;
         float srcBottom = cmd.SrcRect.Bottom;
 
-        if (GameSettings.Instance.UseHalfTexelOffset && cmd.Texture != null)
+        if (GameSettings.Instance.UseHalfTexelOffset && (cmd.Texture != null || cmd.Font != null))
         {
-            float texWidth = cmd.Texture.Size.X;
-            float texHeight = cmd.Texture.Size.Y;
-            float offsetX = 0.5f / texWidth;
-            float offsetY = 0.5f / texHeight;
-
-            srcLeft -= offsetX;
-            srcRight += offsetX;
-            srcTop -= offsetY;
-            srcBottom += offsetY;
+            // VOID stores 2D texture coordinates in pixel space. The default shader
+            // normalizes them by texture size, so a half-texel adjustment is exactly
+            // half a source pixel here rather than half a normalized texel.
+            const float HalfTexel = 0.5f;
+            srcLeft += HalfTexel;
+            srcRight -= HalfTexel;
+            srcTop += HalfTexel;
+            srcBottom -= HalfTexel;
         }
 
         if (cmd.Effects.HasFlag(TextureEffects.Horizontal))

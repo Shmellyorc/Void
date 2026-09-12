@@ -35,6 +35,8 @@ namespace Void.Engine.Assets.Loaders.Fonts;
 /// </remarks>
 public abstract class Font : IAsset
 {
+    internal const int TabSpaces = 4;
+
     /// <summary>
     /// Stores the glyphs exposed by the font.
     /// </summary>
@@ -185,8 +187,9 @@ public abstract class Font : IAsset
     /// The measured text size. Empty or null text returns <see cref="Vect2.Zero"/>.
     /// </returns>
     /// <remarks>
-    /// Carriage returns are ignored. Newline characters start a new line, and
-    /// each measured line uses <see cref="LineHeight"/> plus <see cref="LineSpacing"/>.
+    /// Carriage returns are ignored, tabs advance by four spaces, and newline
+    /// characters start a new line. Each measured line uses <see cref="LineHeight"/>
+    /// plus <see cref="LineSpacing"/>.
     /// </remarks>
     public Vect2 Measure(string text)
     {
@@ -210,6 +213,12 @@ public abstract class Font : IAsset
 
             if (c == '\r')
                 continue;
+
+            if (c == '\t')
+            {
+                currentLineWidth += GetGlyph(' ').Advance * TabSpaces;
+                continue;
+            }
 
             currentLineWidth += GetGlyph(c).Advance;
         }
