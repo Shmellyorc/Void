@@ -22,7 +22,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <PackAsTool>true</PackAsTool>
-    <ToolCommandName>packer</ToolCommandName>
+    <ToolCommandName>void-packer</ToolCommandName>
     <Version>1.0.1</Version>
     <Description>Command-line tool for building, verifying, inspecting, extracting, and updating VOID asset packs with authenticated encryption and compression.</Description>
 
