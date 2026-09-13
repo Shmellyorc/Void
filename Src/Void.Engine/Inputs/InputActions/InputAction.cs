@@ -4,7 +4,7 @@
 //  Static manager for named input actions with string and enum support,
 //  providing frame-based action state tracking.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

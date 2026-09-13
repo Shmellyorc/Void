@@ -1,3 +1,12 @@
+// ============================================================================
+//  EmbeddedResources.cs
+// ============================================================================
+//  Helpers for accessing text, binary, and stream-based embedded engine resources.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 global using System.Reflection;
 
 namespace Void.Engine.Resources;

@@ -1,30 +1,57 @@
+// ============================================================================
+//  WindowCapabilities.cs
+// ============================================================================
+//  Native window-backend identification and capability reporting.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Systems;
 
 /// <summary>
 /// Identifies the native window-system backend currently used by VOID.
-/// This is intentionally independent of SDL types.
 /// </summary>
+/// <remarks>
+/// This enum exposes renderer-neutral backend names and does not expose SDL types.
+/// </remarks>
 public enum NativeWindowBackend
 {
+    /// <summary>The backend could not be identified.</summary>
     Unknown,
+
+    /// <summary>Microsoft Windows desktop backend.</summary>
     Windows,
+
+    /// <summary>X11 backend.</summary>
     X11,
+
+    /// <summary>Native Wayland backend.</summary>
     Wayland,
+
+    /// <summary>macOS Cocoa backend.</summary>
     Cocoa,
+
+    /// <summary>Android backend.</summary>
     Android,
+
+    /// <summary>Apple UIKit backend.</summary>
     UIKit,
+
+    /// <summary>Linux KMS/DRM backend.</summary>
     KmsDrm,
+
+    /// <summary>A recognized backend not represented by another enum value.</summary>
     Other
 }
 
 /// <summary>
-/// Describes window/display operations that the active native backend can
-/// reliably provide to VOID.
+/// Describes window and display capabilities provided by the active native backend.
 /// </summary>
 /// <remarks>
-/// These values describe the backend SDL actually initialized, not merely the
-/// operating system. For example, a Linux Wayland desktop running VOID through
-/// XWayland reports <see cref="NativeWindowBackend.X11"/>.
+/// Capabilities describe the backend actually initialized by the platform layer,
+/// not only the operating system. For example, a Wayland desktop running VOID
+/// through XWayland reports <see cref="NativeWindowBackend.X11"/>.
 /// </remarks>
 public readonly struct WindowCapabilities
 {
@@ -50,53 +77,63 @@ public readonly struct WindowCapabilities
         SupportsContentScale = supportsContentScale;
     }
 
-    /// <summary>The native window-system backend currently active.</summary>
+    /// <summary>
+    /// Gets the native window-system backend currently active.
+    /// </summary>
     public NativeWindowBackend Backend { get; }
 
     /// <summary>
-    /// Native backend name reported by the platform layer, such as
-    /// "x11", "wayland", "windows", or "cocoa".
+    /// Gets the native backend name reported by the platform layer.
     /// </summary>
+    /// <remarks>
+    /// Typical values include <c>x11</c>, <c>wayland</c>, <c>windows</c>, and <c>cocoa</c>.
+    /// </remarks>
     public string BackendName { get; }
 
     /// <summary>
-    /// Whether VOID can request an arbitrary X/Y position for a normal
-    /// top-level window.
+    /// Gets whether VOID can request an arbitrary position for a normal top-level window.
     /// </summary>
     public bool CanPositionWindow { get; }
 
     /// <summary>
-    /// Whether a windowed/borderless window can be moved to a specific display.
+    /// Gets whether a windowed or borderless window can be moved to a specific display.
     /// </summary>
     public bool CanSelectWindowedDisplay { get; }
 
     /// <summary>
-    /// Whether desktop/borderless fullscreen can be deterministically targeted
-    /// at a specific display by VOID.
+    /// Gets whether desktop fullscreen can be targeted at a specific display.
     /// </summary>
     public bool CanSelectDesktopFullscreenDisplay { get; }
 
     /// <summary>
-    /// Whether exclusive fullscreen can target a specific display through a
-    /// display-specific fullscreen mode.
+    /// Gets whether exclusive fullscreen can target a specific display mode.
     /// </summary>
     public bool CanSelectExclusiveFullscreenDisplay { get; }
 
-    /// <summary>Whether connected displays can be enumerated.</summary>
+    /// <summary>
+    /// Gets whether connected displays can be enumerated.
+    /// </summary>
     public bool SupportsDisplayEnumeration { get; }
 
-    /// <summary>Whether fullscreen display modes can be queried.</summary>
+    /// <summary>
+    /// Gets whether fullscreen display modes can be queried.
+    /// </summary>
     public bool SupportsDisplayModes { get; }
 
-    /// <summary>Whether display content/DPI scaling information is available.</summary>
+    /// <summary>
+    /// Gets whether display content or DPI scaling information is available.
+    /// </summary>
     public bool SupportsContentScale { get; }
 
     /// <summary>
-    /// True when placement of ordinary top-level windows is controlled by the
-    /// compositor instead of by the application.
+    /// Gets whether ordinary top-level window placement is controlled by the compositor.
     /// </summary>
     public bool UsesCompositorWindowPlacement => !CanPositionWindow;
 
+    /// <summary>
+    /// Returns the backend identifier and platform-reported backend name.
+    /// </summary>
+    /// <returns>A string in <c>Backend (BackendName)</c> form.</returns>
     public override string ToString()
         => $"{Backend} ({BackendName})";
 }

@@ -1,9 +1,9 @@
 // ============================================================================
 //  SoundEventArgs.cs
 // ============================================================================
-//  Base event argument class for all sound playback events.
+//  Base event data shared by sound playback events.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -12,43 +12,20 @@ using System;
 namespace Void.Engine.Sounds.EventArg;
 
 /// <summary>
-/// Base event argument class for sound playback events.
+/// Provides a snapshot of common sound-instance data captured when an event is created.
 /// </summary>
-/// <remarks>
-/// <para>
-/// This class serves as the base for all sound event argument types and provides
-/// common information about the sound instance, including its name, current
-/// playback time, and total duration.
-/// </para>
-/// <para>
-/// Derived event types include:
-/// <list type="bullet">
-///   <item><description><see cref="SoundCompletedEventArgs"/></description></item>
-///   <item><description><see cref="SoundLoopedEventArgs"/></description></item>
-///   <item><description><see cref="SoundStoppedEventArgs"/></description></item>
-/// </list>
-/// </para>
-/// </remarks>
 public class SoundEventArgs : EventArgs
 {
-    /// <summary>
-    /// Gets the sound instance that triggered the event.
-    /// </summary>
+    /// <summary>Gets the sound instance associated with the event.</summary>
     public SoundInstance Instance { get; }
 
-    /// <summary>
-    /// Gets the name of the sound.
-    /// </summary>
+    /// <summary>Gets the sound name captured for the event.</summary>
     public string SoundName { get; }
 
-    /// <summary>
-    /// Gets the current playback time of the sound in seconds.
-    /// </summary>
+    /// <summary>Gets the playback time, in seconds, captured for the event.</summary>
     public float PlayTime { get; }
 
-    /// <summary>
-    /// Gets the total duration of the sound in seconds.
-    /// </summary>
+    /// <summary>Gets the sound duration, in seconds, captured for the event.</summary>
     public float Duration { get; }
 
     internal SoundEventArgs(SoundInstance instance)

@@ -1,8 +1,11 @@
 // ============================================================================
 //  Window.cs
 // ============================================================================
-//  SDL-backed game window. Native ownership is SDL; rendering is performed by
-//  the selected VOID renderer backend and presented from a renderer-owned FBO.
+//  Native game-window management, renderer presentation, display selection,
+//  fullscreen configuration, scaling, input window state, and window events.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 using Void.Engine.Graphics.Rendering;
@@ -11,26 +14,76 @@ using Void.Engine.Platform.SDL;
 
 namespace Void.Engine.Systems;
 
+/// <summary>
+/// Defines how the configured game viewport is presented inside the native window.
+/// </summary>
 public enum WindowScaleMode
 {
+    /// <summary>
+    /// Stretches the viewport to fill the entire window without preserving aspect ratio.
+    /// </summary>
     Stretch,
+
+    /// <summary>
+    /// Preserves aspect ratio and scales the viewport by a whole-number factor of at least one.
+    /// </summary>
     PixelPerfect,
+
+    /// <summary>
+    /// Preserves aspect ratio and fits the entire viewport inside the window.
+    /// </summary>
     Fit,
+
+    /// <summary>
+    /// Preserves aspect ratio and fills the window, allowing content outside the window bounds.
+    /// </summary>
     Fill,
+
+    /// <summary>
+    /// Presents the viewport at its configured size without scaling.
+    /// </summary>
     None
 }
 
+/// <summary>
+/// Defines the native window presentation mode.
+/// </summary>
 public enum WindowMode
 {
+    /// <summary>A normal resizable window.</summary>
     Windowed,
+
+    /// <summary>A borderless window.</summary>
     Borderless,
+
+    /// <summary>A fullscreen window using the configured <see cref="FullscreenStyle"/>.</summary>
     Fullscreen
 }
 
 /// <summary>
-/// Manages the native SDL window and the renderer-owned main game surface.
-/// SDL remains an internal implementation detail.
+/// Manages the native game window and the renderer-owned main game surface.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Window settings changed through the fluent setter methods are queued until
+/// <see cref="ApplyChanges"/> is called. Properties such as <see cref="Mode"/>,
+/// <see cref="VSyncEnabled"/>, and the fullscreen properties report the currently
+/// applied state.
+/// </para>
+/// <para>
+/// Rendering is performed through VOID's selected renderer backend while native
+/// window ownership remains an internal platform detail.
+/// </para>
+/// <para>
+/// Example:
+/// <code>
+/// using var window = new Window(1280, 720, "My Game");
+/// window.SetSize(1600, 900)
+///       .SetVSync(false)
+///       .ApplyChanges();
+/// </code>
+/// </para>
+/// </remarks>
 public sealed class Window : IDisposable
 {
     private readonly IRendererBackend _renderer;
@@ -80,21 +133,66 @@ public sealed class Window : IDisposable
     internal void SetGlobalMousePosition(int x, int y)
         => SdlWindowHost.SetGlobalMousePosition(x, y);
 
+    /// <summary>
+    /// Gets the current native window size in pixels.
+    /// </summary>
     public Vect2 WindowSize => _windowSize;
+
+    /// <summary>
+    /// Gets the renderer-owned game surface size.
+    /// </summary>
+    /// <remarks>
+    /// This is the configured viewport multiplied by the supersampling factor.
+    /// </remarks>
     public Vect2 RenderSize => _renderSize;
+
+    /// <summary>
+    /// Gets the currently applied window mode.
+    /// </summary>
     public WindowMode Mode => _appliedMode;
+
+    /// <summary>
+    /// Gets whether vertical synchronization is currently enabled.
+    /// </summary>
     public bool VSyncEnabled => _appliedVSync;
+
+    /// <summary>
+    /// Gets whether the native window currently has input focus.
+    /// </summary>
     public bool IsFocused { get; private set; }
+
+    /// <summary>
+    /// Gets whether the window is still open and has not been disposed.
+    /// </summary>
     public bool IsOpen => !_isDisposed && _window.IsOpen;
+
+    /// <summary>
+    /// Gets whether one or more queued window settings have not yet been applied.
+    /// </summary>
     public bool HasPendingChanges => _hasPendingChanges;
+
+    /// <summary>
+    /// Gets the currently applied fullscreen style.
+    /// </summary>
     public FullscreenStyle FullscreenStyle => _appliedFullscreenStyle;
+
+    /// <summary>
+    /// Gets the currently applied exclusive-fullscreen width.
+    /// </summary>
     public int FullscreenWidth => _appliedFullscreenWidth;
+
+    /// <summary>
+    /// Gets the currently applied exclusive-fullscreen height.
+    /// </summary>
     public int FullscreenHeight => _appliedFullscreenHeight;
+
+    /// <summary>
+    /// Gets the currently applied exclusive-fullscreen refresh rate.
+    /// </summary>
     public float FullscreenRefreshRate => _appliedFullscreenRefreshRate;
 
     /// <summary>
-    /// Gets the capabilities of the native window backend that VOID actually
-    /// initialized for this window.
+    /// Gets the capabilities of the native window backend initialized for this window.
     /// </summary>
     public WindowCapabilities Capabilities => _window.Capabilities;
 
@@ -103,22 +201,66 @@ public sealed class Window : IDisposable
     /// </summary>
     public NativeWindowBackend PlatformBackend => Capabilities.Backend;
 
-    /// <summary>Gets the display the native window currently occupies.</summary>
+    /// <summary>
+    /// Gets the display the native window currently occupies.
+    /// </summary>
     public DisplayId CurrentDisplayId => _window.Display;
 
-    /// <summary>Gets a fresh snapshot of the display the native window currently occupies.</summary>
+    /// <summary>
+    /// Gets a fresh snapshot of the display the native window currently occupies.
+    /// </summary>
     public DisplayInfo CurrentDisplay => DisplayManager.GetDisplay(CurrentDisplayId);
 
-    /// <summary>Gets the current enumeration index of the window's display, or -1 if disconnected.</summary>
+    /// <summary>
+    /// Gets the current enumeration index of the window's display, or <c>-1</c> if disconnected.
+    /// </summary>
     public int DisplayIndex => DisplayManager.GetIndex(CurrentDisplayId);
 
+    /// <summary>
+    /// Gets or sets the callback invoked when the native window size changes.
+    /// </summary>
     public Action<Vect2> OnWindowResized { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the window gains focus.
+    /// </summary>
     public Action OnFocusGained { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the window loses focus.
+    /// </summary>
     public Action OnFocusLost { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the native window requests to close.
+    /// </summary>
     public Action OnWindowClosed { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the mouse wheel is scrolled.
+    /// </summary>
     public Action<int> OnMouseWheelScrolled { get; set; }
+
+    /// <summary>
+    /// Gets or sets the callback invoked when the connected-display configuration changes.
+    /// </summary>
     public Action<DisplayChangedEvent> OnDisplayChanged { get; set; }
 
+    /// <summary>
+    /// Creates a game window and initializes the configured renderer backend.
+    /// </summary>
+    /// <param name="width">Initial window width in pixels.</param>
+    /// <param name="height">Initial window height in pixels.</param>
+    /// <param name="title">Initial window title.</param>
+    /// <param name="mode">Initial window mode.</param>
+    /// <param name="vsync">Whether vertical synchronization is initially enabled.</param>
+    /// <param name="iconData">Optional encoded image data used as the window icon.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="width"/> or <paramref name="height"/> is not positive.
+    /// </exception>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="title"/> is null or empty.
+    /// </exception>
     public Window(int width, int height, string title, WindowMode mode = WindowMode.Windowed, bool vsync = true, byte[] iconData = null)
     {
         if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width));
@@ -203,6 +345,14 @@ public sealed class Window : IDisposable
         Logger.Instance.InfoWithCategory("Window", "SDL window and renderer created successfully: {0}", _renderer.Name);
     }
 
+    /// <summary>
+    /// Queues a new window width.
+    /// </summary>
+    /// <param name="width">Width in pixels.</param>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="width"/> is not positive.
+    /// </exception>
     public Window SetWidth(int width)
     {
         if (width <= 0) throw new ArgumentOutOfRangeException(nameof(width), "Width must be greater than 0.");
@@ -211,6 +361,14 @@ public sealed class Window : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Queues a new window height.
+    /// </summary>
+    /// <param name="height">Height in pixels.</param>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="height"/> is not positive.
+    /// </exception>
     public Window SetHeight(int height)
     {
         if (height <= 0) throw new ArgumentOutOfRangeException(nameof(height), "Height must be greater than 0.");
@@ -219,6 +377,12 @@ public sealed class Window : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Queues a new window size.
+    /// </summary>
+    /// <param name="width">Width in pixels.</param>
+    /// <param name="height">Height in pixels.</param>
+    /// <returns>This window for fluent configuration.</returns>
     public Window SetSize(int width, int height)
     {
         SetWidth(width);
@@ -226,6 +390,11 @@ public sealed class Window : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Queues a new window mode.
+    /// </summary>
+    /// <param name="mode">The window mode to apply.</param>
+    /// <returns>This window for fluent configuration.</returns>
     public Window SetMode(WindowMode mode)
     {
         _pendingMode = mode;
@@ -233,6 +402,11 @@ public sealed class Window : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Queues a vertical-synchronization setting.
+    /// </summary>
+    /// <param name="enabled">Whether vertical synchronization should be enabled.</param>
+    /// <returns>This window for fluent configuration.</returns>
     public Window SetVSync(bool enabled)
     {
         _pendingVSync = enabled;
@@ -240,6 +414,14 @@ public sealed class Window : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Queues a new window title.
+    /// </summary>
+    /// <param name="title">The title to apply.</param>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="title"/> is null or empty.
+    /// </exception>
     public Window SetTitle(string title)
     {
         if (string.IsNullOrEmpty(title)) throw new ArgumentNullException(nameof(title));
@@ -250,15 +432,26 @@ public sealed class Window : IDisposable
 
     /// <summary>
     /// Queues a move to a connected display by its current enumeration index.
-    /// Call <see cref="ApplyChanges"/> to apply it.
     /// </summary>
+    /// <param name="displayIndex">The current display enumeration index.</param>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <remarks>
+    /// Call <see cref="ApplyChanges"/> to apply the queued display change.
+    /// </remarks>
     public Window SetDisplay(int displayIndex)
         => SetDisplay(DisplayManager.GetDisplay(displayIndex).Id);
 
     /// <summary>
     /// Queues a move to a connected display by stable VOID display handle.
-    /// Call <see cref="ApplyChanges"/> to apply it.
     /// </summary>
+    /// <param name="display">The connected display to target.</param>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the requested display is invalid or no longer connected.
+    /// </exception>
+    /// <remarks>
+    /// Call <see cref="ApplyChanges"/> to apply the queued display change.
+    /// </remarks>
     public Window SetDisplay(DisplayId display)
     {
         if (!display.IsValid || !DisplayManager.TryGetDisplay(display, out _))
@@ -270,9 +463,13 @@ public sealed class Window : IDisposable
     }
 
     /// <summary>
-    /// Queues desktop/borderless fullscreen. The selected display keeps its
-    /// current desktop resolution and refresh rate.
+    /// Queues desktop fullscreen using the selected display's current desktop mode.
     /// </summary>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <remarks>
+    /// The selected display keeps its current desktop resolution and refresh rate.
+    /// Call <see cref="ApplyChanges"/> to apply the queued state.
+    /// </remarks>
     public Window SetDesktopFullscreen()
     {
         _pendingMode = WindowMode.Fullscreen;
@@ -285,9 +482,17 @@ public sealed class Window : IDisposable
     }
 
     /// <summary>
-    /// Queues exclusive fullscreen at the requested resolution and optional
-    /// refresh rate. A refresh rate of zero lets SDL choose the closest mode.
+    /// Queues exclusive fullscreen at the requested resolution and refresh rate.
     /// </summary>
+    /// <param name="width">Fullscreen width in pixels.</param>
+    /// <param name="height">Fullscreen height in pixels.</param>
+    /// <param name="refreshRate">
+    /// Requested refresh rate, or zero to allow the platform layer to choose the closest mode.
+    /// </param>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when width or height is not positive, or when refresh rate is negative.
+    /// </exception>
     public Window SetFullscreenMode(int width, int height, float refreshRate = 0f)
     {
         if (width <= 0)
@@ -306,13 +511,22 @@ public sealed class Window : IDisposable
         return this;
     }
 
-    /// <summary>Queues exclusive fullscreen using a mode returned by DisplayManager.</summary>
+    /// <summary>
+    /// Queues exclusive fullscreen using a mode returned by <see cref="DisplayManager"/>.
+    /// </summary>
+    /// <param name="mode">The display mode to use.</param>
+    /// <returns>This window for fluent configuration.</returns>
     public Window SetFullscreenMode(DisplayMode mode)
         => SetFullscreenMode(
             checked((int)mode.Width),
             checked((int)mode.Height),
             mode.RefreshRate);
 
+    /// <summary>
+    /// Applies all queued window, display, fullscreen, title, and VSync changes.
+    /// </summary>
+    /// <returns>This window for fluent configuration.</returns>
+    /// <exception cref="ObjectDisposedException">Thrown when the window has been disposed.</exception>
     public Window ApplyChanges()
     {
         ThrowIfDisposed();
@@ -379,6 +593,10 @@ public sealed class Window : IDisposable
         return this;
     }
 
+    /// <summary>
+    /// Toggles between fullscreen and windowed mode and applies the change immediately.
+    /// </summary>
+    /// <returns>This window.</returns>
     public Window ToggleFullscreen()
     {
         SetMode(_appliedMode == WindowMode.Fullscreen ? WindowMode.Windowed : WindowMode.Fullscreen);
@@ -415,6 +633,9 @@ public sealed class Window : IDisposable
         _renderer.EndFrame();
     }
 
+    /// <summary>
+    /// Closes the native window if it has not already been disposed.
+    /// </summary>
     public void Close()
     {
         if (_isDisposed) return;
@@ -523,12 +744,31 @@ public sealed class Window : IDisposable
     // These legacy helpers retain their original primary-display semantics,
     // but SDL now supplies the display data. A richer multi-monitor API can be
     // layered on top without changing these existing methods.
+
+    /// <summary>
+    /// Gets the desktop resolution of the primary display.
+    /// </summary>
+    /// <returns>The primary display resolution in pixels.</returns>
     public static Vect2 GetDesktopResolution()
         => SdlPlatform.GetPrimaryDesktopResolution();
 
+    /// <summary>
+    /// Gets the supported resolutions reported for the primary display.
+    /// </summary>
+    /// <returns>A list of supported resolutions.</returns>
     public static List<Vect2> GetSupportedResolutions()
         => SdlPlatform.GetPrimarySupportedResolutions();
 
+    /// <summary>
+    /// Gets primary-display resolutions matching an aspect ratio within a tolerance.
+    /// </summary>
+    /// <param name="ratioWidth">Aspect-ratio width component.</param>
+    /// <param name="ratioHeight">Aspect-ratio height component.</param>
+    /// <param name="tolerance">Maximum absolute difference from the requested ratio.</param>
+    /// <returns>A list of matching supported resolutions.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when either ratio component is not positive.
+    /// </exception>
     public static List<Vect2> GetSupportedResolutionsByAspectRatio(int ratioWidth, int ratioHeight, float tolerance = 0.01f)
     {
         if (ratioWidth <= 0 || ratioHeight <= 0)
@@ -545,6 +785,15 @@ public sealed class Window : IDisposable
         return result;
     }
 
+    /// <summary>
+    /// Finds the supported primary-display resolution closest to a requested size.
+    /// </summary>
+    /// <param name="width">Requested width.</param>
+    /// <param name="height">Requested height.</param>
+    /// <returns>
+    /// The closest supported resolution, or the requested size when no supported
+    /// resolutions are reported.
+    /// </returns>
     public static Vect2 GetClosestSupportedResolution(int width, int height)
     {
         var resolutions = GetSupportedResolutions();
@@ -565,9 +814,22 @@ public sealed class Window : IDisposable
         return closest;
     }
 
+    /// <summary>
+    /// Determines whether a resolution is supported by the primary display.
+    /// </summary>
+    /// <param name="width">Resolution width.</param>
+    /// <param name="height">Resolution height.</param>
+    /// <returns><see langword="true"/> when the resolution is supported; otherwise, <see langword="false"/>.</returns>
     public static bool IsResolutionSupported(int width, int height)
         => SdlPlatform.IsPrimaryResolutionSupported(width, height);
 
+    /// <summary>
+    /// Loads encoded image data from a file and applies it as the window icon.
+    /// </summary>
+    /// <param name="iconPath">Path to the icon image file.</param>
+    /// <remarks>
+    /// Null or empty paths are ignored. Missing files are logged as warnings.
+    /// </remarks>
     public void SetIcon(string iconPath)
     {
         if (string.IsNullOrEmpty(iconPath)) return;
@@ -579,6 +841,13 @@ public sealed class Window : IDisposable
         SetIcon(File.ReadAllBytes(iconPath));
     }
 
+    /// <summary>
+    /// Applies encoded image data as the window icon.
+    /// </summary>
+    /// <param name="iconData">Encoded image data.</param>
+    /// <remarks>
+    /// Null or empty data is ignored. Decode or platform failures are logged as warnings.
+    /// </remarks>
     public void SetIcon(byte[] iconData)
     {
         if (iconData == null || iconData.Length == 0)
@@ -605,6 +874,9 @@ public sealed class Window : IDisposable
         }
     }
 
+    /// <summary>
+    /// Releases the renderer, render surface, presenter, and native window resources.
+    /// </summary>
     public void Dispose()
     {
         if (_isDisposed)

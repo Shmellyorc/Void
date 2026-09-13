@@ -3,7 +3,7 @@
 // ============================================================================
 //  Writes formatted log entries to the console.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

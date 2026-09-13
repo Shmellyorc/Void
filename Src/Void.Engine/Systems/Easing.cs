@@ -1,277 +1,184 @@
 // ============================================================================
 //  Easing.cs
 // ============================================================================
-//  Comprehensive easing function library with 33 different easing types
-//  covering quadratic, cubic, sine, exponential, circular, back, elastic,
-//  and bounce families with In, Out, InOut, and OutIn directions.
+//  Easing function library with 41 easing types across common curve families
+//  and In, Out, InOut, and OutIn directions.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Systems;
 
 /// <summary>
-/// Defines all supported easing types by combining an easing family with a direction.
+/// Identifies an easing curve used to transform normalized time.
 /// </summary>
 /// <remarks>
 /// <para>
-/// Easing functions control the rate of change of a value over time, producing
-/// different acceleration and deceleration patterns for animations, transitions,
-/// and other time-based effects.
+/// <see cref="Easing.Ease"/> clamps its input to the range from 0 to 1 before
+/// evaluating the selected curve.
 /// </para>
 /// <para>
-/// The naming convention follows a pattern where the family name is combined
-/// with a direction suffix:
-/// <list type="bullet">
-/// <item><description><see cref="QuadIn"/> - Quadratic ease-in (starts slow, ends fast)</description></item>
-/// <item><description><see cref="QuadOut"/> - Quadratic ease-out (starts fast, ends slow)</description></item>
-/// <item><description><see cref="QuadInOut"/> - Quadratic with both ease-in and ease-out</description></item>
-/// <item><description><see cref="QuadOutIn"/> - Quadratic with ease-out then ease-in</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// To apply an easing function, pass the desired <see cref="EaseType"/> and
-/// a normalized time value (0-1) to <see cref="Easing.Ease"/>.
+/// Most curves remain within the normalized output range. Back and elastic
+/// curves intentionally overshoot to create their characteristic motion.
 /// </para>
 /// </remarks>
-/// <example>
-/// <code>
-/// float t = 0.5f; // Halfway through the animation
-/// float easedValue = Easing.Ease(EaseType.QuadInOut, t);
-/// // Use easedValue to interpolate between start and end values
-/// </code>
-/// </example>
 public enum EaseType
 {
-    /// <summary>
-    /// No easing applied. The value progresses linearly from start to end.
-    /// </summary>
+    /// <summary>Linear interpolation with no easing.</summary>
     Linear,
 
-    /// <summary>
-    /// Quadratic ease-in. The value starts slowly and accelerates toward the end.
-    /// </summary>
+    /// <summary>Quadratic ease-in.</summary>
     QuadIn,
 
-    /// <summary>
-    /// Quadratic ease-out. The value starts quickly and decelerates toward the end.
-    /// </summary>
+    /// <summary>Quadratic ease-out.</summary>
     QuadOut,
 
-    /// <summary>
-    /// Quadratic ease-in-out. The value starts slow, accelerates, then decelerates at the end.
-    /// </summary>
+    /// <summary>Quadratic ease-in followed by ease-out.</summary>
     QuadInOut,
 
-    /// <summary>
-    /// Quadratic ease-out-in. The value starts fast, decelerates in the middle, then accelerates again.
-    /// </summary>
+    /// <summary>Quadratic ease-out followed by ease-in.</summary>
     QuadOutIn,
 
-    /// <summary>
-    /// Cubic ease-in. The value starts very slowly and accelerates toward the end.
-    /// </summary>
+    /// <summary>Cubic ease-in.</summary>
     CubicIn,
 
-    /// <summary>
-    /// Cubic ease-out. The value starts quickly and decelerates toward the end.
-    /// </summary>
+    /// <summary>Cubic ease-out.</summary>
     CubicOut,
 
-    /// <summary>
-    /// Cubic ease-in-out. The value starts slow, accelerates, then decelerates at the end.
-    /// </summary>
+    /// <summary>Cubic ease-in followed by ease-out.</summary>
     CubicInOut,
 
-    /// <summary>
-    /// Cubic ease-out-in. The value starts fast, decelerates in the middle, then accelerates again.
-    /// </summary>
+    /// <summary>Cubic ease-out followed by ease-in.</summary>
     CubicOutIn,
 
-    /// <summary>
-    /// Quartic ease-in. The value starts very slowly and accelerates strongly toward the end.
-    /// </summary>
+    /// <summary>Quartic ease-in.</summary>
     QuartIn,
 
-    /// <summary>
-    /// Quartic ease-out. The value starts very fast and decelerates strongly toward the end.
-    /// </summary>
+    /// <summary>Quartic ease-out.</summary>
     QuartOut,
 
-    /// <summary>
-    /// Quartic ease-in-out. The value starts slow, accelerates strongly, then decelerates at the end.
-    /// </summary>
+    /// <summary>Quartic ease-in followed by ease-out.</summary>
     QuartInOut,
 
-    /// <summary>
-    /// Quartic ease-out-in. The value starts fast, decelerates strongly in the middle, then accelerates again.
-    /// </summary>
+    /// <summary>Quartic ease-out followed by ease-in.</summary>
     QuartOutIn,
 
-    /// <summary>
-    /// Quintic ease-in. The value starts extremely slowly and accelerates sharply toward the end.
-    /// </summary>
+    /// <summary>Quintic ease-in.</summary>
     QuintIn,
 
-    /// <summary>
-    /// Quintic ease-out. The value starts extremely fast and decelerates sharply toward the end.
-    /// </summary>
+    /// <summary>Quintic ease-out.</summary>
     QuintOut,
 
-    /// <summary>
-    /// Quintic ease-in-out. The value starts slow, accelerates sharply, then decelerates at the end.
-    /// </summary>
+    /// <summary>Quintic ease-in followed by ease-out.</summary>
     QuintInOut,
 
-    /// <summary>
-    /// Quintic ease-out-in. The value starts fast, decelerates sharply in the middle, then accelerates again.
-    /// </summary>
+    /// <summary>Quintic ease-out followed by ease-in.</summary>
     QuintOutIn,
 
-    /// <summary>
-    /// Sine ease-in. The value starts slowly with a smooth sinusoidal curve.
-    /// </summary>
+    /// <summary>Sinusoidal ease-in.</summary>
     SineIn,
 
-    /// <summary>
-    /// Sine ease-out. The value ends slowly with a smooth sinusoidal curve.
-    /// </summary>
+    /// <summary>Sinusoidal ease-out.</summary>
     SineOut,
 
-    /// <summary>
-    /// Sine ease-in-out. The value starts and ends slowly with a smooth sinusoidal curve.
-    /// </summary>
+    /// <summary>Sinusoidal ease-in followed by ease-out.</summary>
     SineInOut,
 
-    /// <summary>
-    /// Sine ease-out-in. The value has a slow middle section with sinusoidal smoothing.
-    /// </summary>
+    /// <summary>Sinusoidal ease-out followed by ease-in.</summary>
     SineOutIn,
 
-    /// <summary>
-    /// Exponential ease-in. The value starts imperceptibly slow and accelerates extremely fast.
-    /// </summary>
+    /// <summary>Exponential ease-in.</summary>
     ExpoIn,
 
-    /// <summary>
-    /// Exponential ease-out. The value starts extremely fast and decelerates imperceptibly.
-    /// </summary>
+    /// <summary>Exponential ease-out.</summary>
     ExpoOut,
 
-    /// <summary>
-    /// Exponential ease-in-out. The value starts imperceptibly slow, accelerates, then decelerates.
-    /// </summary>
+    /// <summary>Exponential ease-in followed by ease-out.</summary>
     ExpoInOut,
 
-    /// <summary>
-    /// Exponential ease-out-in. The value starts fast, decelerates, then accelerates imperceptibly.
-    /// </summary>
+    /// <summary>Exponential ease-out followed by ease-in.</summary>
     ExpoOutIn,
 
-    /// <summary>
-    /// Circular ease-in. The value follows a circular arc starting slowly.
-    /// </summary>
+    /// <summary>Circular ease-in.</summary>
     CircIn,
 
-    /// <summary>
-    /// Circular ease-out. The value follows a circular arc ending slowly.
-    /// </summary>
+    /// <summary>Circular ease-out.</summary>
     CircOut,
 
-    /// <summary>
-    /// Circular ease-in-out. The value follows a circular arc starting and ending slowly.
-    /// </summary>
+    /// <summary>Circular ease-in followed by ease-out.</summary>
     CircInOut,
 
-    /// <summary>
-    /// Circular ease-out-in. The value follows a circular arc with a slow middle.
-    /// </summary>
+    /// <summary>Circular ease-out followed by ease-in.</summary>
     CircOutIn,
 
-    /// <summary>
-    /// Back ease-in. The value overshoots the starting point before moving forward.
-    /// </summary>
+    /// <summary>Back ease-in with intentional overshoot.</summary>
     BackIn,
 
-    /// <summary>
-    /// Back ease-out. The value overshoots the ending point before settling.
-    /// </summary>
+    /// <summary>Back ease-out with intentional overshoot.</summary>
     BackOut,
 
-    /// <summary>
-    /// Back ease-in-out. The value overshoots both the start and end points.
-    /// </summary>
+    /// <summary>Back ease-in followed by ease-out with intentional overshoot.</summary>
     BackInOut,
 
-    /// <summary>
-    /// Back ease-out-in. The value overshoots in the middle of the transition.
-    /// </summary>
+    /// <summary>Back ease-out followed by ease-in with intentional overshoot.</summary>
     BackOutIn,
 
-    /// <summary>
-    /// Elastic ease-in. The value oscillates with a spring-like effect at the start.
-    /// </summary>
+    /// <summary>Elastic ease-in with spring-like oscillation.</summary>
     ElasticIn,
 
-    /// <summary>
-    /// Elastic ease-out. The value oscillates with a spring-like effect at the end.
-    /// </summary>
+    /// <summary>Elastic ease-out with spring-like oscillation.</summary>
     ElasticOut,
 
-    /// <summary>
-    /// Elastic ease-in-out. The value oscillates with a spring-like effect at both ends.
-    /// </summary>
+    /// <summary>Elastic ease-in followed by ease-out with spring-like oscillation.</summary>
     ElasticInOut,
 
-    /// <summary>
-    /// Elastic ease-out-in. The value oscillates with a spring-like effect in the middle.
-    /// </summary>
+    /// <summary>Elastic ease-out followed by ease-in with spring-like oscillation.</summary>
     ElasticOutIn,
 
-    /// <summary>
-    /// Bounce ease-in. The value bounces at the start of the transition.
-    /// </summary>
+    /// <summary>Bounce ease-in.</summary>
     BounceIn,
 
-    /// <summary>
-    /// Bounce ease-out. The value bounces at the end of the transition.
-    /// </summary>
+    /// <summary>Bounce ease-out.</summary>
     BounceOut,
 
-    /// <summary>
-    /// Bounce ease-in-out. The value bounces at both the start and end.
-    /// </summary>
+    /// <summary>Bounce ease-in followed by ease-out.</summary>
     BounceInOut,
 
-    /// <summary>
-    /// Bounce ease-out-in. The value bounces in the middle of the transition.
-    /// </summary>
+    /// <summary>Bounce ease-out followed by ease-in.</summary>
     BounceOutIn,
 }
 
 /// <summary>
-/// Provides static methods for evaluating easing functions by type.
+/// Provides easing functions for normalized animation and interpolation time.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Ease"/> method serves as the primary entry point, accepting
-/// an <see cref="EaseType"/> and a normalized time value. All easing functions
-/// operate on a time range of 0 to 1, with the output also normalized to 0 to 1.
+/// Use <see cref="Ease"/> to evaluate one of the 41 <see cref="EaseType"/> values.
+/// Input time is clamped to the normalized range before evaluation.
 /// </para>
 /// <para>
-/// This class is typically used in animation systems, tweening libraries, and
-/// any scenario where smooth interpolations are required.
+/// Back and elastic easing may return values outside the normalized range because
+/// their curves intentionally overshoot.
+/// </para>
+/// <para>
+/// Example:
+/// <code>
+/// float eased = Easing.Ease(EaseType.QuadInOut, 0.5f);
+/// </code>
 /// </para>
 /// </remarks>
 public static class Easing
 {
     /// <summary>
-    /// Evaluates the specified easing function at the given time value.
+    /// Evaluates an easing curve at the specified normalized time.
     /// </summary>
-    /// <param name="type">The easing type to evaluate.</param>
-    /// <param name="t">The normalized time value between 0 and 1.</param>
-    /// <returns>The eased value between 0 and 1.</returns>
+    /// <param name="type">The easing curve to evaluate.</param>
+    /// <param name="t">The time value to evaluate. Values outside the normalized range are clamped.</param>
+    /// <returns>
+    /// The eased value. Back and elastic curves may intentionally return values
+    /// outside the normalized range.
+    /// </returns>
     public static float Ease(EaseType type, float t)
     {
         t = Math.Clamp(t, 0f, 1f);
@@ -323,9 +230,6 @@ public static class Easing
         };
     }
 
-    /// <summary>
-    /// Combines an ease-out function with an ease-in function to create an Out-In curve.
-    /// </summary>
     private static float OutIn(Func<float, float> easeOut, Func<float, float> easeIn, float t)
     {
         if (t < 0.5f)

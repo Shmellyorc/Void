@@ -1,72 +1,47 @@
 // ============================================================================
 //  ContentReader.cs
 // ============================================================================
-//  Binary reader with manifest-based verification for save/load operations.
-//  Ensures data integrity by validating the expected read order against
-//  the manifest generated during writing.
+//  Manifest-verified binary reader for VOID save data.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
+using System.Xml.Serialization;
+
 namespace Void.Engine.Saves;
 
+internal sealed class ManifestMismatchException : InvalidOperationException
+{
+    public ManifestMismatchException(string message) : base(message) { }
+}
+
 /// <summary>
-/// Provides a manifest-verified binary reader for secure deserialization of save data.
+/// Reads manifest-tracked values written by <see cref="ContentWriter"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ContentReader"/> works in tandem with <see cref="ContentWriter"/>
-/// to ensure data integrity during save/load operations. When data is written,
-/// a manifest is generated that records the exact order and types of every value
-/// written. During reading, this manifest is used to verify that values are read
-/// in the identical order with matching types.
+/// Each supported read verifies the next manifest entry before consuming its
+/// payload. Read values in the same order and with the same supported types used
+/// by the matching <see cref="ContentWriter"/>.
 /// </para>
 /// <para>
-/// This verification system provides protection against:
-/// <list type="bullet">
-///   <item><description>Data corruption from incomplete writes or storage errors</description></item>
-///   <item><description>Version mismatches where save file structure has changed</description></item>
-///   <item><description>Programming errors where read order doesn't match write order</description></item>
-///   <item><description>Malicious tampering with save data</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// The reader is typically used inside a derived <see cref="ContentTypeWriterReader{T}"/>
-/// implementation. The manifest is provided automatically by the save system
-/// and should not be manually constructed.
+/// The manifest detects schema/order mismatches. When the save payload is
+/// encrypted, AES-GCM separately provides authenticated integrity for that payload.
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Called from within a ContentTypeWriterReader&lt;T&gt; implementation
-/// protected override T Read(ContentReader reader)
+/// protected override PlayerSave Read(ContentReader reader)
 /// {
-///     // Read values in the exact same order they were written
-///     var position = reader.ReadVect2();
-///     var health = reader.ReadInt32();
-///     var playerName = reader.ReadString();
-///     var inventory = reader.ReadObject&lt;List&lt;Item&gt;&gt;();
-///     
-///     // The reader automatically verifies the manifest
-///     // If the read order doesn't match the write order, an exception is thrown
-///     
-///     return new T(position, health, playerName, inventory);
+///     return new PlayerSave
+///     {
+///         Name = reader.ReadString(),
+///         Level = reader.ReadInt32(),
+///         Position = reader.ReadVect2()
+///     };
 /// }
 /// </code>
-/// </para>
-/// <para>
-/// <b>Important Notes:</b>
-/// <list type="bullet">
-///   <item><description>All read operations must be performed in the exact same order as their corresponding write operations</description></item>
-///   <item><description><see cref="IsManifestComplete"/> should be checked after reading to ensure all data was consumed</description></item>
-///   <item><description>If a manifest mismatch is detected, the save file should be considered corrupt</description></item>
-///   <item><description>This class is internal to the save system and should not be instantiated directly by user code</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. Each reader instance should be used on a single thread.
 /// </para>
 /// </remarks>
 public sealed class ContentReader : BinaryReader
@@ -76,71 +51,85 @@ public sealed class ContentReader : BinaryReader
 
     internal ContentReader(Stream stream, WriteType[] manifest) : base(stream)
     {
+        ArgumentNullException.ThrowIfNull(manifest);
         _manifest = manifest;
-        _manifestIndex = 0;
     }
 
-    /// <summary>
-    /// Gets a value indicating whether all manifest entries have been consumed.
-    /// </summary>
-    internal bool IsManifestComplete => _manifestIndex >= _manifest.Length;
+    internal bool IsManifestComplete => _manifestIndex == _manifest.Length;
+    internal bool IsDataComplete => BaseStream.Position == BaseStream.Length;
 
     private void VerifyNext(WriteType expected)
     {
         if (_manifestIndex >= _manifest.Length)
-            throw new InvalidOperationException($"Save data is corrupt: Expected {expected} but reached end of manifest.");
+        {
+            throw new ManifestMismatchException(
+                $"Expected {expected}, but the manifest ended at position {_manifestIndex}.");
+        }
 
-        var actual = _manifest[_manifestIndex];
+        WriteType actual = _manifest[_manifestIndex];
         if (actual != expected)
-            throw new InvalidOperationException($"Save data is corrupt: Expected {expected} but found {actual} at position {_manifestIndex}.");
+        {
+            throw new ManifestMismatchException(
+                $"Expected {expected}, but found {actual} at manifest position {_manifestIndex}.");
+        }
 
         _manifestIndex++;
     }
 
-    /// <summary>
-    /// Reads a <see cref="Vect2"/> value from the stream.
-    /// </summary>
-    /// <returns>The read <see cref="Vect2"/> value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    private byte[] ReadExactPayload(int length)
+    {
+        if (length < 0)
+            throw new InvalidDataException("Save payload contains a negative length.");
+
+        long remaining = BaseStream.Length - BaseStream.Position;
+        if (length > remaining)
+            throw new EndOfStreamException("Save payload ended before the declared data length was read.");
+
+        byte[] data = base.ReadBytes(length);
+        if (data.Length != length)
+            throw new EndOfStreamException("Save payload ended before the declared data length was read.");
+
+        return data;
+    }
+
+    /// <summary>Reads a <see cref="Vect2"/> value.</summary>
+    /// <returns>The stored vector.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a vector.</exception>
     public Vect2 ReadVect2()
     {
         VerifyNext(WriteType.Vect2);
         return new Vect2(base.ReadSingle(), base.ReadSingle());
     }
 
-    /// <summary>
-    /// Reads a <see cref="Rect2"/> value from the stream.
-    /// </summary>
-    /// <returns>The read <see cref="Rect2"/> value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a <see cref="Rect2"/> value.</summary>
+    /// <returns>The stored rectangle.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a rectangle.</exception>
     public Rect2 ReadRect2()
     {
         VerifyNext(WriteType.Rect2);
         return new Rect2(
-            base.ReadSingle(), base.ReadSingle(),
-            base.ReadSingle(), base.ReadSingle()
-        );
+            base.ReadSingle(),
+            base.ReadSingle(),
+            base.ReadSingle(),
+            base.ReadSingle());
     }
 
-    /// <summary>
-    /// Reads a <see cref="Color"/> value from the stream.
-    /// </summary>
-    /// <returns>The read <see cref="Color"/> value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a <see cref="Color"/> value.</summary>
+    /// <returns>The stored color.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a color.</exception>
     public Color ReadColor()
     {
         VerifyNext(WriteType.Color);
         return new Color(
-            base.ReadByte(), base.ReadByte(),
-            base.ReadByte(), base.ReadByte()
-        );
+            base.ReadByte(),
+            base.ReadByte(),
+            base.ReadByte(),
+            base.ReadByte());
     }
 
-    /// <summary>
-    /// Reads a string value from the stream using UTF-8 encoding with a length prefix.
-    /// </summary>
-    /// <returns>The read string value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a UTF-8 string written by <see cref="ContentWriter.Write(string)"/>.</summary>
+    /// <returns>The stored string.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a string.</exception>
     public override string ReadString()
     {
         VerifyNext(WriteType.String);
@@ -159,78 +148,64 @@ public sealed class ContentReader : BinaryReader
         return Encoding.UTF8.GetString(bytes);
     }
 
-    /// <summary>
-    /// Reads a 32-bit signed integer from the stream.
-    /// </summary>
-    /// <returns>The read integer value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a 32-bit signed integer.</summary>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a 32-bit integer.</exception>
     public override int ReadInt32()
     {
         VerifyNext(WriteType.Int32);
         return base.ReadInt32();
     }
 
-    /// <summary>
-    /// Reads a 32-bit floating-point value from the stream.
-    /// </summary>
-    /// <returns>The read float value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a 32-bit floating-point value.</summary>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a single-precision value.</exception>
     public override float ReadSingle()
     {
         VerifyNext(WriteType.Single);
         return base.ReadSingle();
     }
 
-    /// <summary>
-    /// Reads a boolean value from the stream.
-    /// </summary>
-    /// <returns>The read boolean value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a Boolean value.</summary>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a Boolean.</exception>
     public override bool ReadBoolean()
     {
         VerifyNext(WriteType.Boolean);
         return base.ReadBoolean();
     }
 
-    /// <summary>
-    /// Reads an unsigned byte from the stream.
-    /// </summary>
-    /// <returns>The read byte value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads an unsigned byte.</summary>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a byte.</exception>
     public override byte ReadByte()
     {
         VerifyNext(WriteType.Byte);
         return base.ReadByte();
     }
 
-    /// <summary>
-    /// Reads a 64-bit signed integer from the stream.
-    /// </summary>
-    /// <returns>The read long value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a 64-bit signed integer.</summary>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a 64-bit integer.</exception>
     public override long ReadInt64()
     {
         VerifyNext(WriteType.Int64);
         return base.ReadInt64();
     }
 
-    /// <summary>
-    /// Reads a 64-bit floating-point value from the stream.
-    /// </summary>
-    /// <returns>The read double value.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads a 64-bit floating-point value.</summary>
+    /// <returns>The stored value.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not a double-precision value.</exception>
     public override double ReadDouble()
     {
         VerifyNext(WriteType.Double);
         return base.ReadDouble();
     }
 
-    /// <summary>
-    /// Reads a custom object from the stream using XML serialization.
-    /// </summary>
-    /// <typeparam name="T">The type of the object to read.</typeparam>
-    /// <returns>The deserialized object, or default if the value is null.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the manifest indicates a different type was expected.</exception>
+    /// <summary>Reads an object serialized by <see cref="ContentWriter.WriteObject{T}(T)"/>.</summary>
+    /// <typeparam name="T">The serialized object type.</typeparam>
+    /// <returns>The deserialized value, or <see langword="default"/> when a null value was stored.</returns>
+    /// <exception cref="InvalidOperationException">The next manifest entry is not an object.</exception>
     public T ReadObject<T>()
     {
         VerifyNext(WriteType.Object);

@@ -1,5 +1,11 @@
-using Void.Engine.Logs;
-using Void.Engine.Systems;
+// ============================================================================
+//  SdlPlatform.cs
+// ============================================================================
+//  SDL platform initialization, backend selection, and display management.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
 
 namespace Void.Engine.Platform.SDL;
 

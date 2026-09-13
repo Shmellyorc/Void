@@ -1,73 +1,64 @@
 // ============================================================================
 //  ContentTypeWriterReader.cs
 // ============================================================================
-//  Abstract base class for implementing type-specific save/load operations
-//  with version checking, encryption, compression, and manifest verification.
+//  Versioned save/load base with optional encryption, compression, and manifest checks.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
-using System.IO;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
 
 namespace Void.Engine.Saves;
 
-/// <summary>
-/// Defines error codes that can occur during save and load operations.
-/// </summary>
+/// <summary>Identifies failures reported by save and load operations.</summary>
 public enum SaveError
 {
     /// <summary>No error occurred.</summary>
     None = 0,
 
-    /// <summary>The file path was invalid or contained illegal characters.</summary>
+    /// <summary>The supplied save path is invalid or escapes the save folder.</summary>
     InvalidPath,
 
-    /// <summary>The file extension was not .sav.</summary>
+    /// <summary>The save file does not use the <c>.sav</c> extension.</summary>
     InvalidExtension,
 
-    /// <summary>Failed to write to disk due to permissions or other I/O errors.</summary>
+    /// <summary>The save file could not be written.</summary>
     WriteFailed,
 
-    /// <summary>Insufficient disk space to save the file.</summary>
+    /// <summary>The save could not be written because the destination ran out of space.</summary>
     OutOfSpace,
 
-    /// <summary>Failed to serialize the data to the save format.</summary>
+    /// <summary>The application data could not be serialized.</summary>
     SerializationFailed,
 
-    /// <summary>Encryption of the save data failed.</summary>
+    /// <summary>The save payload could not be encrypted.</summary>
     EncryptionFailed,
 
-    /// <summary>The save file was not found on disk.</summary>
+    /// <summary>The requested save file does not exist.</summary>
     FileNotFound,
 
-    /// <summary>The file magic number did not match the expected value.</summary>
+    /// <summary>The file does not contain VOID's save-file signature.</summary>
     WrongMagic,
 
-    /// <summary>The save file version does not match the current application version.</summary>
+    /// <summary>The save was written for a different application version.</summary>
     VersionMismatch,
 
-    /// <summary>The encryption key was incorrect or the data could not be decrypted.</summary>
+    /// <summary>The encrypted payload could not be authenticated or decrypted with the configured key.</summary>
     WrongKey,
 
-    /// <summary>The save data was corrupted and could not be read.</summary>
+    /// <summary>The save structure or payload is malformed, incomplete, or otherwise unreadable.</summary>
     CorruptData,
 
-    /// <summary>The manifest did not match the read order.</summary>
+    /// <summary>The stored manifest does not match the order or types read by the current schema.</summary>
     ManifestMismatch,
 
-    /// <summary>An unknown error occurred.</summary>
+    /// <summary>An unclassified save/load error occurred.</summary>
     Unknown
 }
 
-/// <summary>
-/// Internal enumeration for tracking data types written to the save file.
-/// Used for manifest-based integrity verification.
-/// </summary>
 internal enum WriteType : byte
 {
     None = 0,
@@ -85,105 +76,47 @@ internal enum WriteType : byte
 }
 
 /// <summary>
-/// Abstract base class for implementing type-specific save and load operations
-/// with comprehensive security features including version checking, encryption,
-/// compression, and manifest-based data integrity verification.
+/// Provides versioned save/load handling for a game-defined data type.
 /// </summary>
-/// <typeparam name="T">The type of data to save and load.</typeparam>
+/// <typeparam name="T">The data type written to and read from each save.</typeparam>
 /// <remarks>
 /// <para>
-/// The <see cref="ContentTypeWriterReader{T}"/> class provides a complete
-/// save/load system with the following features:
-/// <list type="bullet">
-///   <item><description><b>Version Checking:</b> Prevents loading save files from different application versions</description></item>
-///   <item><description><b>Encryption:</b> AES-GCM authenticated encryption with PBKDF2 key derivation</description></item>
-///   <item><description><b>Compression:</b> Deflate compression with automatic selection (only compresses if beneficial)</description></item>
-///   <item><description><b>Manifest Verification:</b> Ensures read order matches write order</description></item>
-///   <item><description><b>Path Security:</b> Prevents directory traversal attacks</description></item>
-///   <item><description><b>Atomic Writes:</b> Uses temporary files to prevent corruption</description></item>
-///   <item><description><b>Error Handling:</b> Detailed error codes through Try methods</description></item>
-/// </list>
+/// Derive from this class and implement <see cref="Write"/> and <see cref="Read"/>.
+/// Saves use the application's current version hash, optional AES-GCM encryption,
+/// optional Deflate compression, and a type manifest that verifies schema order.
 /// </para>
 /// <para>
-/// To implement a save system, derive from this class and implement the abstract
-/// <see cref="Write"/> and <see cref="Read"/> methods using <see cref="ContentWriter"/>
-/// and <see cref="ContentReader"/> to handle the serialization of your data type.
+/// Save names are resolved beneath <see cref="SaveFolder"/>. Relative subfolders
+/// are allowed, but paths that resolve outside that folder are rejected.
+/// </para>
+/// <para>
+/// The encrypted and unencrypted file layout remains the same regardless of the
+/// concrete save-data type. Changing the application's version intentionally makes
+/// older saves return <see cref="SaveError.VersionMismatch"/>.
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Define your save data type
-/// public class PlayerSaveData
+/// public sealed class PlayerSaveSystem : ContentTypeWriterReader&lt;PlayerSave&gt;
 /// {
-///     public string Name { get; set; }
-///     public int Level { get; set; }
-///     public Vect2 Position { get; set; }
-///     public List&lt;Item&gt; Inventory { get; set; }
-/// }
-/// 
-/// // Create a writer/reader for your data type
-/// public class PlayerSaveSystem : ContentTypeWriterReader&lt;PlayerSaveData&gt;
-/// {
-///     public PlayerSaveSystem() : base() { }
-///     public PlayerSaveSystem(string key) : base(key) { }
-///     
-///     protected override void Write(PlayerSaveData data, ContentWriter writer)
+///     protected override void Write(PlayerSave data, ContentWriter writer)
 ///     {
 ///         writer.Write(data.Name);
 ///         writer.Write(data.Level);
 ///         writer.Write(data.Position);
-///         writer.WriteObject(data.Inventory);
 ///     }
-///     
-///     protected override PlayerSaveData Read(ContentReader reader)
+///
+///     protected override PlayerSave Read(ContentReader reader)
 ///     {
-///         return new PlayerSaveData
+///         return new PlayerSave
 ///         {
 ///             Name = reader.ReadString(),
 ///             Level = reader.ReadInt32(),
-///             Position = reader.ReadVect2(),
-///             Inventory = reader.ReadObject&lt;List&lt;Item&gt;&gt;()
+///             Position = reader.ReadVect2()
 ///         };
 ///     }
 /// }
-/// 
-/// // Use the save system
-/// var saveSystem = new PlayerSaveSystem();
-/// 
-/// // Save with error handling
-/// if (saveSystem.TrySave("player.sav", playerData, out var error))
-/// {
-///     Console.WriteLine("Save successful!");
-/// }
-/// else
-/// {
-///     Console.WriteLine($"Save failed: {error}");
-/// }
-/// 
-/// // Load with error handling
-/// if (saveSystem.TryLoad("player.sav", out var loadedData, out error))
-/// {
-///     Console.WriteLine($"Loaded: {loadedData.Name}");
-/// }
-/// 
-/// // Or use the throwing versions
-/// saveSystem.Save("player.sav", playerData);
-/// var data = saveSystem.Load("player.sav");
 /// </code>
-/// </para>
-/// <para>
-/// <b>Security Considerations:</b>
-/// <list type="bullet">
-///   <item><description>Encryption uses AES-GCM with authenticated encryption</description></item>
-///   <item><description>Keys are derived using PBKDF2 with 1000 iterations and SHA-256</description></item>
-///   <item><description>A unique nonce is generated for each encryption operation</description></item>
-///   <item><description>Additional authenticated data (AAD) includes the magic and version hash</description></item>
-///   <item><description>Path security prevents directory traversal attacks</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. Each instance should be used on a single thread.
 /// </para>
 /// </remarks>
 public abstract class ContentTypeWriterReader<T>
@@ -194,85 +127,78 @@ public abstract class ContentTypeWriterReader<T>
     private readonly byte[] _encryptionKey;
     private readonly string _saveFolder;
 
-    /// <summary>
-    /// Gets the full path to the save folder.
-    /// </summary>
+    /// <summary>Gets the full directory used by this save handler.</summary>
     public string SaveFolder => _saveFolder;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContentTypeWriterReader{T}"/> class
-    /// without encryption.
-    /// </summary>
+    /// <summary>Creates a save handler without payload encryption.</summary>
+    /// <exception cref="InvalidOperationException">No active <see cref="Game"/> instance exists.</exception>
     protected ContentTypeWriterReader()
     {
-        _saveFolder = Game.Instance.ApplicationSaveFolder;
+        _saveFolder = GetApplicationSaveFolder();
         Directory.CreateDirectory(_saveFolder);
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContentTypeWriterReader{T}"/> class
-    /// with the specified string encryption key.
-    /// </summary>
-    /// <param name="encryptionKey">The encryption key string. Will be converted to UTF-8 bytes.</param>
+    /// <summary>Creates a save handler using a UTF-8 encryption password.</summary>
+    /// <param name="encryptionKey">The password used to derive the AES-GCM key.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="encryptionKey"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">No active <see cref="Game"/> instance exists.</exception>
     protected ContentTypeWriterReader(string encryptionKey)
     {
-        _encryptionKey = Encoding.UTF8.GetBytes(encryptionKey);
-        _saveFolder = Game.Instance.ApplicationSaveFolder;
+        ArgumentNullException.ThrowIfNull(encryptionKey);
 
+        _encryptionKey = Encoding.UTF8.GetBytes(encryptionKey);
+        _saveFolder = GetApplicationSaveFolder();
         Directory.CreateDirectory(_saveFolder);
     }
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ContentTypeWriterReader{T}"/> class
-    /// with the specified byte array encryption key.
-    /// </summary>
-    /// <param name="encryptionKey">The encryption key as a byte array.</param>
+    /// <summary>Creates a save handler using the supplied encryption key material.</summary>
+    /// <param name="encryptionKey">Bytes used as PBKDF2 input when deriving the AES-GCM key.</param>
+    /// <exception cref="ArgumentNullException"><paramref name="encryptionKey"/> is null.</exception>
+    /// <exception cref="InvalidOperationException">No active <see cref="Game"/> instance exists.</exception>
     protected ContentTypeWriterReader(byte[] encryptionKey)
     {
-        _encryptionKey = encryptionKey;
-        _saveFolder = Game.Instance.ApplicationSaveFolder;
+        ArgumentNullException.ThrowIfNull(encryptionKey);
 
+        _encryptionKey = (byte[])encryptionKey.Clone();
+        _saveFolder = GetApplicationSaveFolder();
         Directory.CreateDirectory(_saveFolder);
     }
 
-    /// <summary>
-    /// Saves data to the specified file, throwing an exception on failure.
-    /// </summary>
-    /// <param name="fileName">The name of the save file (must end with .sav).</param>
+    /// <summary>Saves data and throws when the operation fails.</summary>
+    /// <param name="fileName">Relative save name ending in <c>.sav</c>.</param>
     /// <param name="data">The data to save.</param>
-    /// <exception cref="InvalidOperationException">Thrown when the save operation fails.</exception>
+    /// <exception cref="InvalidOperationException">The save operation failed.</exception>
     public void Save(string fileName, T data)
     {
-        if (!TrySave(fileName, data, out var error))
+        if (!TrySave(fileName, data, out SaveError error))
             throw new InvalidOperationException($"Save failed: {error}");
     }
 
-    /// <summary>
-    /// Loads data from the specified file, throwing an exception on failure.
-    /// </summary>
-    /// <param name="fileName">The name of the save file (must end with .sav).</param>
-    /// <returns>The loaded data.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when the load operation fails.</exception>
+    /// <summary>Loads data and throws when the operation fails.</summary>
+    /// <param name="fileName">Relative save name ending in <c>.sav</c>.</param>
+    /// <returns>The loaded value.</returns>
+    /// <exception cref="InvalidOperationException">The load operation failed.</exception>
     public T Load(string fileName)
     {
-        TryLoad(fileName, out var data, out _);
+        if (!TryLoad(fileName, out T data, out SaveError error))
+            throw new InvalidOperationException($"Load failed: {error}");
+
         return data;
     }
 
-    /// <summary>
-    /// Attempts to save data to the specified file with detailed error reporting.
-    /// </summary>
-    /// <param name="fileName">The name of the save file (must end with .sav).</param>
+    /// <summary>Attempts to save data without throwing for normal save failures.</summary>
+    /// <param name="fileName">Relative save name ending in <c>.sav</c>.</param>
     /// <param name="data">The data to save.</param>
-    /// <param name="error">When this method returns, contains the error that occurred, if any.</param>
-    /// <returns><see langword="true"/> if the save was successful; otherwise, <see langword="false"/>.</returns>
+    /// <param name="error">Receives the failure reason, or <see cref="SaveError.None"/> on success.</param>
+    /// <returns><see langword="true"/> when the save completes successfully.</returns>
     public bool TrySave(string fileName, T data, out SaveError error)
     {
         error = SaveError.None;
+        string tempPath = null;
 
         try
         {
-            if (string.IsNullOrEmpty(fileName))
+            if (string.IsNullOrWhiteSpace(fileName))
             {
                 error = SaveError.InvalidPath;
                 return false;
@@ -299,28 +225,27 @@ public abstract class ContentTypeWriterReader<T>
             if (!string.IsNullOrEmpty(directory))
                 Directory.CreateDirectory(directory);
 
-            string tempPath = fullPath + ".tmp";
+            tempPath = fullPath + ".tmp";
 
             byte[] innerData;
             using (var innerStream = new MemoryStream())
+            using (var writer = new ContentWriter(innerStream))
             {
-                using (var writer = new ContentWriter(innerStream))
-                {
-                    Write(data, writer);
-                    writer.Flush();
-                    WriteType[] manifest = writer.Manifest;
-                    byte[] rawData = innerStream.ToArray();
+                Write(data, writer);
+                writer.Flush();
 
-                    using var combinedStream = new MemoryStream();
-                    using var combinedWriter = new BinaryWriter(combinedStream);
-                    combinedWriter.Write(manifest.Length);
-                    foreach (var type in manifest)
-                        combinedWriter.Write((byte)type);
-                    combinedWriter.Write(rawData.Length);
-                    combinedWriter.Write(rawData);
-                    combinedWriter.Flush();
-                    innerData = combinedStream.ToArray();
-                }
+                WriteType[] manifest = writer.Manifest;
+                byte[] rawData = innerStream.ToArray();
+
+                using var combinedStream = new MemoryStream();
+                using var combinedWriter = new BinaryWriter(combinedStream);
+                combinedWriter.Write(manifest.Length);
+                foreach (WriteType type in manifest)
+                    combinedWriter.Write((byte)type);
+                combinedWriter.Write(rawData.Length);
+                combinedWriter.Write(rawData);
+                combinedWriter.Flush();
+                innerData = combinedStream.ToArray();
             }
 
             bool compressed = false;
@@ -333,24 +258,18 @@ public abstract class ContentTypeWriterReader<T>
                 compressed = true;
             }
 
+            string version = GameSettings.Instance.AppVersion;
+            ulong versionHash = HashHelper.Cache64(version);
             bool encrypted = _encryptionKey != null;
-            byte[] finalData = dataToWrite;
-
-            if (encrypted)
-            {
-                string version = GameSettings.Instance.AppVersion;
-                ulong versionHash = HashHelper.Cache64(version);
-                finalData = Encrypt(dataToWrite, Magic, versionHash);
-            }
-
-            string versionStr = GameSettings.Instance.AppVersion;
-            ulong verHash = HashHelper.Cache64(versionStr);
+            byte[] finalData = encrypted
+                ? Encrypt(dataToWrite, Magic, versionHash)
+                : dataToWrite;
 
             using (var fileStream = File.Create(tempPath))
             using (var binaryWriter = new BinaryWriter(fileStream))
             {
                 binaryWriter.Write(Encoding.ASCII.GetBytes(Magic));
-                binaryWriter.Write(verHash);
+                binaryWriter.Write(versionHash);
                 binaryWriter.Write((byte)(encrypted ? 1 : 0));
                 binaryWriter.Write((byte)(compressed ? 1 : 0));
                 binaryWriter.Write(finalData.Length);
@@ -358,15 +277,13 @@ public abstract class ContentTypeWriterReader<T>
                 binaryWriter.Flush();
             }
 
-            if (File.Exists(fullPath))
-                File.Delete(fullPath);
-            File.Move(tempPath, fullPath);
-
+            File.Move(tempPath, fullPath, overwrite: true);
+            tempPath = null;
             return true;
         }
-        catch (IOException)
+        catch (CryptographicException)
         {
-            error = SaveError.OutOfSpace;
+            error = SaveError.EncryptionFailed;
             return false;
         }
         catch (UnauthorizedAccessException)
@@ -374,20 +291,38 @@ public abstract class ContentTypeWriterReader<T>
             error = SaveError.WriteFailed;
             return false;
         }
-        catch (Exception)
+        catch (IOException ex)
+        {
+            error = IsOutOfSpace(ex) ? SaveError.OutOfSpace : SaveError.WriteFailed;
+            return false;
+        }
+        catch
         {
             error = SaveError.SerializationFailed;
             return false;
         }
+        finally
+        {
+            if (!string.IsNullOrEmpty(tempPath))
+            {
+                try
+                {
+                    if (File.Exists(tempPath))
+                        File.Delete(tempPath);
+                }
+                catch
+                {
+                    // Best-effort cleanup must not replace the original save error.
+                }
+            }
+        }
     }
 
-    /// <summary>
-    /// Attempts to load data from the specified file with detailed error reporting.
-    /// </summary>
-    /// <param name="fileName">The name of the save file (must end with .sav).</param>
-    /// <param name="data">When this method returns, contains the loaded data if successful.</param>
-    /// <param name="error">When this method returns, contains the error that occurred, if any.</param>
-    /// <returns><see langword="true"/> if the load was successful; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Attempts to load data without throwing for normal load failures.</summary>
+    /// <param name="fileName">Relative save name ending in <c>.sav</c>.</param>
+    /// <param name="data">Receives the loaded value on success; otherwise <see langword="default"/>.</param>
+    /// <param name="error">Receives the failure reason, or <see cref="SaveError.None"/> on success.</param>
+    /// <returns><see langword="true"/> when the save is valid and was read successfully.</returns>
     public bool TryLoad(string fileName, out T data, out SaveError error)
     {
         data = default;
@@ -395,7 +330,7 @@ public abstract class ContentTypeWriterReader<T>
 
         try
         {
-            if (string.IsNullOrEmpty(fileName))
+            if (string.IsNullOrWhiteSpace(fileName))
             {
                 error = SaveError.InvalidPath;
                 return false;
@@ -425,35 +360,45 @@ public abstract class ContentTypeWriterReader<T>
             }
 
             byte[] fileData = File.ReadAllBytes(fullPath);
-
-            using var fileStream = new MemoryStream(fileData);
+            using var fileStream = new MemoryStream(fileData, writable: false);
             using var binaryReader = new BinaryReader(fileStream);
 
-            byte[] magicBytes = binaryReader.ReadBytes(4);
+            byte[] magicBytes = ReadExactBytes(binaryReader, Magic.Length);
             string magic = Encoding.ASCII.GetString(magicBytes);
-
-            if (magic != Magic)
+            if (!string.Equals(magic, Magic, StringComparison.Ordinal))
             {
                 error = SaveError.WrongMagic;
                 return false;
             }
 
             ulong savedVersionHash = binaryReader.ReadUInt64();
-            string version = GameSettings.Instance.AppVersion;
-            ulong currentVersionHash = HashHelper.Cache64(version);
-
+            ulong currentVersionHash = HashHelper.Cache64(GameSettings.Instance.AppVersion);
             if (savedVersionHash != currentVersionHash)
             {
                 error = SaveError.VersionMismatch;
                 return false;
             }
 
-            bool encrypted = binaryReader.ReadByte() == 1;
-            bool compressed = binaryReader.ReadByte() == 1;
-            int blobLength = binaryReader.ReadInt32();
-            byte[] blob = binaryReader.ReadBytes(blobLength);
-            byte[] decryptedBlob = blob;
+            byte encryptedFlag = binaryReader.ReadByte();
+            byte compressedFlag = binaryReader.ReadByte();
+            if (encryptedFlag > 1 || compressedFlag > 1)
+            {
+                error = SaveError.CorruptData;
+                return false;
+            }
 
+            bool encrypted = encryptedFlag == 1;
+            bool compressed = compressedFlag == 1;
+
+            int blobLength = binaryReader.ReadInt32();
+            byte[] blob = ReadExactBytes(binaryReader, blobLength);
+            if (fileStream.Position != fileStream.Length)
+            {
+                error = SaveError.CorruptData;
+                return false;
+            }
+
+            byte[] decryptedBlob = blob;
             if (encrypted)
             {
                 if (_encryptionKey == null)
@@ -466,9 +411,14 @@ public abstract class ContentTypeWriterReader<T>
                 {
                     decryptedBlob = Decrypt(blob, Magic, savedVersionHash);
                 }
-                catch
+                catch (CryptographicException)
                 {
                     error = SaveError.WrongKey;
+                    return false;
+                }
+                catch (InvalidDataException)
+                {
+                    error = SaveError.CorruptData;
                     return false;
                 }
             }
@@ -487,45 +437,74 @@ public abstract class ContentTypeWriterReader<T>
                 }
             }
 
-            using var innerStream = new MemoryStream(innerData);
+            using var innerStream = new MemoryStream(innerData, writable: false);
             using var innerReader = new BinaryReader(innerStream);
 
             int manifestLength = innerReader.ReadInt32();
+            if (manifestLength < 0 || manifestLength > innerStream.Length - innerStream.Position - sizeof(int))
+            {
+                error = SaveError.CorruptData;
+                return false;
+            }
+
             var manifest = new WriteType[manifestLength];
             for (int i = 0; i < manifestLength; i++)
-                manifest[i] = (WriteType)innerReader.ReadByte();
+            {
+                byte rawType = innerReader.ReadByte();
+                if (rawType == (byte)WriteType.None || rawType > (byte)WriteType.Object)
+                {
+                    error = SaveError.CorruptData;
+                    return false;
+                }
+
+                manifest[i] = (WriteType)rawType;
+            }
 
             int dataLength = innerReader.ReadInt32();
-            byte[] dataBytes = innerReader.ReadBytes(dataLength);
+            byte[] dataBytes = ReadExactBytes(innerReader, dataLength);
+            if (innerStream.Position != innerStream.Length)
+            {
+                error = SaveError.CorruptData;
+                return false;
+            }
 
-            using var dataStream = new MemoryStream(dataBytes);
+            using var dataStream = new MemoryStream(dataBytes, writable: false);
             using var reader = new ContentReader(dataStream, manifest);
 
-            data = Read(reader);
-
-            if (!reader.IsManifestComplete)
+            try
             {
+                data = Read(reader);
+            }
+            catch (ManifestMismatchException)
+            {
+                data = default;
+                error = SaveError.ManifestMismatch;
+                return false;
+            }
+
+            if (!reader.IsManifestComplete || !reader.IsDataComplete)
+            {
+                data = default;
                 error = SaveError.ManifestMismatch;
                 return false;
             }
 
             return true;
         }
-        catch (Exception)
+        catch
         {
+            data = default;
             error = SaveError.CorruptData;
             return false;
         }
     }
 
-    /// <summary>
-    /// Checks if a save file exists.
-    /// </summary>
-    /// <param name="fileName">The name of the save file.</param>
-    /// <returns><see langword="true"/> if the file exists; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a file exists beneath <see cref="SaveFolder"/>.</summary>
+    /// <param name="fileName">Relative file name or subpath.</param>
+    /// <returns><see langword="true"/> when the file exists and the path is valid.</returns>
     public bool FileExists(string fileName)
     {
-        if (string.IsNullOrEmpty(fileName))
+        if (string.IsNullOrWhiteSpace(fileName))
             return false;
 
         try
@@ -538,14 +517,12 @@ public abstract class ContentTypeWriterReader<T>
         }
     }
 
-    /// <summary>
-    /// Deletes a save file.
-    /// </summary>
-    /// <param name="fileName">The name of the save file to delete.</param>
-    /// <returns><see langword="true"/> if the file was deleted; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Deletes a file beneath <see cref="SaveFolder"/>.</summary>
+    /// <param name="fileName">Relative file name or subpath.</param>
+    /// <returns><see langword="true"/> when an existing file was deleted.</returns>
     public bool Delete(string fileName)
     {
-        if (string.IsNullOrEmpty(fileName))
+        if (string.IsNullOrWhiteSpace(fileName))
             return false;
 
         try
@@ -555,7 +532,6 @@ public abstract class ContentTypeWriterReader<T>
                 return false;
 
             File.Delete(fullPath);
-
             return true;
         }
         catch
@@ -564,53 +540,89 @@ public abstract class ContentTypeWriterReader<T>
         }
     }
 
+    private static string GetApplicationSaveFolder()
+    {
+        Game game = Game.Instance;
+        if (game == null)
+            throw new InvalidOperationException("A Game instance must exist before creating a save handler.");
+
+        return game.ApplicationSaveFolder;
+    }
+
     private string GetSafePath(string fileName)
     {
-        fileName = fileName
+        string normalized = fileName
             .Replace('\\', Path.DirectorySeparatorChar)
             .Replace('/', Path.DirectorySeparatorChar);
 
-        string fullPath = Path.GetFullPath(Path.Combine(_saveFolder, fileName));
-        string saveFolderFull = Path.GetFullPath(_saveFolder).TrimEnd(Path.DirectorySeparatorChar);
+        string saveFolderFull = Path.GetFullPath(_saveFolder);
+        string fullPath = Path.GetFullPath(Path.Combine(saveFolderFull, normalized));
+        string relative = Path.GetRelativePath(saveFolderFull, fullPath);
 
-        if (!fullPath.StartsWith(saveFolderFull + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException($"Invalid save path: '{fileName}'.");
+        if (Path.IsPathRooted(relative) ||
+            relative.Equals("..", StringComparison.Ordinal) ||
+            relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+            (Path.AltDirectorySeparatorChar != Path.DirectorySeparatorChar &&
+             relative.StartsWith(".." + Path.AltDirectorySeparatorChar, StringComparison.Ordinal)))
+        {
+            throw new ArgumentException($"Invalid save path: '{fileName}'.", nameof(fileName));
+        }
 
         return fullPath;
+    }
+
+    private static byte[] ReadExactBytes(BinaryReader reader, int length)
+    {
+        if (length < 0)
+            throw new InvalidDataException("Save data contains a negative length.");
+
+        long remaining = reader.BaseStream.Length - reader.BaseStream.Position;
+        if (length > remaining)
+            throw new EndOfStreamException("Save data ended before the declared length was read.");
+
+        byte[] data = reader.ReadBytes(length);
+        if (data.Length != length)
+            throw new EndOfStreamException("Save data ended before the declared length was read.");
+
+        return data;
+    }
+
+    private static bool IsOutOfSpace(IOException exception)
+    {
+        int code = exception.HResult & 0xFFFF;
+        return code is 0x70 or 0x27 or 28;
     }
 
     private static byte[] Compress(byte[] data)
     {
         using var output = new MemoryStream();
         using (var deflate = new DeflateStream(output, CompressionLevel.Optimal))
-        {
             deflate.Write(data, 0, data.Length);
-        }
 
         return output.ToArray();
     }
 
     private static byte[] Decompress(byte[] data)
     {
-        using var input = new MemoryStream(data);
+        using var input = new MemoryStream(data, writable: false);
         using var deflate = new DeflateStream(input, CompressionMode.Decompress);
         using var output = new MemoryStream();
-
         deflate.CopyTo(output);
-
         return output.ToArray();
     }
 
     private byte[] Encrypt(byte[] data, string magic, ulong versionHash)
     {
         byte[] salt = Encoding.ASCII.GetBytes(magic + versionHash);
-        byte[] key = Rfc2898DeriveBytes.Pbkdf2(_encryptionKey, salt, 1000, HashAlgorithmName.SHA256, 32);
-        byte[] nonce = new byte[12];
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(
+            _encryptionKey,
+            salt,
+            1000,
+            HashAlgorithmName.SHA256,
+            32);
 
-        using (var rng = RandomNumberGenerator.Create())
-        {
-            rng.GetBytes(nonce);
-        }
+        byte[] nonce = new byte[12];
+        RandomNumberGenerator.Fill(nonce);
 
         byte[] aad = Encoding.ASCII.GetBytes(magic + versionHash);
         byte[] ciphertext = new byte[data.Length];
@@ -623,42 +635,48 @@ public abstract class ContentTypeWriterReader<T>
         Buffer.BlockCopy(nonce, 0, result, 0, nonce.Length);
         Buffer.BlockCopy(tag, 0, result, nonce.Length, tag.Length);
         Buffer.BlockCopy(ciphertext, 0, result, nonce.Length + tag.Length, ciphertext.Length);
-
         return result;
     }
 
     private byte[] Decrypt(byte[] data, string magic, ulong versionHash)
     {
-        byte[] salt = Encoding.ASCII.GetBytes(magic + versionHash);
-        byte[] key = Rfc2898DeriveBytes.Pbkdf2(_encryptionKey, salt, 1000, HashAlgorithmName.SHA256, 32);
-        byte[] nonce = new byte[12];
-        byte[] tag = new byte[16];
-        byte[] ciphertext = new byte[data.Length - nonce.Length - tag.Length];
+        const int NonceLength = 12;
+        const int TagLength = 16;
 
-        Buffer.BlockCopy(data, 0, nonce, 0, nonce.Length);
-        Buffer.BlockCopy(data, nonce.Length, tag, 0, tag.Length);
-        Buffer.BlockCopy(data, nonce.Length + tag.Length, ciphertext, 0, ciphertext.Length);
+        if (data.Length < NonceLength + TagLength)
+            throw new InvalidDataException("Encrypted save payload is too short.");
+
+        byte[] salt = Encoding.ASCII.GetBytes(magic + versionHash);
+        byte[] key = Rfc2898DeriveBytes.Pbkdf2(
+            _encryptionKey,
+            salt,
+            1000,
+            HashAlgorithmName.SHA256,
+            32);
+
+        byte[] nonce = new byte[NonceLength];
+        byte[] tag = new byte[TagLength];
+        byte[] ciphertext = new byte[data.Length - NonceLength - TagLength];
+
+        Buffer.BlockCopy(data, 0, nonce, 0, NonceLength);
+        Buffer.BlockCopy(data, NonceLength, tag, 0, TagLength);
+        Buffer.BlockCopy(data, NonceLength + TagLength, ciphertext, 0, ciphertext.Length);
 
         byte[] aad = Encoding.ASCII.GetBytes(magic + versionHash);
         byte[] plaintext = new byte[ciphertext.Length];
 
         using var aesGcm = new AesGcm(key, 16);
         aesGcm.Decrypt(nonce, ciphertext, tag, plaintext, aad);
-
         return plaintext;
     }
 
-    /// <summary>
-    /// Writes the data to the specified <see cref="ContentWriter"/>.
-    /// </summary>
-    /// <param name="data">The data to write.</param>
-    /// <param name="writer">The writer to use for serialization.</param>
+    /// <summary>Writes one instance of <typeparamref name="T"/> to the save payload.</summary>
+    /// <param name="data">The value to serialize.</param>
+    /// <param name="writer">The manifest-tracked writer.</param>
     protected abstract void Write(T data, ContentWriter writer);
 
-    /// <summary>
-    /// Reads the data from the specified <see cref="ContentReader"/>.
-    /// </summary>
-    /// <param name="reader">The reader to use for deserialization.</param>
-    /// <returns>The deserialized data.</returns>
+    /// <summary>Reads one instance of <typeparamref name="T"/> from the save payload.</summary>
+    /// <param name="reader">The manifest-verified reader.</param>
+    /// <returns>The deserialized value.</returns>
     protected abstract T Read(ContentReader reader);
 }

@@ -1,76 +1,40 @@
 // ============================================================================
 //  ContentWriter.cs
 // ============================================================================
-//  Binary writer with manifest tracking and game-specific type support
-//  for secure save file generation.
+//  Manifest-tracked binary writer for VOID save data.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Text;
+using System.Xml.Serialization;
 
 namespace Void.Engine.Saves;
 
 /// <summary>
-/// Provides a binary writer with manifest tracking and game-specific type
-/// support for generating secure save files.
+/// Writes supported save values while recording their order in a type manifest.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ContentWriter"/> works in tandem with <see cref="ContentReader"/>
-/// to ensure data integrity during save/load operations. Every write operation
-/// is recorded in a manifest that tracks the order and types of all values
-/// written. This manifest is later used by <see cref="ContentReader"/> to
-/// verify that values are read in the exact same order with matching types.
+/// Use the manifest-tracked overloads declared by this class when implementing
+/// <see cref="ContentTypeWriterReader{T}.Write(T, ContentWriter)"/>. Matching
+/// <see cref="ContentReader"/> calls must read the same supported types in the
+/// same order.
 /// </para>
 /// <para>
-/// The manifest tracking system provides protection against:
-/// <list type="bullet">
-///   <item><description>Data corruption from incomplete writes or storage errors</description></item>
-///   <item><description>Version mismatches where save file structure has changed</description></item>
-///   <item><description>Programming errors where read order doesn't match write order</description></item>
-///   <item><description>Malicious tampering with save data</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// The writer is typically used inside a derived <see cref="ContentTypeWriterReader{T}"/>
-/// implementation. The manifest is automatically generated during the write
-/// process and embedded in the save file.
+/// Inherited <see cref="BinaryWriter"/> overloads that are not overridden here do
+/// not create manifest entries and should not be used for save-schema fields.
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Called from within a ContentTypeWriterReader&lt;T&gt; implementation
-/// protected override void Write(T data, ContentWriter writer)
+/// protected override void Write(PlayerSave data, ContentWriter writer)
 /// {
-///     // Write values in the order they should be read
+///     writer.Write(data.Name);
+///     writer.Write(data.Level);
 ///     writer.Write(data.Position);
-///     writer.Write(data.Health);
-///     writer.Write(data.PlayerName);
-///     writer.WriteObject(data.Inventory);
-///     
-///     // The writer automatically tracks the manifest
-///     // The manifest is embedded in the save file for verification
 /// }
 /// </code>
-/// </para>
-/// <para>
-/// <b>Important Notes:</b>
-/// <list type="bullet">
-///   <item><description>All write operations must be performed in the exact same order as their corresponding read operations</description></item>
-///   <item><description>The manifest is automatically generated and should not be manually modified</description></item>
-///   <item><description>String values are written with a 7-bit encoded length prefix followed by UTF-8 bytes</description></item>
-///   <item><description>Custom objects are serialized using XML serialization</description></item>
-///   <item><description>Null objects are written as a single boolean flag (false)</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is not thread-safe. Each writer instance should be used on a single thread.
 /// </para>
 /// </remarks>
 public sealed class ContentWriter : BinaryWriter
@@ -81,40 +45,31 @@ public sealed class ContentWriter : BinaryWriter
 
     internal WriteType[] Manifest => _manifest.ToArray();
 
-    /// <summary>
-    /// Writes a <see cref="Vect2"/> value to the stream and records it in the manifest.
-    /// </summary>
-    /// <param name="value">The <see cref="Vect2"/> value to write.</param>
+    /// <summary>Writes a <see cref="Vect2"/> and records its manifest entry.</summary>
+    /// <param name="value">The value to write.</param>
     public void Write(Vect2 value)
     {
         _manifest.Add(WriteType.Vect2);
-
         base.Write(value.X);
         base.Write(value.Y);
     }
 
-    /// <summary>
-    /// Writes a <see cref="Rect2"/> value to the stream and records it in the manifest.
-    /// </summary>
-    /// <param name="value">The <see cref="Rect2"/> value to write.</param>
+    /// <summary>Writes a <see cref="Rect2"/> and records its manifest entry.</summary>
+    /// <param name="value">The value to write.</param>
     public void Write(Rect2 value)
     {
         _manifest.Add(WriteType.Rect2);
-
         base.Write(value.X);
         base.Write(value.Y);
         base.Write(value.Width);
         base.Write(value.Height);
     }
 
-    /// <summary>
-    /// Writes a <see cref="Color"/> value to the stream and records it in the manifest.
-    /// </summary>
-    /// <param name="value">The <see cref="Color"/> value to write.</param>
+    /// <summary>Writes a <see cref="Color"/> and records its manifest entry.</summary>
+    /// <param name="value">The value to write.</param>
     public void Write(Color value)
     {
         _manifest.Add(WriteType.Color);
-
         base.Write(value.R);
         base.Write(value.G);
         base.Write(value.B);
@@ -122,13 +77,10 @@ public sealed class ContentWriter : BinaryWriter
     }
 
     /// <summary>
-    /// Writes a string value to the stream using UTF-8 encoding with a 7-bit encoded length prefix.
+    /// Writes a UTF-8 string and records its manifest entry. A null value is
+    /// stored as an empty string.
     /// </summary>
-    /// <param name="value">The string value to write.</param>
-    /// <remarks>
-    /// The string is written as a 7-bit encoded length followed by the UTF-8 bytes.
-    /// This format is compatible with the reader's <see cref="ContentReader.ReadString"/> method.
-    /// </remarks>
+    /// <param name="value">The value to write.</param>
     public override void Write(string value)
     {
         _manifest.Add(WriteType.String);
@@ -146,74 +98,51 @@ public sealed class ContentWriter : BinaryWriter
         base.Write(bytes);
     }
 
-    /// <summary>
-    /// Writes a 32-bit signed integer to the stream and records it in the manifest.
-    /// </summary>
+    /// <summary>Writes a 32-bit signed integer and records its manifest entry.</summary>
     public override void Write(int value)
     {
         _manifest.Add(WriteType.Int32);
         base.Write(value);
     }
 
-    /// <summary>
-    /// Writes a 32-bit floating-point value to the stream and records it in the manifest.
-    /// </summary>
+    /// <summary>Writes a 32-bit floating-point value and records its manifest entry.</summary>
     public override void Write(float value)
     {
         _manifest.Add(WriteType.Single);
         base.Write(value);
     }
 
-    /// <summary>
-    /// Writes a boolean value to the stream and records it in the manifest.
-    /// </summary>
+    /// <summary>Writes a Boolean and records its manifest entry.</summary>
     public override void Write(bool value)
     {
         _manifest.Add(WriteType.Boolean);
         base.Write(value);
     }
 
-    /// <summary>
-    /// Writes an 8-bit unsigned integer to the stream and records it in the manifest.
-    /// </summary>
+    /// <summary>Writes an unsigned byte and records its manifest entry.</summary>
     public override void Write(byte value)
     {
         _manifest.Add(WriteType.Byte);
         base.Write(value);
     }
 
-    /// <summary>
-    /// Writes a 64-bit signed integer to the stream and records it in the manifest.
-    /// </summary>
+    /// <summary>Writes a 64-bit signed integer and records its manifest entry.</summary>
     public override void Write(long value)
     {
         _manifest.Add(WriteType.Int64);
         base.Write(value);
     }
 
-    /// <summary>
-    /// Writes a 64-bit floating-point value to the stream and records it in the manifest.
-    /// </summary>
+    /// <summary>Writes a 64-bit floating-point value and records its manifest entry.</summary>
     public override void Write(double value)
     {
         _manifest.Add(WriteType.Double);
         base.Write(value);
     }
 
-    /// <summary>
-    /// Writes a custom object to the stream using XML serialization and records it in the manifest.
-    /// </summary>
-    /// <typeparam name="T">The type of the object to serialize.</typeparam>
-    /// <param name="value">The object to serialize, or null.</param>
-    /// <remarks>
-    /// <para>
-    /// The object is serialized to XML and written as a length-prefixed byte array.
-    /// If the value is null, a single boolean flag (false) is written.
-    /// </para>
-    /// <para>
-    /// This method is compatible with <see cref="ContentReader.ReadObject{T}"/>.
-    /// </para>
-    /// </remarks>
+    /// <summary>Serializes an object as XML and records one object manifest entry.</summary>
+    /// <typeparam name="T">The object type.</typeparam>
+    /// <param name="value">The value to serialize. Null values are preserved as null.</param>
     public void WriteObject<T>(T value)
     {
         _manifest.Add(WriteType.Object);

@@ -1,19 +1,20 @@
 // ============================================================================
 //  Display.cs
 // ============================================================================
-//  Renderer/platform-neutral display and monitor information for VOID.
-//  SDL is used internally by the platform layer but is never exposed here.
+//  Renderer-neutral display information, display modes, and display change events.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Systems;
 
 /// <summary>
-/// Stable VOID handle for a connected display.
+/// Identifies a connected display without exposing the native platform handle.
 /// </summary>
 /// <remarks>
-/// The native platform identifier is intentionally hidden so SDL remains an
-/// implementation detail. A display ID remains useful across display-list
-/// reordering while that display stays connected.
+/// A display ID remains stable while the display stays connected, even if its
+/// enumeration index changes.
 /// </remarks>
 public readonly struct DisplayId : IEquatable<DisplayId>
 {
@@ -23,70 +24,121 @@ public readonly struct DisplayId : IEquatable<DisplayId>
 
     internal uint NativeValue => _value;
 
-    /// <summary>Gets whether this handle refers to a valid display.</summary>
+    /// <summary>
+    /// Gets a value indicating whether this instance refers to a valid display.
+    /// </summary>
     public bool IsValid => _value != 0;
 
+    /// <summary>
+    /// Determines whether this display ID is equal to another display ID.
+    /// </summary>
+    /// <param name="other">The display ID to compare.</param>
+    /// <returns><see langword="true"/> if both IDs refer to the same display; otherwise, <see langword="false"/>.</returns>
     public bool Equals(DisplayId other) => _value == other._value;
+
+    /// <summary>
+    /// Determines whether this display ID is equal to the specified object.
+    /// </summary>
+    /// <param name="obj">The object to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="obj"/> is an equal <see cref="DisplayId"/>; otherwise, <see langword="false"/>.</returns>
     public override bool Equals(object obj) => obj is DisplayId other && Equals(other);
+
+    /// <summary>
+    /// Returns the hash code for this display ID.
+    /// </summary>
+    /// <returns>The hash code for this instance.</returns>
     public override int GetHashCode() => _value.GetHashCode();
 
+    /// <summary>
+    /// Determines whether two display IDs are equal.
+    /// </summary>
     public static bool operator ==(DisplayId left, DisplayId right) => left.Equals(right);
+
+    /// <summary>
+    /// Determines whether two display IDs are not equal.
+    /// </summary>
     public static bool operator !=(DisplayId left, DisplayId right) => !left.Equals(right);
 
+    /// <summary>
+    /// Returns a string representation of this display ID.
+    /// </summary>
+    /// <returns>A string identifying the display, or <c>Display(Invalid)</c> when invalid.</returns>
     public override string ToString() => IsValid ? $"Display({_value})" : "Display(Invalid)";
 }
 
 /// <summary>
-/// Describes one resolution/refresh-rate mode supported by a display.
-/// </summary>
-/// <summary>
-/// Determines how VOID enters fullscreen.
+/// Determines how VOID enters fullscreen mode.
 /// </summary>
 public enum FullscreenStyle
 {
     /// <summary>
-    /// Desktop/borderless fullscreen. The operating system keeps the display's
-    /// current desktop mode; VOID does not request a resolution switch.
+    /// Uses desktop or borderless fullscreen without requesting a display mode change.
     /// </summary>
     Desktop,
 
     /// <summary>
-    /// Exclusive fullscreen. VOID requests a concrete resolution and optional
-    /// refresh rate from the selected display.
+    /// Requests an exclusive fullscreen display mode.
     /// </summary>
     Exclusive
 }
 
+/// <summary>
+/// Describes a resolution and refresh-rate mode supported by a display.
+/// </summary>
+/// <remarks>
+/// Equality compares the resolution exactly and compares refresh rate and pixel
+/// density using the same epsilon-based quantization used by <see cref="Vect2"/>.
+/// </remarks>
 public readonly struct DisplayMode : IEquatable<DisplayMode>
 {
-    /// <summary>Mode width in logical display coordinates.</summary>
+    /// <summary>
+    /// Gets the mode width in logical display coordinates.
+    /// </summary>
     public uint Width { get; }
 
-    /// <summary>Mode height in logical display coordinates.</summary>
+    /// <summary>
+    /// Gets the mode height in logical display coordinates.
+    /// </summary>
     public uint Height { get; }
 
     /// <summary>
-    /// Retained for compatibility with the old VOID display-mode shape.
-    /// SDL3 does not expose a simple bits-per-pixel field for every mode, so
-    /// this is zero when unavailable.
+    /// Gets the bits-per-pixel value when reported by the platform.
     /// </summary>
+    /// <remarks>
+    /// A value of zero indicates that the platform did not provide this information.
+    /// </remarks>
     public uint BitsPerPixel { get; }
 
-    /// <summary>Nominal refresh rate in Hz, or zero when unspecified.</summary>
+    /// <summary>
+    /// Gets the nominal refresh rate in hertz.
+    /// </summary>
+    /// <remarks>
+    /// A value of zero indicates that no nominal refresh rate was reported.
+    /// </remarks>
     public float RefreshRate { get; }
 
-    /// <summary>Logical-to-pixel scale associated with this mode.</summary>
+    /// <summary>
+    /// Gets the logical-to-pixel scale associated with this mode.
+    /// </summary>
     public float PixelDensity { get; }
 
-    /// <summary>Exact refresh-rate numerator when supplied by the platform.</summary>
+    /// <summary>
+    /// Gets the exact refresh-rate numerator when supplied by the platform.
+    /// </summary>
     public int RefreshRateNumerator { get; }
 
-    /// <summary>Exact refresh-rate denominator when supplied by the platform.</summary>
+    /// <summary>
+    /// Gets the exact refresh-rate denominator when supplied by the platform.
+    /// </summary>
     public int RefreshRateDenominator { get; }
 
     /// <summary>
-    /// Gets the most precise refresh rate available.
+    /// Gets the most precise refresh rate available in hertz.
     /// </summary>
+    /// <remarks>
+    /// Uses the exact numerator and denominator when both are positive; otherwise,
+    /// falls back to <see cref="RefreshRate"/>.
+    /// </remarks>
     public double ExactRefreshRate
         => RefreshRateNumerator > 0 && RefreshRateDenominator > 0
             ? (double)RefreshRateNumerator / RefreshRateDenominator
@@ -110,18 +162,48 @@ public readonly struct DisplayMode : IEquatable<DisplayMode>
         RefreshRateDenominator = refreshRateDenominator;
     }
 
+    /// <summary>
+    /// Determines whether this display mode is equal to another display mode.
+    /// </summary>
+    /// <param name="other">The display mode to compare.</param>
+    /// <returns><see langword="true"/> if the modes are equal; otherwise, <see langword="false"/>.</returns>
     public bool Equals(DisplayMode other)
         => Width == other.Width &&
            Height == other.Height &&
-           MathF.Abs(RefreshRate - other.RefreshRate) <= 0.001f &&
-           MathF.Abs(PixelDensity - other.PixelDensity) <= 0.001f;
+           new Vect2(RefreshRate, PixelDensity)
+               .Equals(new Vect2(other.RefreshRate, other.PixelDensity));
 
+    /// <summary>
+    /// Determines whether this display mode is equal to the specified object.
+    /// </summary>
+    /// <param name="obj">The object to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="obj"/> is an equal <see cref="DisplayMode"/>; otherwise, <see langword="false"/>.</returns>
     public override bool Equals(object obj) => obj is DisplayMode other && Equals(other);
-    public override int GetHashCode() => HashCode.Combine(Width, Height, RefreshRate, PixelDensity);
 
+    /// <summary>
+    /// Returns the hash code for this display mode.
+    /// </summary>
+    /// <returns>The hash code for this instance.</returns>
+    public override int GetHashCode()
+        => HashCode.Combine(
+            Width,
+            Height,
+            new Vect2(RefreshRate, PixelDensity).GetHashCode());
+
+    /// <summary>
+    /// Determines whether two display modes are equal.
+    /// </summary>
     public static bool operator ==(DisplayMode left, DisplayMode right) => left.Equals(right);
+
+    /// <summary>
+    /// Determines whether two display modes are not equal.
+    /// </summary>
     public static bool operator !=(DisplayMode left, DisplayMode right) => !left.Equals(right);
 
+    /// <summary>
+    /// Returns a human-readable representation of this display mode.
+    /// </summary>
+    /// <returns>A string containing the resolution and optional refresh rate and pixel density.</returns>
     public override string ToString()
     {
         string refresh = RefreshRate > 0f ? $" @ {RefreshRate:0.###} Hz" : string.Empty;
@@ -133,7 +215,7 @@ public readonly struct DisplayMode : IEquatable<DisplayMode>
 }
 
 /// <summary>
-/// Immutable snapshot of one connected display.
+/// Provides an immutable snapshot of one connected display.
 /// </summary>
 public sealed class DisplayInfo
 {
@@ -163,65 +245,106 @@ public sealed class DisplayInfo
         _supportedModes = supportedModes ?? Array.Empty<DisplayMode>();
     }
 
-    /// <summary>Stable VOID handle for this connected display.</summary>
+    /// <summary>
+    /// Gets the stable VOID identifier for this display.
+    /// </summary>
     public DisplayId Id { get; }
 
     /// <summary>
-    /// Current zero-based enumeration index. Indices can change when displays
-    /// are connected or disconnected; keep <see cref="Id"/> for long-lived references.
+    /// Gets the display's current zero-based enumeration index.
     /// </summary>
+    /// <remarks>
+    /// Enumeration indices may change when displays are connected or disconnected.
+    /// Use <see cref="Id"/> for long-lived references.
+    /// </remarks>
     public int Index { get; }
 
-    /// <summary>Human-readable display name supplied by the operating system.</summary>
+    /// <summary>
+    /// Gets the human-readable display name supplied by the operating system.
+    /// </summary>
     public string Name { get; }
 
-    /// <summary>Gets whether this is the operating system's primary display.</summary>
+    /// <summary>
+    /// Gets a value indicating whether this is the operating system's primary display.
+    /// </summary>
     public bool IsPrimary { get; }
 
-    /// <summary>Full desktop bounds in global screen coordinates.</summary>
+    /// <summary>
+    /// Gets the full desktop bounds in global screen coordinates.
+    /// </summary>
     public Rect2 Bounds { get; }
 
     /// <summary>
-    /// Desktop work area after system-reserved regions such as panels, docks,
-    /// or taskbars have been removed.
+    /// Gets the desktop work area after system-reserved regions are excluded.
     /// </summary>
     public Rect2 WorkArea { get; }
 
     /// <summary>
-    /// Display content scale. 1.0 is 100%, 1.5 is 150%, 2.0 is 200%, etc.
+    /// Gets the display content scale.
     /// </summary>
+    /// <remarks>
+    /// A value of 1.0 represents 100 percent scaling, 1.5 represents 150 percent,
+    /// and 2.0 represents 200 percent.
+    /// </remarks>
     public float ContentScale { get; }
 
     /// <summary>
-    /// Approximate logical DPI based on the conventional 96-DPI desktop baseline.
-    /// Prefer <see cref="ContentScale"/> for layout decisions.
+    /// Gets the approximate logical DPI using a 96-DPI baseline.
     /// </summary>
+    /// <remarks>
+    /// Prefer <see cref="ContentScale"/> for layout decisions.
+    /// </remarks>
     public float EstimatedDpi => 96f * ContentScale;
 
-    /// <summary>Desktop display mode.</summary>
+    /// <summary>
+    /// Gets the display's desktop mode.
+    /// </summary>
     public DisplayMode DesktopMode { get; }
 
-    /// <summary>Currently active display mode.</summary>
+    /// <summary>
+    /// Gets the display's currently active mode.
+    /// </summary>
     public DisplayMode CurrentMode { get; }
 
-    /// <summary>Fullscreen modes reported for this display.</summary>
+    /// <summary>
+    /// Gets the fullscreen modes reported for this display.
+    /// </summary>
     public IReadOnlyList<DisplayMode> SupportedModes => _supportedModes;
 }
 
-/// <summary>Types of display topology/configuration changes reported by VOID.</summary>
+/// <summary>
+/// Identifies the type of display configuration change reported by VOID.
+/// </summary>
 public enum DisplayChangeKind
 {
+    /// <summary>The display orientation changed.</summary>
     OrientationChanged,
+
+    /// <summary>A display was connected.</summary>
     Added,
+
+    /// <summary>A display was disconnected.</summary>
     Removed,
+
+    /// <summary>The display moved within the desktop layout.</summary>
     Moved,
+
+    /// <summary>The display's desktop mode changed.</summary>
     DesktopModeChanged,
+
+    /// <summary>The display's active mode changed.</summary>
     CurrentModeChanged,
+
+    /// <summary>The display content scale changed.</summary>
     ContentScaleChanged,
+
+    /// <summary>The display work area changed.</summary>
     WorkAreaChanged
 }
 
-/// <summary>Display change notification raised while SDL events are pumped.</summary>
+/// <summary>
+/// Contains information about a display configuration change.
+/// </summary>
 public readonly struct DisplayChangedEvent
 {
     internal DisplayChangedEvent(DisplayId display, DisplayChangeKind kind)
@@ -230,45 +353,82 @@ public readonly struct DisplayChangedEvent
         Kind = kind;
     }
 
+    /// <summary>
+    /// Gets the display associated with the change.
+    /// </summary>
     public DisplayId Display { get; }
+
+    /// <summary>
+    /// Gets the type of display change.
+    /// </summary>
     public DisplayChangeKind Kind { get; }
 }
 
 /// <summary>
-/// Public monitor/display API. No SDL types are exposed.
+/// Provides access to connected displays and display configuration information.
 /// </summary>
+/// <remarks>
+/// Native platform details remain internal to VOID. Returned display information
+/// is exposed through renderer-neutral engine types.
+/// </remarks>
 public static class DisplayManager
 {
     /// <summary>
-    /// Raised for display hot-plug and configuration changes while the game
-    /// event loop is pumping platform events.
+    /// Occurs when a display is connected, disconnected, moved, or otherwise reconfigured.
     /// </summary>
+    /// <remarks>
+    /// Notifications are raised while the game loop pumps platform events.
+    /// </remarks>
     public static event Action<DisplayChangedEvent> Changed;
 
-    /// <summary>Gets a fresh snapshot of all currently connected displays.</summary>
+    /// <summary>
+    /// Gets a fresh snapshot of all currently connected displays.
+    /// </summary>
+    /// <returns>A read-only list containing the current displays.</returns>
     public static IReadOnlyList<DisplayInfo> GetDisplays()
         => Platform.SDL.SdlPlatform.GetDisplays();
 
-    /// <summary>Gets the number of currently connected displays.</summary>
+    /// <summary>
+    /// Gets the number of currently connected displays.
+    /// </summary>
     public static int Count => GetDisplays().Count;
 
-    /// <summary>Gets the current primary display.</summary>
+    /// <summary>
+    /// Gets the current primary display.
+    /// </summary>
     public static DisplayInfo PrimaryDisplay
         => Platform.SDL.SdlPlatform.GetPrimaryDisplay();
 
-    /// <summary>Gets a display by its current enumeration index.</summary>
+    /// <summary>
+    /// Gets a display by its current enumeration index.
+    /// </summary>
+    /// <param name="index">The zero-based display index.</param>
+    /// <returns>The display at the specified index.</returns>
     public static DisplayInfo GetDisplay(int index)
         => Platform.SDL.SdlPlatform.GetDisplay(index);
 
-    /// <summary>Gets a display by its stable VOID display handle.</summary>
+    /// <summary>
+    /// Gets a display by its stable VOID display ID.
+    /// </summary>
+    /// <param name="id">The display ID to resolve.</param>
+    /// <returns>The matching display.</returns>
     public static DisplayInfo GetDisplay(DisplayId id)
         => Platform.SDL.SdlPlatform.GetDisplay(id);
 
-    /// <summary>Attempts to get a display by handle.</summary>
+    /// <summary>
+    /// Attempts to get a display by its stable VOID display ID.
+    /// </summary>
+    /// <param name="id">The display ID to resolve.</param>
+    /// <param name="display">When this method returns, contains the matching display when found.</param>
+    /// <returns><see langword="true"/> if the display was found; otherwise, <see langword="false"/>.</returns>
     public static bool TryGetDisplay(DisplayId id, out DisplayInfo display)
         => Platform.SDL.SdlPlatform.TryGetDisplay(id, out display);
 
-    /// <summary>Gets the current enumeration index for a display, or -1 if disconnected.</summary>
+    /// <summary>
+    /// Gets the current enumeration index for a display.
+    /// </summary>
+    /// <param name="id">The display ID to locate.</param>
+    /// <returns>The zero-based index, or <c>-1</c> if the display is no longer connected.</returns>
     public static int GetIndex(DisplayId id)
         => Platform.SDL.SdlPlatform.GetDisplayIndex(id);
 

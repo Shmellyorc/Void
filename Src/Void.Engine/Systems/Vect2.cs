@@ -5,7 +5,7 @@
 //  arithmetic, transformations, distance calculations, normalization, and
 //  geometric utilities for game development.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -161,7 +161,7 @@ public struct Vect2 : IEquatable<Vect2>
     /// <summary>
     /// Divides a scalar by a vector component-wise.
     /// </summary>
-    public static Vect2 operator /(float a, in Vect2 b) => b / a;
+    public static Vect2 operator /(float a, in Vect2 b) => new(a / b.X, a / b.Y);
 
     /// <summary>
     /// Multiplies two vectors component-wise.
@@ -196,7 +196,7 @@ public struct Vect2 : IEquatable<Vect2>
     /// <summary>
     /// Subtracts a vector from a scalar component-wise.
     /// </summary>
-    public static Vect2 operator -(float a, in Vect2 b) => b - a;
+    public static Vect2 operator -(float a, in Vect2 b) => new(a - b.X, a - b.Y);
     #endregion
 
 
@@ -874,12 +874,15 @@ public struct Vect2 : IEquatable<Vect2>
 
 
     #region IEquatable
+    private static float Quantize(float value)
+        => MathHelper.Snap(value, MathHelper.Epsilon);
+
     /// <summary>
     /// Determines whether the current vector is equal to another vector.
     /// </summary>
     public readonly bool Equals(Vect2 other)
-        => MathHelper.AlmostEquals(X, other.X, MathHelper.Epsilon)
-        && MathHelper.AlmostEquals(Y, other.Y, MathHelper.Epsilon);
+        => Quantize(X).Equals(Quantize(other.X))
+        && Quantize(Y).Equals(Quantize(other.Y));
 
     /// <summary>
     /// Determines whether the current vector is equal to the specified object.
@@ -891,11 +894,7 @@ public struct Vect2 : IEquatable<Vect2>
     /// Returns the hash code for the current vector.
     /// </summary>
     public readonly override int GetHashCode()
-    {
-        int x = (int)MathF.Round(X / MathHelper.Epsilon);
-        int y = (int)MathF.Round(Y / MathHelper.Epsilon);
-        return HashCode.Combine(x, y);
-    }
+        => HashCode.Combine(Quantize(X), Quantize(Y));
 
     /// <summary>
     /// Returns a string representation of the current vector.

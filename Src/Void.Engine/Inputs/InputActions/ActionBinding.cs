@@ -4,7 +4,7 @@
 //  Represents a named input action with multiple bindings to keyboard,
 //  mouse, and gamepad inputs.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

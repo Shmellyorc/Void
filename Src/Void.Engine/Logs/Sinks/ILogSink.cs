@@ -3,7 +3,7 @@
 // ============================================================================
 //  Defines the extension point used to receive log entries.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

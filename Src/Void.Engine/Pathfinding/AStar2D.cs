@@ -3,7 +3,7 @@
 // ============================================================================
 //  2D graph pathfinding with A*, Dijkstra, BFS, Greedy Best-First, and flow fields.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

@@ -1,9 +1,11 @@
 // ============================================================================
 //  Camera.cs
 // ============================================================================
-//  2D camera system with renderer-neutral world/screen transforms.
+//  Renderer-neutral 2D camera with world/screen coordinate conversion,
+//  zoom, visible bounds, and optional world-space clamping.
 //
-//  Renderer-neutral camera; no SFML view object is required.
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
 // ============================================================================
 
 using System.Numerics;
@@ -11,16 +13,44 @@ using System.Numerics;
 namespace Void.Engine.Systems;
 
 /// <summary>
-/// 2D camera for viewport rendering. Controls position, zoom, clamping and
-/// coordinate conversion between screen and world space.
+/// Represents a 2D camera for world-space rendering.
 /// </summary>
+/// <remarks>
+/// <para>
+/// The camera tracks a world-space center position and zoom level, exposes the
+/// currently visible world rectangle, and converts coordinates between world
+/// space and the configured viewport.
+/// </para>
+/// <para>
+/// When <see cref="Bounds"/> is non-empty, the camera position is constrained
+/// so the visible view stays within those bounds where possible. If the visible
+/// view is larger than the bounds on an axis, the camera is centered on that axis.
+/// </para>
+/// <para>
+/// Example:
+/// <code>
+/// var camera = new Camera
+/// {
+///     Position = new Vect2(160f, 90f),
+///     Zoom = 2f
+/// };
+///
+/// Vect2 screen = camera.WorldToScreen(new Vect2(160f, 90f));
+/// </code>
+/// </para>
+/// </remarks>
 public sealed class Camera
 {
     private Vect2 _position;
     private Rect2 _bounds;
     private float _zoom = 1f;
 
-    /// <summary>Gets or sets the camera's world-space center position.</summary>
+    /// <summary>
+    /// Gets or sets the camera center in world coordinates.
+    /// </summary>
+    /// <remarks>
+    /// Assigning a position reapplies <see cref="Bounds"/> when camera clamping is enabled.
+    /// </remarks>
     public Vect2 Position
     {
         get => _position;
@@ -31,7 +61,13 @@ public sealed class Camera
         }
     }
 
-    /// <summary>Gets or sets the camera's clamping bounds.</summary>
+    /// <summary>
+    /// Gets or sets the world-space rectangle used to constrain the camera.
+    /// </summary>
+    /// <remarks>
+    /// An empty rectangle disables clamping. Assigning new bounds immediately
+    /// reapplies the constraint to the current position.
+    /// </remarks>
     public Rect2 Bounds
     {
         get => _bounds;
@@ -42,7 +78,13 @@ public sealed class Camera
         }
     }
 
-    /// <summary>Gets or sets the zoom level. Minimum 0.1x.</summary>
+    /// <summary>
+    /// Gets or sets the camera zoom factor.
+    /// </summary>
+    /// <remarks>
+    /// Values below <c>0.1</c> are clamped to <c>0.1</c>. Increasing the zoom
+    /// factor reduces the visible world area.
+    /// </remarks>
     public float Zoom
     {
         get => _zoom;
@@ -53,7 +95,13 @@ public sealed class Camera
         }
     }
 
-    /// <summary>Gets the visible world bounds based on current position and zoom.</summary>
+    /// <summary>
+    /// Gets the world-space rectangle currently visible through the camera.
+    /// </summary>
+    /// <remarks>
+    /// The visible size is derived from <see cref="GameSettings.Viewport"/> and
+    /// the current <see cref="Zoom"/>.
+    /// </remarks>
     public Rect2 ViewBounds
     {
         get
@@ -70,13 +118,11 @@ public sealed class Camera
         }
     }
 
-    /// <summary>
-    /// Renderer-neutral world-to-clip matrix used by VOID's built-in 2D shader.
-    /// Positive Y remains downward, matching the existing engine coordinate system.
-    /// </summary>
     internal Matrix4x4 ViewProjectionMatrix => CreateViewProjection(ViewBounds);
 
-    /// <summary>Creates a new camera centered on the configured viewport.</summary>
+    /// <summary>
+    /// Creates a camera centered on the configured viewport with a zoom of <c>1.0</c>.
+    /// </summary>
     public Camera()
     {
         GameSettings settings = GameSettings.Instance;
@@ -85,10 +131,19 @@ public sealed class Camera
 
     }
 
-    /// <summary>Resets zoom to 1x.</summary>
+    /// <summary>
+    /// Resets <see cref="Zoom"/> to <c>1.0</c>.
+    /// </summary>
     public void ResetZoom() => Zoom = 1f;
 
-    /// <summary>Converts viewport pixel coordinates to world coordinates.</summary>
+    /// <summary>
+    /// Converts viewport coordinates to world coordinates.
+    /// </summary>
+    /// <param name="screenPos">The position within the configured viewport.</param>
+    /// <returns>
+    /// The corresponding world-space position, or the camera position when the
+    /// configured viewport has no positive size.
+    /// </returns>
     public Vect2 ScreenToWorld(Vect2 screenPos)
     {
         Vect2 viewport = GameSettings.Instance.Viewport;
@@ -102,7 +157,14 @@ public sealed class Camera
             view.Top + (screenPos.Y / viewport.Y) * view.Height);
     }
 
-    /// <summary>Converts world coordinates to viewport pixel coordinates.</summary>
+    /// <summary>
+    /// Converts a world-space position to viewport coordinates.
+    /// </summary>
+    /// <param name="worldPos">The world-space position to convert.</param>
+    /// <returns>
+    /// The corresponding viewport position, or <see cref="Vect2.Zero"/> when
+    /// the current view has no positive size.
+    /// </returns>
     public Vect2 WorldToScreen(Vect2 worldPos)
     {
         Vect2 viewport = GameSettings.Instance.Viewport;
@@ -117,10 +179,6 @@ public sealed class Camera
     }
 
 
-    /// <summary>
-    /// Creates the no-camera transform: viewport (0,0) is the top-left and the
-    /// configured viewport size maps to the bottom-right.
-    /// </summary>
     internal static Matrix4x4 CreateDefaultViewProjection()
     {
         Vect2 viewport = GameSettings.Instance.Viewport;

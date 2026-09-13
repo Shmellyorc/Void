@@ -3,7 +3,7 @@
 // ============================================================================
 //  Represents one log entry delivered to registered log sinks.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

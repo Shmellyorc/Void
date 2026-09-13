@@ -1,3 +1,12 @@
+// ============================================================================
+//  SdlWindowHost.cs
+// ============================================================================
+//  SDL native window, event handling, display state, and graphics context hosting.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using Void.Engine.Graphics.Rendering;
 using Void.Engine.Systems;
 

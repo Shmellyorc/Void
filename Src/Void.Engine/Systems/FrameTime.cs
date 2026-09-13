@@ -4,7 +4,7 @@
 //  Manages frame timing information including delta time, fixed timestep
 //  accumulation, and interpolation alpha for smooth rendering.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -335,7 +335,7 @@ public sealed class FrameTime
             _accumulator = 0f;
         }
 
-        _totalTime += _elapsedTime;
+        _totalTime += TimeSpan.FromSeconds(rawDelta);
 
         _fpsTimer += rawDelta;
         _frameCount++;

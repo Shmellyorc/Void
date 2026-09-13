@@ -1,10 +1,9 @@
 // ============================================================================
 //  SoundInstancePool.cs
 // ============================================================================
-//  Manages a pool of reusable sound instances with background update loop,
-//  voice allocation, and priority-based instance stealing.
+//  Manages reusable sound instances, background updates, and voice allocation.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -17,62 +16,28 @@ using System.Threading.Tasks;
 namespace Void.Engine.Sounds;
 
 /// <summary>
-/// Manages a pool of reusable sound instances with automatic background updating,
-/// voice allocation, and priority-based instance stealing.
+/// Manages the shared pool of reusable <see cref="SoundInstance"/> objects.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="SoundInstancePool"/> is a singleton that maintains a fixed
-/// number of pre-allocated sound instances (default: 255) to avoid garbage
-/// collection pressure from frequent allocations. It handles the complete
-/// lifecycle of sound instances from creation to recycling.
+/// The pool pre-allocates the number of instances configured by
+/// <see cref="GameSettings.SetAudioLimit(uint)"/> and updates active instances
+/// on a background task at approximately 60 Hz.
 /// </para>
 /// <para>
-/// <b>How It Works:</b>
-/// <list type="number">
-///   <item><description>On creation, the pool pre-allocates <see cref="GameSettings.SetAudioLimit(uint)"/> instances</description></item>
-///   <item><description>Instances are stored in an available queue and an active list</description></item>
-///   <item><description>A background task updates all active instances at 60Hz</description></item>
-///   <item><description>Completed or stopped instances are automatically returned to the pool</description></item>
-///   <item><description>When <see cref="GetInstance"/> is called, an instance is allocated or stolen</description></item>
-/// </list>
+/// When no unused instance is available, the pool first reuses a completed
+/// instance, then may steal a lower-priority active instance, and finally falls
+/// back to the longest-playing active instance.
 /// </para>
 /// <para>
-/// <b>Voice Allocation Strategy:</b>
-/// When a new sound needs to play and no instances are available:
-/// <list type="bullet">
-///   <item><description>Recycle any stopped instances still in the active list</description></item>
-///   <item><description>Steal the lowest priority playing instance if the new sound has higher priority</description></item>
-///   <item><description>Steal the oldest playing instance as a fallback</description></item>
-///   <item><description>Return <see langword="null"/> if no instance can be allocated (pool exhausted)</description></item>
-/// </list>
+/// Public operations that inspect or modify the active and available collections
+/// are synchronized internally. Events can be raised from either the calling
+/// thread or the background update thread depending on the operation that caused them.
 /// </para>
-/// <para>
-/// <b>Background Update Loop:</b>
-/// The pool runs a background task that updates all active sound instances at
-/// 60Hz (16.67ms interval). This loop advances playback time, fires loop events,
-/// detects completion, and automatically returns completed instances to the pool.
-/// </para>
-/// <para>
-/// Example usage:
 /// <code>
-/// // Get an instance from the pool (typically called via Sound.CreateInstance)
-/// var instance = SoundInstancePool.Instance.GetInstance(SoundPriority.Normal);
-/// 
-/// // Check pool status
-/// int active = SoundInstancePool.Instance.ActiveCount;
-/// int available = SoundInstancePool.Instance.AvailableCount;
-/// bool exhausted = SoundInstancePool.Instance.IsExhausted;
-/// 
-/// // Stop all sounds
-/// SoundInstancePool.Instance.StopAll();
+/// SoundInstancePool pool = SoundInstancePool.Instance;
+/// SoundInstance instance = pool.GetInstance(SoundPriority.Normal);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// The pool uses locks internally for thread safety. The background update loop
-/// runs on a separate thread and is safe to use with the main thread.
-/// </para>
 /// </remarks>
 public sealed class SoundInstancePool : IDisposable
 {
@@ -80,7 +45,7 @@ public sealed class SoundInstancePool : IDisposable
         new Lazy<SoundInstancePool>(() => new SoundInstancePool());
 
     /// <summary>
-    /// Gets the singleton instance of the sound instance pool.
+    /// Gets the shared sound-instance pool.
     /// </summary>
     public static SoundInstancePool Instance => _instance.Value;
 
@@ -93,49 +58,68 @@ public sealed class SoundInstancePool : IDisposable
     private bool _isDisposed;
 
     /// <summary>
-    /// Occurs when a new sound instance is created from the pool.
+    /// Occurs when an available instance is allocated from the pool.
     /// </summary>
     public event EventHandler<SoundEventArgs> InstanceCreated;
 
     /// <summary>
-    /// Occurs when a sound instance is recycled by the pool.
+    /// Occurs when an existing instance is reset and reused.
     /// </summary>
     public event EventHandler<SoundEventArgs> InstanceRecycled;
 
     /// <summary>
-    /// Occurs when an error occurs in the pool or an instance.
+    /// Occurs when the pool or one of its managed instances reports an error.
     /// </summary>
     public event EventHandler<SoundErrorEventArgs> InstanceError;
 
-
-
     /// <summary>
-    /// The update interval in milliseconds (60 FPS).
+    /// Background update interval in milliseconds.
     /// </summary>
     public const float UpdateInterval = 16.67f;
 
     /// <summary>
-    /// Gets the number of currently active sound instances.
+    /// Gets the number of instances currently owned by the active list.
     /// </summary>
-    public int ActiveCount => _activeInstances.Count;
+    public int ActiveCount
+    {
+        get
+        {
+            lock (_lock)
+                return _activeInstances.Count;
+        }
+    }
 
     /// <summary>
-    /// Gets the number of available sound instances in the pool.
+    /// Gets the number of unused instances currently available for allocation.
     /// </summary>
-    public int AvailableCount => _availableInstances.Count;
+    public int AvailableCount
+    {
+        get
+        {
+            lock (_lock)
+                return _availableInstances.Count;
+        }
+    }
 
     /// <summary>
-    /// Gets the total number of sound instances managed by the pool.
+    /// Gets the fixed number of instances managed by the pool.
     /// </summary>
     public int TotalInstances => _maxInstances;
 
     /// <summary>
-    /// Gets a value indicating whether the pool is exhausted and no more instances are available.
+    /// Gets whether the pool has no available instance and every managed instance is active.
     /// </summary>
-    public bool IsExhausted => _availableInstances.Count == 0 && _activeInstances.Count >= _maxInstances;
+    public bool IsExhausted
+    {
+        get
+        {
+            lock (_lock)
+                return _availableInstances.Count == 0 && _activeInstances.Count >= _maxInstances;
+        }
+    }
 
     /// <summary>
-    /// Gets a value indicating whether the background update task is running.
+    /// Gets whether the background update task has not completed.
     /// </summary>
     public bool IsRunning => !_updateTask.IsCompleted;
 
@@ -266,24 +250,20 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Gets a sound instance from the pool with the specified priority.
+    /// Gets an instance from the pool using the requested sound priority for voice allocation.
     /// </summary>
-    /// <param name="newSoundPriority">The priority of the new sound for voice allocation.</param>
-    /// <returns>A sound instance ready to use, or <see langword="null"/> if the pool is exhausted.</returns>
+    /// <param name="newSoundPriority">Priority of the sound that will use the returned instance.</param>
+    /// <returns>
+    /// An allocated or recycled instance, or <see langword="null"/> when no instance can be provided.
+    /// </returns>
     /// <remarks>
     /// <para>
-    /// This method attempts to allocate a sound instance using the following strategy:
-    /// <list type="number">
-    ///   <item><description>If an instance is available in the queue, it is returned immediately</description></item>
-    ///   <item><description>If any active instance is stopped, it is recycled</description></item>
-    ///   <item><description>If the new sound has higher priority than active sounds, the lowest priority active sound is stolen</description></item>
-    ///   <item><description>As a fallback, the oldest active sound is stolen</description></item>
-    ///   <item><description>If no instance can be allocated, <see langword="null"/> is returned</description></item>
-    /// </list>
+    /// Allocation order is: unused instance, completed instance, lower-priority
+    /// active instance, then the longest-playing active instance.
     /// </para>
     /// <para>
-    /// When an instance is stolen, it is stopped, reset, and reinitialized with
-    /// the new sound data. The <see cref="InstanceRecycled"/> event is fired.
+    /// When stealing among lower-priority instances, the lowest priority is preferred;
+    /// ties are resolved by stealing the longest-playing instance.
     /// </para>
     /// </remarks>
     public SoundInstance GetInstance(SoundPriority newSoundPriority = SoundPriority.Normal)
@@ -316,7 +296,7 @@ public sealed class SoundInstancePool : IDisposable
                     .Where(x => x.IsPlaying || x.IsPaused)
                     .Where(x => x.Priority < newSoundPriority)
                     .OrderBy(x => x.Priority)
-                    .ThenBy(x => x.PlayTime)
+                    .ThenByDescending(x => x.PlayTime)
                     .FirstOrDefault();
 
                 if (lowestPriority != null)
@@ -334,7 +314,7 @@ public sealed class SoundInstancePool : IDisposable
 
                 var oldest = _activeInstances
                     .Where(x => x.IsPlaying || x.IsPaused)
-                    .OrderBy(x => x.PlayTime)
+                    .OrderByDescending(x => x.PlayTime)
                     .FirstOrDefault();
 
                 if (oldest != null)
@@ -389,10 +369,10 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Gets the number of active instances for a specific sound name.
+    /// Gets the number of playing or paused instances with the specified sound name.
     /// </summary>
-    /// <param name="name">The name of the sound to count.</param>
-    /// <returns>The number of active instances playing or paused for the specified sound.</returns>
+    /// <param name="name">Sound name to count.</param>
+    /// <returns>The matching active-instance count.</returns>
     public int GetActiveInstanceCount(string name)
     {
         lock (_lock)
@@ -402,17 +382,17 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Determines whether any active instances exist for a specific sound name.
+    /// Gets whether any playing or paused instance has the specified sound name.
     /// </summary>
-    /// <param name="name">The name of the sound to check.</param>
-    /// <returns><see langword="true"/> if at least one instance is playing or paused; otherwise, <see langword="false"/>.</returns>
+    /// <param name="name">Sound name to check.</param>
+    /// <returns><see langword="true"/> when a matching active instance exists; otherwise, <see langword="false"/>.</returns>
     public bool HasActiveInstance(string name)
         => GetActiveInstanceCount(name) > 0;
 
     /// <summary>
-    /// Stops all instances with the specified sound name.
+    /// Stops every active instance with the specified sound name.
     /// </summary>
-    /// <param name="name">The name of the sound to stop.</param>
+    /// <param name="name">Sound name to stop.</param>
     public void StopAllInstances(string name)
     {
         lock (_lock)
@@ -427,9 +407,9 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Pauses all instances with the specified sound name.
+    /// Pauses every active instance with the specified sound name.
     /// </summary>
-    /// <param name="name">The name of the sound to pause.</param>
+    /// <param name="name">Sound name to pause.</param>
     public void PauseAllInstances(string name)
     {
         lock (_lock)
@@ -444,9 +424,9 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Resumes all paused instances with the specified sound name.
+    /// Resumes every paused instance with the specified sound name.
     /// </summary>
-    /// <param name="name">The name of the sound to resume.</param>
+    /// <param name="name">Sound name to resume.</param>
     public void ResumeAllInstances(string name)
     {
         lock (_lock)
@@ -461,7 +441,7 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Disposes the sound instance pool and releases all resources.
+    /// Cancels the update task and disposes every managed sound instance.
     /// </summary>
     public void Dispose()
     {
@@ -502,9 +482,9 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Gets a list of all active sound instances.
+    /// Gets a snapshot of the instances currently held in the active list.
     /// </summary>
-    /// <returns>A list containing all active sound instances.</returns>
+    /// <returns>A new list containing the current active instances.</returns>
     public List<SoundInstance> GetActiveInstances()
     {
         lock (_lock)
@@ -514,9 +494,9 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Applies the specified volume to all active sound instances.
+    /// Sets the instance volume of every active sound.
     /// </summary>
-    /// <param name="volume">The volume value between 0 and 1 to apply.</param>
+    /// <param name="volume">Volume passed to each active instance.</param>
     public void ApplyVolumeToAll(float volume)
     {
         lock (_lock)
@@ -529,7 +509,7 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Stops all active sound instances.
+    /// Stops every active sound instance.
     /// </summary>
     public void StopAll()
     {
@@ -544,7 +524,7 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Pauses all active sound instances.
+    /// Pauses every active sound instance.
     /// </summary>
     public void PauseAll()
     {
@@ -559,7 +539,7 @@ public sealed class SoundInstancePool : IDisposable
     }
 
     /// <summary>
-    /// Resumes all paused sound instances.
+    /// Resumes every paused sound instance.
     /// </summary>
     public void ResumeAll()
     {

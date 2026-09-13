@@ -3,7 +3,7 @@
 // ============================================================================
 //  Writes log entries to daily files with size rollover and retention cleanup.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

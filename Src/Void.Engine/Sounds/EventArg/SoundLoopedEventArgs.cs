@@ -1,9 +1,9 @@
 // ============================================================================
 //  SoundLoopedEventArgs.cs
 // ============================================================================
-//  Event arguments for sound loop events, providing loop count information.
+//  Event data raised after a looping sound completes an iteration.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -12,30 +12,11 @@ using System;
 namespace Void.Engine.Sounds;
 
 /// <summary>
-/// Provides event data for sound loop events.
+/// Provides event data for a completed loop iteration.
 /// </summary>
-/// <remarks>
-/// <para>
-/// This event is raised each time a looping sound completes a loop iteration.
-/// It provides the current loop count, allowing tracking of how many times
-/// the sound has looped.
-/// </para>
-/// <para>
-/// Example usage:
-/// <code>
-/// SoundInstance.SoundLooped += (sender, args) =>
-/// {
-///     if (args.LoopCount % 5 == 0)
-///         Console.WriteLine($"Sound looped {args.LoopCount} times");
-/// };
-/// </code>
-/// </para>
-/// </remarks>
 public class SoundLoopedEventArgs : SoundEventArgs
 {
-    /// <summary>
-    /// Gets the number of times the sound has looped.
-    /// </summary>
+    /// <summary>Gets the total number of loop iterations completed by the instance.</summary>
     public int LoopCount { get; }
 
     internal SoundLoopedEventArgs(SoundInstance instance, int loopCount) : base(instance)

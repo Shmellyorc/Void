@@ -50,7 +50,7 @@ public abstract class BaseBatcher : IBatcher
     internal int _vertexBufferSize;
     internal IRenderTarget _renderTarget;
     internal IVertexBuffer _vertexBuffer;
-    internal Texture _currentTexture;
+    // internal Texture _currentTexture;
 
     /// <summary>Gets whether this batcher has been disposed.</summary>
     protected bool IsDisposed => _isDisposed;

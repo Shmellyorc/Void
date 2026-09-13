@@ -4,7 +4,7 @@
 //  Reflection-based discovery system for locating and managing types marked
 //  with the [Discoverable] attribute across loaded assemblies.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

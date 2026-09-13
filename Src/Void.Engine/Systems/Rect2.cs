@@ -1,11 +1,10 @@
 // ============================================================================
 //  Rect2.cs
 // ============================================================================
-//  2D axis-aligned rectangle structure with position, size, and common
-//  geometric operations including containment, intersection, union, and
-//  transformation methods.
+//  2D axis-aligned rectangle with position, size, collision helpers,
+//  interpolation, movement, and common geometric operations.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -18,36 +17,12 @@ namespace Void.Engine.Systems;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="Rect2"/> structure provides comprehensive geometric operations
-/// for axis-aligned rectangles including containment testing, intersection
-/// detection, union operations, and various transformations. It is used
-/// extensively for collision detection, viewport calculations, UI layout,
-/// and spatial partitioning.
+/// The rectangle uses a top-left position with positive X extending right and
+/// positive Y extending downward.
 /// </para>
 /// <para>
-/// Collision detection methods delegate to <see cref="CollisionHelper"/> to ensure
-/// all collision logic lives in one place.
-/// </para>
-/// <para>
-/// All operations assume a coordinate system where positive X extends to the
-/// right and positive Y extends downward.
-/// </para>
-/// <para>
-/// Example usage:
-/// <code>
-/// // Create a rectangle
-/// var rect = new Rect2(10, 20, 100, 50);
-/// 
-/// // Check if a point is inside
-/// bool contains = rect.Contains(new Vect2(50, 30));
-/// 
-/// // Find intersection with another rectangle
-/// var other = new Rect2(30, 10, 80, 40);
-/// var intersection = rect.Intersection(other);
-/// 
-/// // Inflate the rectangle
-/// var inflated = rect.Inflate(10f);
-/// </code>
+/// Point, rectangle, and circle collision tests delegate to
+/// <see cref="CollisionHelper"/>.
 /// </para>
 /// </remarks>
 public struct Rect2 : IEquatable<Rect2>
@@ -58,99 +33,70 @@ public struct Rect2 : IEquatable<Rect2>
     #endregion
 
     #region Properties
-    /// <summary>
-    /// Gets or sets the X-coordinate of the rectangle's position.
-    /// </summary>
+    /// <summary>Gets or sets the X coordinate of the rectangle position.</summary>
     public float X { get => _position.X; set => _position.X = value; }
 
-    /// <summary>
-    /// Gets or sets the Y-coordinate of the rectangle's position.
-    /// </summary>
+    /// <summary>Gets or sets the Y coordinate of the rectangle position.</summary>
     public float Y { get => _position.Y; set => _position.Y = value; }
 
-    /// <summary>
-    /// Gets or sets the width of the rectangle.
-    /// </summary>
+    /// <summary>Gets or sets the rectangle width.</summary>
     public float Width { get => _size.X; set => _size.X = value; }
 
-    /// <summary>
-    /// Gets or sets the height of the rectangle.
-    /// </summary>
+    /// <summary>Gets or sets the rectangle height.</summary>
     public float Height { get => _size.Y; set => _size.Y = value; }
 
-    /// <summary>
-    /// Gets or sets the position (top-left corner) of the rectangle.
-    /// </summary>
+    /// <summary>Gets or sets the top-left position.</summary>
     public Vect2 Position { get => _position; set => _position = value; }
 
-    /// <summary>
-    /// Gets or sets the size (width and height) of the rectangle.
-    /// </summary>
+    /// <summary>Gets or sets the width and height.</summary>
     public Vect2 Size { get => _size; set => _size = value; }
 
-    /// <summary>
-    /// Gets an empty rectangle with position (0,0) and size (0,0).
-    /// </summary>
+    /// <summary>Gets a rectangle at the origin with zero width and height.</summary>
     public static Rect2 Empty => _rectEmpty;
 
-    /// <summary>
-    /// Gets the Y-coordinate of the top edge of the rectangle.
-    /// </summary>
+    /// <summary>Gets the Y coordinate of the top edge.</summary>
     public readonly float Top => _position.Y;
 
-    /// <summary>
-    /// Gets the X-coordinate of the left edge of the rectangle.
-    /// </summary>
+    /// <summary>Gets the X coordinate of the left edge.</summary>
     public readonly float Left => _position.X;
 
-    /// <summary>
-    /// Gets the X-coordinate of the right edge of the rectangle.
-    /// </summary>
+    /// <summary>Gets the X coordinate of the right edge.</summary>
     public readonly float Right => _position.X + _size.X;
 
-    /// <summary>
-    /// Gets the Y-coordinate of the bottom edge of the rectangle.
-    /// </summary>
+    /// <summary>Gets the Y coordinate of the bottom edge.</summary>
     public readonly float Bottom => _position.Y + _size.Y;
 
-    /// <summary>
-    /// Gets the center point of the rectangle.
-    /// </summary>
+    /// <summary>Gets the center point.</summary>
     public readonly Vect2 Center => _position + _size * 0.5f;
 
-    /// <summary>
-    /// Gets the top-left corner of the rectangle.
-    /// </summary>
+    /// <summary>Gets the top-left corner.</summary>
     public readonly Vect2 TopLeft => _position;
 
-    /// <summary>
-    /// Gets the top-right corner of the rectangle.
-    /// </summary>
+    /// <summary>Gets the top-right corner.</summary>
     public readonly Vect2 TopRight => new(Right, Top);
 
-    /// <summary>
-    /// Gets the bottom-left corner of the rectangle.
-    /// </summary>
+    /// <summary>Gets the bottom-left corner.</summary>
     public readonly Vect2 BottomLeft => new(Left, Bottom);
 
-    /// <summary>
-    /// Gets the bottom-right corner of the rectangle.
-    /// </summary>
+    /// <summary>Gets the bottom-right corner.</summary>
     public readonly Vect2 BottomRight => new(Right, Bottom);
 
     /// <summary>
-    /// Gets a value indicating whether the rectangle has zero size.
+    /// Gets whether both width and height are approximately zero.
     /// </summary>
+    /// <remarks>
+    /// Uses <see cref="MathHelper.Epsilon"/> for both size components.
+    /// </remarks>
     public readonly bool IsEmpty
         => MathHelper.AlmostZero(_size.X, MathHelper.Epsilon) && MathHelper.AlmostZero(_size.Y, MathHelper.Epsilon);
     #endregion
 
     #region Constructor
     /// <summary>
-    /// Initializes a new instance of the <see cref="Rect2"/> structure with the specified position and size.
+    /// Creates a rectangle from a top-left position and size.
     /// </summary>
-    /// <param name="position">The position (top-left corner) of the rectangle.</param>
-    /// <param name="size">The size (width and height) of the rectangle.</param>
+    /// <param name="position">The top-left position.</param>
+    /// <param name="size">The width and height.</param>
     public Rect2(Vect2 position, Vect2 size)
     {
         _position = position;
@@ -158,53 +104,53 @@ public struct Rect2 : IEquatable<Rect2>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Rect2"/> structure with the specified component values.
+    /// Creates a rectangle from position and size components.
     /// </summary>
-    /// <param name="x">The X-coordinate of the position.</param>
-    /// <param name="y">The Y-coordinate of the position.</param>
-    /// <param name="width">The width of the rectangle.</param>
-    /// <param name="height">The height of the rectangle.</param>
+    /// <param name="x">The X coordinate.</param>
+    /// <param name="y">The Y coordinate.</param>
+    /// <param name="width">The width.</param>
+    /// <param name="height">The height.</param>
     public Rect2(float x, float y, float width, float height)
         : this(new(x, y), new(width, height)) { }
     #endregion
 
     #region Contains
     /// <summary>
-    /// Determines whether the rectangle contains the specified point.
+    /// Determines whether this rectangle contains a point.
     /// </summary>
     /// <param name="point">The point to test.</param>
-    /// <returns><see langword="true"/> if the point is inside the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if the point is contained; otherwise, <see langword="false"/>.</returns>
     public readonly bool Contains(Vect2 point) => Contains(this, point);
 
     /// <summary>
-    /// Determines whether the specified rectangle contains the specified point.
+    /// Determines whether a rectangle contains a point.
     /// </summary>
-    /// <param name="rect">The rectangle to test against.</param>
+    /// <param name="rect">The rectangle to test.</param>
     /// <param name="point">The point to test.</param>
-    /// <returns><see langword="true"/> if the point is inside the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if the point is contained; otherwise, <see langword="false"/>.</returns>
     public static bool Contains(in Rect2 rect, in Vect2 point)
         => CollisionHelper.PointRect(point, rect);
 
     /// <summary>
-    /// Determines whether this rectangle fully contains the specified rectangle.
+    /// Determines whether this rectangle fully contains another rectangle.
     /// </summary>
     /// <param name="other">The rectangle to test.</param>
-    /// <returns><see langword="true"/> if this rectangle fully contains the other; otherwise, <see langword="false"/>.</returns>
+    /// <returns><see langword="true"/> if the rectangle is fully contained; otherwise, <see langword="false"/>.</returns>
     public readonly bool Contains(in Rect2 other) => Contains(this, other);
 
     /// <summary>
     /// Determines whether one rectangle fully contains another rectangle.
     /// </summary>
     /// <param name="a">The outer rectangle.</param>
-    /// <param name="b">The inner rectangle to test.</param>
-    /// <returns><see langword="true"/> if rectangle a fully contains rectangle b; otherwise, <see langword="false"/>.</returns>
+    /// <param name="b">The rectangle to test.</param>
+    /// <returns><see langword="true"/> if <paramref name="a"/> fully contains <paramref name="b"/>; otherwise, <see langword="false"/>.</returns>
     public static bool Contains(in Rect2 a, in Rect2 b)
         => CollisionHelper.RectContainsRect(a, b);
     #endregion
 
     #region Intersects
     /// <summary>
-    /// Determines whether this rectangle intersects with another rectangle.
+    /// Determines whether this rectangle intersects another rectangle.
     /// </summary>
     /// <param name="other">The rectangle to test.</param>
     /// <returns><see langword="true"/> if the rectangles intersect; otherwise, <see langword="false"/>.</returns>
@@ -220,19 +166,19 @@ public struct Rect2 : IEquatable<Rect2>
         => CollisionHelper.RectRect(a, b);
 
     /// <summary>
-    /// Determines whether this rectangle intersects with a circle defined by its center and radius.
+    /// Determines whether this rectangle intersects a circle.
     /// </summary>
-    /// <param name="center">The center point of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
+    /// <param name="center">The circle center.</param>
+    /// <param name="radius">The circle radius.</param>
     /// <returns><see langword="true"/> if the rectangle and circle intersect; otherwise, <see langword="false"/>.</returns>
     public readonly bool Intersects(in Vect2 center, float radius) => Intersects(this, center, radius);
 
     /// <summary>
-    /// Determines whether a rectangle intersects with a circle defined by its center and radius.
+    /// Determines whether a rectangle intersects a circle.
     /// </summary>
     /// <param name="rect">The rectangle to test.</param>
-    /// <param name="center">The center point of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
+    /// <param name="center">The circle center.</param>
+    /// <param name="radius">The circle radius.</param>
     /// <returns><see langword="true"/> if the rectangle and circle intersect; otherwise, <see langword="false"/>.</returns>
     public static bool Intersects(in Rect2 rect, in Vect2 center, float radius)
         => CollisionHelper.RectCircle(rect, center, radius);
@@ -240,18 +186,18 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region Intersection
     /// <summary>
-    /// Gets the intersection rectangle between this rectangle and another rectangle.
+    /// Returns the overlapping area between this rectangle and another rectangle.
     /// </summary>
-    /// <param name="other">The rectangle to intersect with.</param>
-    /// <returns>The intersection rectangle, or <see cref="Empty"/> if there is no intersection.</returns>
+    /// <param name="other">The rectangle to intersect.</param>
+    /// <returns>The overlapping rectangle, or <see cref="Empty"/> when no positive-area overlap exists.</returns>
     public readonly Rect2 Intersection(in Rect2 other) => Intersection(this, other);
 
     /// <summary>
-    /// Gets the intersection rectangle between two rectangles.
+    /// Returns the overlapping area between two rectangles.
     /// </summary>
     /// <param name="a">The first rectangle.</param>
     /// <param name="b">The second rectangle.</param>
-    /// <returns>The intersection rectangle, or <see cref="Empty"/> if there is no intersection.</returns>
+    /// <returns>The overlapping rectangle, or <see cref="Empty"/> when no positive-area overlap exists.</returns>
     public static Rect2 Intersection(in Rect2 a, in Rect2 b)
     {
         float left = MathF.Max(a.Left, b.Left);
@@ -266,20 +212,20 @@ public struct Rect2 : IEquatable<Rect2>
     }
 
     /// <summary>
-    /// Gets the intersection rectangle between this rectangle and a circle.
+    /// Returns the rectangular overlap between this rectangle and a circle.
     /// </summary>
-    /// <param name="center">The center point of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns>The intersection rectangle, or <see cref="Empty"/> if there is no intersection.</returns>
+    /// <param name="center">The circle center.</param>
+    /// <param name="radius">The circle radius.</param>
+    /// <returns>The overlapping rectangle, or <see cref="Empty"/> when there is no positive-area overlap.</returns>
     public readonly Rect2 Intersection(Vect2 center, float radius) => Intersection(this, center, radius);
 
     /// <summary>
-    /// Gets the intersection rectangle between a rectangle and a circle.
+    /// Returns the rectangular overlap between a rectangle and a circle.
     /// </summary>
-    /// <param name="rect">The rectangle to intersect with.</param>
-    /// <param name="center">The center point of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns>The intersection rectangle, or <see cref="Empty"/> if there is no intersection.</returns>
+    /// <param name="rect">The rectangle to intersect.</param>
+    /// <param name="center">The circle center.</param>
+    /// <param name="radius">The circle radius.</param>
+    /// <returns>The overlapping rectangle, or <see cref="Empty"/> when there is no positive-area overlap.</returns>
     public static Rect2 Intersection(in Rect2 rect, Vect2 center, float radius)
     {
         Vect2 clamped = center.Clamp(rect.TopLeft, rect.BottomRight);
@@ -301,18 +247,18 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region Union
     /// <summary>
-    /// Gets the smallest rectangle that contains both this rectangle and another rectangle.
+    /// Returns the smallest rectangle containing this rectangle and another rectangle.
     /// </summary>
-    /// <param name="other">The rectangle to combine with.</param>
-    /// <returns>The union rectangle that contains both rectangles.</returns>
+    /// <param name="other">The rectangle to include.</param>
+    /// <returns>The union of both rectangles.</returns>
     public readonly Rect2 Union(in Rect2 other) => Union(this, other);
 
     /// <summary>
-    /// Gets the smallest rectangle that contains two rectangles.
+    /// Returns the smallest rectangle containing two rectangles.
     /// </summary>
     /// <param name="a">The first rectangle.</param>
     /// <param name="b">The second rectangle.</param>
-    /// <returns>The union rectangle that contains both rectangles.</returns>
+    /// <returns>The union of both rectangles.</returns>
     public static Rect2 Union(in Rect2 a, in Rect2 b)
     {
         float left = MathF.Min(a.Left, b.Left);
@@ -326,35 +272,35 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region Inflate
     /// <summary>
-    /// Expands the rectangle by the specified amount on all sides.
+    /// Expands this rectangle equally on all sides.
     /// </summary>
-    /// <param name="amount">The amount to expand in all directions.</param>
+    /// <param name="amount">The amount added to each side.</param>
     /// <returns>The inflated rectangle.</returns>
     public readonly Rect2 Inflate(float amount) => Inflate(this, amount);
 
     /// <summary>
-    /// Expands a rectangle by the specified amount on all sides.
+    /// Expands a rectangle equally on all sides.
     /// </summary>
     /// <param name="rect">The rectangle to inflate.</param>
-    /// <param name="amount">The amount to expand in all directions.</param>
+    /// <param name="amount">The amount added to each side.</param>
     /// <returns>The inflated rectangle.</returns>
     public static Rect2 Inflate(in Rect2 rect, float amount)
         => new(rect._position - new Vect2(amount), rect._size + new Vect2(amount * 2f));
 
     /// <summary>
-    /// Expands the rectangle by different amounts horizontally and vertically.
+    /// Expands this rectangle by separate horizontal and vertical amounts.
     /// </summary>
-    /// <param name="horizontal">The amount to expand horizontally.</param>
-    /// <param name="vertical">The amount to expand vertically.</param>
+    /// <param name="horizontal">The amount added to the left and right sides.</param>
+    /// <param name="vertical">The amount added to the top and bottom sides.</param>
     /// <returns>The inflated rectangle.</returns>
     public readonly Rect2 Inflate(float horizontal, float vertical) => Inflate(this, horizontal, vertical);
 
     /// <summary>
-    /// Expands a rectangle by different amounts horizontally and vertically.
+    /// Expands a rectangle by separate horizontal and vertical amounts.
     /// </summary>
     /// <param name="rect">The rectangle to inflate.</param>
-    /// <param name="horizontal">The amount to expand horizontally.</param>
-    /// <param name="vertical">The amount to expand vertically.</param>
+    /// <param name="horizontal">The amount added to the left and right sides.</param>
+    /// <param name="vertical">The amount added to the top and bottom sides.</param>
     /// <returns>The inflated rectangle.</returns>
     public static Rect2 Inflate(in Rect2 rect, float horizontal, float vertical)
         => new(rect._position - new Vect2(horizontal, vertical),
@@ -364,28 +310,20 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region Lerp
     /// <summary>
-    /// Linearly interpolates between this rectangle and a target rectangle.
+    /// Linearly interpolates this rectangle toward a target rectangle.
     /// </summary>
-    /// <param name="target">The target rectangle to interpolate towards.</param>
-    /// <param name="t">The interpolation factor between 0 and 1.</param>
-    /// <returns>A new rectangle with interpolated position and size.</returns>
-    /// <remarks>
-    /// The position and size are interpolated independently using vector linear interpolation.
-    /// At t = 0, returns a rectangle matching this instance. At t = 1, returns a rectangle matching the target.
-    /// </remarks>
+    /// <param name="target">The target rectangle.</param>
+    /// <param name="t">The interpolation amount passed to <see cref="Vect2.Lerp(Vect2, Vect2, float)"/>.</param>
+    /// <returns>The interpolated rectangle.</returns>
     public readonly Rect2 Lerp(Rect2 target, float t) => Lerp(this, target, t);
 
     /// <summary>
     /// Linearly interpolates between two rectangles.
     /// </summary>
     /// <param name="a">The starting rectangle.</param>
-    /// <param name="b">The ending rectangle.</param>
-    /// <param name="t">The interpolation factor between 0 and 1.</param>
-    /// <returns>A new rectangle with interpolated position and size.</returns>
-    /// <remarks>
-    /// The position and size are interpolated independently using vector linear interpolation.
-    /// At t = 0, returns rectangle a. At t = 1, returns rectangle b.
-    /// </remarks>
+    /// <param name="b">The target rectangle.</param>
+    /// <param name="t">The interpolation amount passed to <see cref="Vect2.Lerp(Vect2, Vect2, float)"/>.</param>
+    /// <returns>The interpolated rectangle.</returns>
     public static Rect2 Lerp(Rect2 a, Rect2 b, float t)
     {
         return new Rect2(
@@ -397,38 +335,20 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region SmoothStep
     /// <summary>
-    /// Performs a smooth Hermite interpolation between this rectangle and a target rectangle.
+    /// Smoothly interpolates this rectangle toward a target rectangle.
     /// </summary>
-    /// <param name="target">The target rectangle to interpolate towards.</param>
-    /// <param name="t">The interpolation factor between 0 and 1.</param>
-    /// <returns>A new rectangle with smoothly interpolated position and size.</returns>
-    /// <remarks>
-    /// <para>
-    /// The position and size are interpolated independently using smooth step interpolation,
-    /// which creates an ease-in/ease-out effect at the start and end of the interpolation.
-    /// </para>
-    /// <para>
-    /// At t = 0, returns a rectangle matching this instance. At t = 1, returns a rectangle matching the target.
-    /// </para>
-    /// </remarks>
+    /// <param name="target">The target rectangle.</param>
+    /// <param name="t">The interpolation amount passed to <see cref="Vect2.SmoothStep(Vect2, Vect2, float)"/>.</param>
+    /// <returns>The smoothly interpolated rectangle.</returns>
     public readonly Rect2 SmoothStep(Rect2 target, float t) => SmoothStep(this, target, t);
 
     /// <summary>
-    /// Performs a smooth Hermite interpolation between two rectangles.
+    /// Smoothly interpolates between two rectangles.
     /// </summary>
     /// <param name="a">The starting rectangle.</param>
-    /// <param name="b">The ending rectangle.</param>
-    /// <param name="t">The interpolation factor between 0 and 1.</param>
-    /// <returns>A new rectangle with smoothly interpolated position and size.</returns>
-    /// <remarks>
-    /// <para>
-    /// The position and size are interpolated independently using smooth step interpolation,
-    /// which creates an ease-in/ease-out effect at the start and end of the interpolation.
-    /// </para>
-    /// <para>
-    /// At t = 0, returns rectangle a. At t = 1, returns rectangle b.
-    /// </para>
-    /// </remarks>
+    /// <param name="b">The target rectangle.</param>
+    /// <param name="t">The interpolation amount passed to <see cref="Vect2.SmoothStep(Vect2, Vect2, float)"/>.</param>
+    /// <returns>The smoothly interpolated rectangle.</returns>
     public static Rect2 SmoothStep(Rect2 a, Rect2 b, float t)
     {
         return new Rect2(
@@ -441,72 +361,72 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region Offset
     /// <summary>
-    /// Offsets the rectangle by the specified vector.
+    /// Returns this rectangle translated by a vector.
     /// </summary>
-    /// <param name="offset">The amount to offset the position.</param>
-    /// <returns>The offset rectangle.</returns>
+    /// <param name="offset">The translation amount.</param>
+    /// <returns>The translated rectangle.</returns>
     public readonly Rect2 Offset(Vect2 offset) => Offset(this, offset);
 
     /// <summary>
-    /// Offsets a rectangle by the specified vector.
+    /// Returns a rectangle translated by a vector.
     /// </summary>
-    /// <param name="rect">The rectangle to offset.</param>
-    /// <param name="offset">The amount to offset the position.</param>
-    /// <returns>The offset rectangle.</returns>
+    /// <param name="rect">The rectangle to translate.</param>
+    /// <param name="offset">The translation amount.</param>
+    /// <returns>The translated rectangle.</returns>
     public static Rect2 Offset(in Rect2 rect, in Vect2 offset)
         => new(rect._position + offset, rect._size);
 
     /// <summary>
-    /// Offsets the rectangle by the specified x and y values.
+    /// Returns this rectangle translated by X and Y offsets.
     /// </summary>
-    /// <param name="x">The amount to offset the X position.</param>
-    /// <param name="y">The amount to offset the Y position.</param>
-    /// <returns>The offset rectangle.</returns>
+    /// <param name="x">The X offset.</param>
+    /// <param name="y">The Y offset.</param>
+    /// <returns>The translated rectangle.</returns>
     public readonly Rect2 Offset(float x, float y) => Offset(this, x, y);
 
     /// <summary>
-    /// Offsets a rectangle by the specified x and y values.
+    /// Returns a rectangle translated by X and Y offsets.
     /// </summary>
-    /// <param name="rect">The rectangle to offset.</param>
-    /// <param name="x">The amount to offset the X position.</param>
-    /// <param name="y">The amount to offset the Y position.</param>
-    /// <returns>The offset rectangle.</returns>
+    /// <param name="rect">The rectangle to translate.</param>
+    /// <param name="x">The X offset.</param>
+    /// <param name="y">The Y offset.</param>
+    /// <returns>The translated rectangle.</returns>
     public static Rect2 Offset(in Rect2 rect, float x, float y)
         => new(rect._position.X + x, rect._position.Y + y, rect._size.X, rect._size.Y);
     #endregion
 
     #region Move
     /// <summary>
-    /// Moves the rectangle to a new position while maintaining its size.
+    /// Returns this rectangle at a new position while preserving its size.
     /// </summary>
-    /// <param name="newPosition">The new position for the rectangle.</param>
+    /// <param name="newPosition">The new top-left position.</param>
     /// <returns>The moved rectangle.</returns>
     public readonly Rect2 Move(Vect2 newPosition)
         => Move(this, newPosition);
 
     /// <summary>
-    /// Moves a rectangle to a new position while maintaining its size.
+    /// Returns a rectangle at a new position while preserving its size.
     /// </summary>
     /// <param name="rect">The rectangle to move.</param>
-    /// <param name="newPosition">The new position for the rectangle.</param>
+    /// <param name="newPosition">The new top-left position.</param>
     /// <returns>The moved rectangle.</returns>
     public static Rect2 Move(in Rect2 rect, in Vect2 newPosition)
         => new(newPosition, rect._size);
 
     /// <summary>
-    /// Moves the rectangle to a new position while maintaining its size.
+    /// Returns this rectangle at a new X and Y position while preserving its size.
     /// </summary>
-    /// <param name="x">The new X-coordinate for the rectangle.</param>
-    /// <param name="y">The new Y-coordinate for the rectangle.</param>
+    /// <param name="x">The new X coordinate.</param>
+    /// <param name="y">The new Y coordinate.</param>
     /// <returns>The moved rectangle.</returns>
     public readonly Rect2 Move(float x, float y) => Move(this, x, y);
 
     /// <summary>
-    /// Moves a rectangle to a new position while maintaining its size.
+    /// Returns a rectangle at a new X and Y position while preserving its size.
     /// </summary>
     /// <param name="rect">The rectangle to move.</param>
-    /// <param name="x">The new X-coordinate for the rectangle.</param>
-    /// <param name="y">The new Y-coordinate for the rectangle.</param>
+    /// <param name="x">The new X coordinate.</param>
+    /// <param name="y">The new Y coordinate.</param>
     /// <returns>The moved rectangle.</returns>
     public static Rect2 Move(in Rect2 rect, float x, float y)
         => new(x, y, rect._size.X, rect._size.Y);
@@ -514,38 +434,38 @@ public struct Rect2 : IEquatable<Rect2>
 
     #region Area
     /// <summary>
-    /// Gets the area of the rectangle.
+    /// Returns the rectangle area.
     /// </summary>
-    /// <returns>The area (width × height) of the rectangle.</returns>
+    /// <returns>Width multiplied by height.</returns>
     public readonly float Area() => Area(this);
 
     /// <summary>
-    /// Gets the area of the specified rectangle.
+    /// Returns the area of a rectangle.
     /// </summary>
-    /// <param name="rect">The rectangle to calculate area for.</param>
-    /// <returns>The area (width × height) of the rectangle.</returns>
+    /// <param name="rect">The rectangle to measure.</param>
+    /// <returns>Width multiplied by height.</returns>
     public static float Area(in Rect2 rect) => rect._size.X * rect._size.Y;
     #endregion
 
 
     #region Damp
     /// <summary>
-    /// Smoothly damps this rectangle towards a target rectangle using exponential decay.
+    /// Smoothly damps this rectangle toward a target rectangle.
     /// </summary>
-    /// <param name="target">The target rectangle to damp towards.</param>
-    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
-    /// <param name="dt">The delta time in seconds.</param>
+    /// <param name="target">The target rectangle.</param>
+    /// <param name="smoothing">The smoothing factor.</param>
+    /// <param name="dt">Delta time in seconds.</param>
     /// <returns>The damped rectangle.</returns>
     public readonly Rect2 Damp(Rect2 target, float smoothing, float dt)
         => Damp(this, target, smoothing, dt);
 
     /// <summary>
-    /// Smoothly damps a rectangle towards a target rectangle using exponential decay.
+    /// Smoothly damps one rectangle toward another.
     /// </summary>
-    /// <param name="a">The start rectangle.</param>
+    /// <param name="a">The starting rectangle.</param>
     /// <param name="b">The target rectangle.</param>
-    /// <param name="smoothing">The smoothing factor (higher = faster).</param>
-    /// <param name="dt">The delta time in seconds.</param>
+    /// <param name="smoothing">The smoothing factor.</param>
+    /// <param name="dt">Delta time in seconds.</param>
     /// <returns>The damped rectangle.</returns>
     public static Rect2 Damp(Rect2 a, Rect2 b, float smoothing, float dt) => new(
         Vect2.Damp(a.Position, b.Position, smoothing, dt),
@@ -555,39 +475,41 @@ public struct Rect2 : IEquatable<Rect2>
 
 
     #region Operators
-    /// <summary>
-    /// Determines whether two rectangles are equal.
-    /// </summary>
+    /// <summary>Determines whether two rectangles are equal.</summary>
     public static bool operator ==(in Rect2 a, in Rect2 b) => a.Equals(b);
 
-    /// <summary>
-    /// Determines whether two rectangles are not equal.
-    /// </summary>
+    /// <summary>Determines whether two rectangles are not equal.</summary>
     public static bool operator !=(in Rect2 a, in Rect2 b) => !a.Equals(b);
     #endregion
 
     #region IEquatable
     /// <summary>
-    /// Determines whether the current rectangle is equal to another rectangle.
+    /// Determines whether this rectangle is equal to another rectangle.
     /// </summary>
+    /// <param name="other">The rectangle to compare.</param>
+    /// <returns><see langword="true"/> if position and size are equal; otherwise, <see langword="false"/>.</returns>
     public readonly bool Equals(Rect2 other)
         => _position.Equals(other._position) && _size.Equals(other._size);
 
     /// <summary>
-    /// Determines whether the current rectangle is equal to the specified object.
+    /// Determines whether this rectangle is equal to the specified object.
     /// </summary>
+    /// <param name="obj">The object to compare.</param>
+    /// <returns><see langword="true"/> if <paramref name="obj"/> is an equal <see cref="Rect2"/>; otherwise, <see langword="false"/>.</returns>
     public readonly override bool Equals([NotNullWhen(true)] object obj)
         => obj is Rect2 value && Equals(value);
 
     /// <summary>
-    /// Returns the hash code for the current rectangle.
+    /// Returns the hash code for this rectangle.
     /// </summary>
+    /// <returns>The hash code for this instance.</returns>
     public readonly override int GetHashCode()
         => HashCode.Combine(_position.GetHashCode(), _size.GetHashCode());
 
     /// <summary>
-    /// Returns a string representation of the current rectangle.
+    /// Returns the position and size of this rectangle.
     /// </summary>
+    /// <returns>A string in <c>Rect2(X, Y, Width, Height)</c> form.</returns>
     public readonly override string ToString()
         => $"Rect2({_position.X}, {_position.Y}, {_size.X}, {_size.Y})";
     #endregion

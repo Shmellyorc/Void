@@ -4,7 +4,7 @@
 //  Represents a snapshot of all input action states with query methods
 //  for JustPressed, Pressed, JustReleased, and Released states.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

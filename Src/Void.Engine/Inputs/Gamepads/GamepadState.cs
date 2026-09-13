@@ -3,7 +3,7 @@
 // ============================================================================
 //  Represents a snapshot of a gamepad's state at a specific moment in time.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 

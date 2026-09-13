@@ -1,9 +1,9 @@
 // ============================================================================
 //  SoundErrorEventArgs.cs
 // ============================================================================
-//  Event arguments for sound system error events.
+//  Event data for errors reported by sound playback and pool operations.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
@@ -12,45 +12,20 @@ using System;
 namespace Void.Engine.Sounds.EventArg;
 
 /// <summary>
-/// Provides event data for sound system error events.
+/// Provides details about an error reported by the sound system.
 /// </summary>
-/// <remarks>
-/// <para>
-/// This event is raised when an error occurs during sound playback, loading,
-/// or processing. It provides detailed error information including the
-/// exception and the sound instance that caused the error.
-/// </para>
-/// <para>
-/// Example usage:
-/// <code>
-/// SoundInstance.SoundError += (sender, args) =>
-/// {
-///     Logger.Error($"Sound error: {args.ErrorMessage}");
-///     Logger.Error($"Exception: {args.Exception}");
-/// };
-/// </code>
-/// </para>
-/// </remarks>
 public class SoundErrorEventArgs : EventArgs
 {
-    /// <summary>
-    /// Gets the sound instance that caused the error.
-    /// </summary>
+    /// <summary>Gets the associated sound instance, or <see langword="null"/> when the error is not tied to one instance.</summary>
     public SoundInstance Instance { get; }
 
-    /// <summary>
-    /// Gets the name of the sound that caused the error.
-    /// </summary>
+    /// <summary>Gets the associated sound name, or <c>Unknown</c> when no instance is available.</summary>
     public string SoundName { get; }
 
-    /// <summary>
-    /// Gets the exception that occurred.
-    /// </summary>
+    /// <summary>Gets the exception associated with the error.</summary>
     public Exception Exception { get; }
 
-    /// <summary>
-    /// Gets the error message describing what went wrong.
-    /// </summary>
+    /// <summary>Gets the contextual error message.</summary>
     public string ErrorMessage { get; }
 
     internal SoundErrorEventArgs(SoundInstance instance, Exception exception, string message = null)

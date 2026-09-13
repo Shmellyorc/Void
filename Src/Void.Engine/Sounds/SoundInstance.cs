@@ -1,3 +1,12 @@
+// ============================================================================
+//  SoundInstance.cs
+// ============================================================================
+//  Pooled OpenAL sound source with playback state, volume, pitch, pan, and events.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 using System;
 using Void.Engine.Assets.Loaders;
 using Void.Engine.Audio;
@@ -6,16 +15,43 @@ using Void.Engine.Logs;
 
 namespace Void.Engine.Sounds;
 
+/// <summary>
+/// Describes the current playback state of a <see cref="SoundInstance"/>.
+/// </summary>
 public enum SoundStatus
 {
+    /// <summary>The instance is not currently playing.</summary>
     Stopped,
+
+    /// <summary>The instance is paused.</summary>
     Paused,
+
+    /// <summary>The instance is playing.</summary>
     Playing,
 }
 
 /// <summary>
-/// Pooled playable sound source backed by Silk.NET/OpenAL.
+/// Represents a pooled playable sound source backed by OpenAL.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Instances are created and recycled by <see cref="SoundInstancePool"/> and are
+/// normally obtained from a <see cref="Sound"/> through <see cref="Sound.CreateInstance(Enum)"/>.
+/// </para>
+/// <para>
+/// Volume is combined with the current category and master volumes. Pitch values
+/// are accepted from 0.1 through 10, while the OpenAL backend clamps playback to
+/// its portable 0.5 through 2.0 range.
+/// </para>
+/// <code>
+/// SoundInstance instance = sound.CreateInstance();
+/// if (instance != null)
+/// {
+///     instance.Volume = 0.8f;
+///     instance.Play();
+/// }
+/// </code>
+/// </remarks>
 public sealed class SoundInstance : IDisposable
 {
     private uint _source;
@@ -36,10 +72,20 @@ public sealed class SoundInstance : IDisposable
     private float _pan;
     private bool _looping;
 
+    /// <summary>Gets whether this instance has been disposed.</summary>
     public bool IsDisposed => _isDisposed;
+
+    /// <summary>Gets the optional game-defined category assigned to this instance.</summary>
     public Enum Category { get; internal set; }
+
+    /// <summary>Gets the current playback state.</summary>
     public SoundStatus Status => _isDisposed || !_isInitialized ? SoundStatus.Stopped : _status;
 
+    /// <summary>
+    /// Gets the effective volume after category and master volume are applied,
+    /// or sets the instance volume before those multipliers.
+    /// </summary>
+    /// <remarks>The assigned instance volume is clamped to the range zero through one.</remarks>
     public float Volume
     {
         get => _volume;
@@ -73,6 +119,11 @@ public sealed class SoundInstance : IDisposable
         AudioRuntime.SetGain(_source, _volume);
     }
 
+    /// <summary>Gets or sets the requested playback pitch.</summary>
+    /// <remarks>
+    /// The public value is clamped from 0.1 through 10. The backend applies the
+    /// portable OpenAL range of 0.5 through 2.0.
+    /// </remarks>
     public float Pitch
     {
         get => _pitch;
@@ -90,6 +141,7 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Gets or sets stereo pan from -1 for left through 1 for right.</summary>
     public float Pan
     {
         get => _pan;
@@ -105,6 +157,7 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Gets or sets whether playback loops continuously.</summary>
     public bool Looping
     {
         get => _looping;
@@ -119,26 +172,53 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Gets the tracked playback time in seconds.</summary>
     public float PlayTime => _playTime;
+
+    /// <summary>Gets the decoded sound duration in seconds.</summary>
     public float Duration => _buffer?.Duration ?? 0f;
+
+    /// <summary>Gets normalized playback progress from zero through one.</summary>
     public float Progress => Duration > 0f ? Math.Clamp(_playTime / Duration, 0f, 1f) : 0f;
+
+    /// <summary>Gets the number of completed loop iterations.</summary>
     public int LoopCount => _loopCount;
+
+    /// <summary>Gets whether the instance is currently playing.</summary>
     public bool IsPlaying => Status == SoundStatus.Playing;
+
+    /// <summary>Gets whether the instance is currently paused.</summary>
     public bool IsPaused => Status == SoundStatus.Paused;
+
+    /// <summary>Gets whether the instance is currently stopped.</summary>
     public bool IsStopped => Status == SoundStatus.Stopped;
+
+    /// <summary>Gets whether the instance has entered a notified stopped/completed state.</summary>
     public bool IsComplete => IsStopped && _hasNotifiedCompletion;
+
+    /// <summary>Gets whether the instance is initialized and not disposed.</summary>
     public bool IsValid => _isInitialized && !_isDisposed;
+
+    /// <summary>Gets or sets the priority used by the sound pool when stealing voices.</summary>
     public SoundPriority Priority { get; set; } = SoundPriority.Normal;
 
+    /// <summary>Gets the source asset name associated with this instance.</summary>
     public string SoundName
     {
         get => _soundName;
         internal set => _soundName = value;
     }
 
+    /// <summary>Occurs when non-looping playback reaches the end of the sound.</summary>
     public event EventHandler<SoundCompletedEventArgs> SoundCompleted;
+
+    /// <summary>Occurs when <see cref="Stop"/> stops the instance.</summary>
     public event EventHandler<SoundStoppedEventArgs> SoundStopped;
+
+    /// <summary>Occurs after each completed loop iteration.</summary>
     public event EventHandler<SoundLoopedEventArgs> SoundLooped;
+
+    /// <summary>Occurs when a playback or update operation reports an exception.</summary>
     public event EventHandler<SoundErrorEventArgs> SoundError;
 
     internal SoundInstance()
@@ -231,6 +311,9 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Starts or resumes playback.</summary>
+    /// <exception cref="InvalidOperationException">Thrown when the instance has not been initialized.</exception>
+    /// <exception cref="ObjectDisposedException">Thrown when the instance has been disposed.</exception>
     public void Play()
     {
         if (!_isInitialized)
@@ -257,6 +340,7 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Pauses playback when the instance is currently playing.</summary>
     public void Pause()
     {
         if (_isDisposed || _status != SoundStatus.Playing)
@@ -275,6 +359,7 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Stops playback and raises <see cref="SoundStopped"/> once for the current playback.</summary>
     public void Stop()
     {
         if (_isDisposed || !_isInitialized)
@@ -338,6 +423,7 @@ public sealed class SoundInstance : IDisposable
         }
     }
 
+    /// <summary>Releases the OpenAL source and any retained audio-buffer reference.</summary>
     public void Dispose()
     {
         if (_isDisposed)

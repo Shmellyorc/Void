@@ -1,33 +1,43 @@
+// ============================================================================
+//  LinuxWindowBackend.cs
+// ============================================================================
+//  Linux native window-backend preference used during platform initialization.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
 namespace Void.Engine.Systems;
 
 /// <summary>
-/// Selects VOID's preferred SDL window-system backend on Linux.
+/// Selects VOID's preferred window-system backend on Linux.
 /// </summary>
 /// <remarks>
-/// This setting only affects Linux. Windows and macOS continue using their
-/// normal native SDL video backends.
+/// This setting applies only to Linux. Other supported platforms continue using
+/// their normal native window backend selection.
 /// </remarks>
 public enum LinuxWindowBackend
 {
     /// <summary>
-    /// VOID default. Prefer X11/XWayland first, then fall back to native Wayland
-    /// if X11 cannot initialize.
+    /// Prefers X11 or XWayland and falls back to native Wayland if X11 cannot initialize.
     /// </summary>
     X11ThenWayland = 0,
 
     /// <summary>
-    /// Let SDL use its normal video-backend selection order.
+    /// Uses the platform layer's normal backend selection order.
     /// </summary>
     Auto = 1,
 
     /// <summary>
-    /// Force X11. On a Wayland desktop this normally means XWayland.
-    /// Initialization fails if X11/XWayland is unavailable.
+    /// Requires X11. On a Wayland desktop this normally uses XWayland.
     /// </summary>
+    /// <remarks>
+    /// Initialization fails when X11 or XWayland is unavailable.
+    /// </remarks>
     X11 = 2,
 
     /// <summary>
-    /// Force native Wayland.
+    /// Requires the native Wayland backend.
     /// </summary>
     Wayland = 3
 }

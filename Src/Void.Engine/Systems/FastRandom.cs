@@ -1,43 +1,33 @@
 // ============================================================================
 //  FastRandom.cs
 // ============================================================================
-//  High-performance thread-safe random number generator using a 128-bit
-//  Xorshift algorithm. Provides per-thread instances and a shared instance
-//  for convenient access.
+//  High-performance thread-local random number generator using Xorshift128.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Systems;
 
 /// <summary>
-/// Provides a high-performance, thread-safe random number generator using the
-/// Xorshift128 algorithm for fast, high-quality pseudo-random numbers.
+/// Provides a fast pseudo-random number generator using the Xorshift128 algorithm.
 /// </summary>
 /// <remarks>
 /// <para>
-/// This implementation is significantly faster than <see cref="System.Random"/>
-/// and provides per-thread instances via <see cref="Shared"/> to avoid
-/// contention in multi-threaded scenarios.
+/// <c>Next*</c> methods follow <see cref="System.Random"/>-style range semantics:
+/// the minimum is inclusive and the maximum is exclusive. The <c>Range*</c>
+/// methods are VOID convenience methods whose minimum and maximum are both inclusive.
 /// </para>
 /// <para>
-/// The generator supports all standard random operations including integers,
-/// floating-point values, booleans, and ranged values. Each instance maintains
-/// its own state for deterministic sequences when seeded.
+/// <see cref="Shared"/> returns one generator per thread, avoiding synchronization
+/// between callers on different threads. Explicitly seeded instances remain useful
+/// when a repeatable sequence is required.
 /// </para>
-/// <para>
-/// Example usage:
 /// <code>
-/// // Use the shared per-thread instance
-/// int randomValue = FastRandom.Shared.Next(0, 100);
-/// float randomFloat = FastRandom.Shared.NextFloat(0f, 1f);
-/// 
-/// // Or create a seeded instance for deterministic results
-/// var random = new FastRandom(12345);
-/// int deterministicValue = random.Next();
+/// int value = FastRandom.Shared.Next(0, 100);       // 0..99
+/// float unit = FastRandom.Shared.NextFloat();       // 0 &lt;= value &lt; 1
+/// int inclusive = FastRandom.Shared.RangeInt(0, 5); // 0..5
 /// </code>
-/// </para>
 /// </remarks>
 public sealed class FastRandom
 {
@@ -45,34 +35,23 @@ public sealed class FastRandom
     private const int Z = 0x4F59A821;
     private const int W = 0x6F5B9D5B;
 
+    private const ulong UInt32Range = 1UL << 32;
+    private const float FloatExclusiveScale = 1f / 16777216f; // 2^24
+    private const float FloatInclusiveScale = 1f / 16777215f; // 2^24 - 1
+
     private uint _x, _y, _z, _w;
 
     private static readonly ThreadLocal<FastRandom> _threadLocal = new(() => new FastRandom());
 
     /// <summary>
-    /// Gets a shared <see cref="FastRandom"/> instance for the current thread.
+    /// Gets a thread-local shared generator for the current thread.
     /// </summary>
-    /// <value>
-    /// A thread-local <see cref="FastRandom"/> instance that is safe to use
-    /// without synchronization in multi-threaded code.
-    /// </value>
-    /// <remarks>
-    /// Each thread gets its own independent random number generator instance
-    /// with a unique seed, making this property ideal for concurrent scenarios
-    /// where multiple threads need random numbers.
-    /// </remarks>
     public static FastRandom Shared => _threadLocal.Value;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FastRandom"/> class with
-    /// the specified seed value.
+    /// Initializes a generator with the specified deterministic seed.
     /// </summary>
-    /// <param name="seed">The seed value that determines the sequence of random numbers.</param>
-    /// <remarks>
-    /// A deterministic sequence of random numbers is generated when the same
-    /// seed is used, which is useful for reproducible results in testing or
-    /// procedural generation.
-    /// </remarks>
+    /// <param name="seed">Seed used to initialize the generator state.</param>
     public FastRandom(int seed)
     {
         var s = (uint)seed;
@@ -87,24 +66,21 @@ public sealed class FastRandom
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="FastRandom"/> class with
-    /// a seed derived from the current system time and thread ID.
+    /// Initializes a generator using a seed derived from time and the current managed thread.
     /// </summary>
     public FastRandom() : this(GenerateSeed()) { }
 
     /// <summary>
-    /// Generates a random boolean value.
+    /// Returns <see langword="true"/> or <see langword="false"/> with approximately equal probability.
     /// </summary>
-    /// <returns><see langword="true"/> or <see langword="false"/> with approximately equal probability.</returns>
     public bool NextBoolean()
     {
         return (NextUInt() & 1) == 0;
     }
 
     /// <summary>
-    /// Generates a random non-negative integer.
+    /// Returns a non-negative integer from zero inclusive to <see cref="int.MaxValue"/> exclusive.
     /// </summary>
-    /// <returns>A random integer between 0 and <see cref="int.MaxValue"/> - 1.</returns>
     public int Next()
     {
         var rtn = NextUInt() & 0x7FFFFFFF;
@@ -114,171 +90,237 @@ public sealed class FastRandom
     }
 
     /// <summary>
-    /// Generates a random integer between 0 (inclusive) and the specified maximum (exclusive).
+    /// Returns a non-negative integer from zero inclusive to <paramref name="maxValue"/> exclusive.
     /// </summary>
-    /// <param name="maxValue">The exclusive upper bound. Must be greater than zero.</param>
-    /// <returns>A random integer between 0 and <paramref name="maxValue"/> - 1.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxValue"/> is less than or equal to zero.</exception>
+    /// <param name="maxValue">
+    /// Exclusive upper bound. Zero is allowed and returns zero.
+    /// </param>
+    /// <returns>
+    /// A value greater than or equal to zero and less than <paramref name="maxValue"/>,
+    /// or zero when <paramref name="maxValue"/> is zero.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxValue"/> is negative.
+    /// </exception>
     public int Next(int maxValue)
     {
-        if (maxValue <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than zero");
+        if (maxValue < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to zero");
 
-        return (int)((NextUInt() & 0x7FFFFFFF) % maxValue);
+        if (maxValue == 0)
+            return 0;
+
+        return (int)NextUIntBounded((ulong)maxValue);
     }
 
     /// <summary>
-    /// Generates a random integer between the specified minimum (inclusive) and maximum (exclusive).
+    /// Returns an integer from <paramref name="minValue"/> inclusive to
+    /// <paramref name="maxValue"/> exclusive.
     /// </summary>
-    /// <param name="minValue">The inclusive lower bound.</param>
-    /// <param name="maxValue">The exclusive upper bound. Must be greater than or equal to <paramref name="minValue"/>.</param>
-    /// <returns>A random integer between <paramref name="minValue"/> and <paramref name="maxValue"/> - 1.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxValue"/> is less than <paramref name="minValue"/>.</exception>
+    /// <param name="minValue">Inclusive lower bound.</param>
+    /// <param name="maxValue">Exclusive upper bound.</param>
+    /// <returns>
+    /// A value greater than or equal to <paramref name="minValue"/> and less than
+    /// <paramref name="maxValue"/>. When both bounds are equal, that value is returned.
+    /// </returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxValue"/> is less than <paramref name="minValue"/>.
+    /// </exception>
     public int Next(int minValue, int maxValue)
     {
         if (minValue > maxValue)
-            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater or equal to minValue");
-        var range = (long)maxValue - minValue;
-        if (range <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to minValue");
+
+        ulong range = (ulong)((long)maxValue - minValue);
+        if (range == 0)
             return minValue;
-        return (int)((NextUInt() & 0x7FFFFFFF) % range) + minValue;
+
+        return (int)((long)minValue + NextUIntBounded(range));
     }
 
     /// <summary>
-    /// Generates a random double-precision floating-point number between 0 (inclusive) and 1 (exclusive).
+    /// Returns a double from zero inclusive to one exclusive.
     /// </summary>
-    /// <returns>A random double between 0.0 and 1.0.</returns>
     public double NextDouble()
     {
-        return (NextUInt() & 0x7FFFFFFF) / (double)0x7FFFFFFF;
+        return NextUInt() / 4294967296.0;
     }
 
     /// <summary>
-    /// Generates a random double-precision floating-point number between 0 (inclusive) and the specified maximum (exclusive).
+    /// Returns a double from zero inclusive to <paramref name="maxValue"/> exclusive.
     /// </summary>
-    /// <param name="maxValue">The exclusive upper bound. Must be greater than zero.</param>
-    /// <returns>A random double between 0.0 and <paramref name="maxValue"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxValue"/> is less than or equal to zero.</exception>
+    /// <param name="maxValue">
+    /// Exclusive upper bound. Zero is allowed and returns zero.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxValue"/> is negative.
+    /// </exception>
     public double NextDouble(double maxValue)
     {
-        if (maxValue <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than zero");
-        return NextDouble() * maxValue;
+        if (maxValue < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to zero");
+
+        if (maxValue == 0)
+            return 0;
+
+        double result = NextDouble() * maxValue;
+        return result < maxValue ? result : Math.BitDecrement(maxValue);
     }
 
     /// <summary>
-    /// Generates a random double-precision floating-point number between the specified minimum (inclusive) and maximum (exclusive).
+    /// Returns a double from <paramref name="minValue"/> inclusive to
+    /// <paramref name="maxValue"/> exclusive.
     /// </summary>
-    /// <param name="minValue">The inclusive lower bound.</param>
-    /// <param name="maxValue">The exclusive upper bound. Must be greater than or equal to <paramref name="minValue"/>.</param>
-    /// <returns>A random double between <paramref name="minValue"/> and <paramref name="maxValue"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxValue"/> is less than <paramref name="minValue"/>.</exception>
+    /// <param name="minValue">Inclusive lower bound.</param>
+    /// <param name="maxValue">Exclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxValue"/> is less than <paramref name="minValue"/>.
+    /// </exception>
     public double NextDouble(double minValue, double maxValue)
     {
         if (minValue > maxValue)
-            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater or equal to minValue");
-        var range = maxValue - minValue;
-        if (range <= 0)
-            return maxValue;
-        return NextDouble() * range + minValue;
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to minValue");
+
+        if (minValue == maxValue)
+            return minValue;
+
+        double result = NextDouble() * (maxValue - minValue) + minValue;
+        return result < maxValue ? result : Math.BitDecrement(maxValue);
     }
 
     /// <summary>
-    /// Generates a random single-precision floating-point number between 0 (inclusive) and 1 (exclusive).
+    /// Returns a float from zero inclusive to one exclusive.
     /// </summary>
-    /// <returns>A random float between 0.0f and 1.0f.</returns>
     public float NextFloat()
     {
-        return (float)((NextUInt() & 0x7FFFFFFF) / (double)0x7FFFFFFF);
+        return (NextUInt() >> 8) * FloatExclusiveScale;
     }
 
     /// <summary>
-    /// Generates a random single-precision floating-point number between 0 (inclusive) and the specified maximum (exclusive).
+    /// Returns a float from zero inclusive to <paramref name="maxValue"/> exclusive.
     /// </summary>
-    /// <param name="maxValue">The exclusive upper bound. Must be greater than zero.</param>
-    /// <returns>A random float between 0.0f and <paramref name="maxValue"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxValue"/> is less than or equal to zero.</exception>
+    /// <param name="maxValue">
+    /// Exclusive upper bound. Zero is allowed and returns zero.
+    /// </param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxValue"/> is negative.
+    /// </exception>
     public float NextFloat(float maxValue)
     {
-        if (maxValue <= 0)
-            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than zero");
+        if (maxValue < 0)
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to zero");
 
-        return NextFloat() * maxValue;
+        if (maxValue == 0)
+            return 0;
+
+        float result = NextFloat() * maxValue;
+        return result < maxValue ? result : MathF.BitDecrement(maxValue);
     }
 
     /// <summary>
-    /// Generates a random single-precision floating-point number between the specified minimum (inclusive) and maximum (exclusive).
+    /// Returns a float from <paramref name="minValue"/> inclusive to
+    /// <paramref name="maxValue"/> exclusive.
     /// </summary>
-    /// <param name="minValue">The inclusive lower bound.</param>
-    /// <param name="maxValue">The exclusive upper bound. Must be greater than or equal to <paramref name="minValue"/>.</param>
-    /// <returns>A random float between <paramref name="minValue"/> and <paramref name="maxValue"/>.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="maxValue"/> is less than <paramref name="minValue"/>.</exception>
+    /// <param name="minValue">Inclusive lower bound.</param>
+    /// <param name="maxValue">Exclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxValue"/> is less than <paramref name="minValue"/>.
+    /// </exception>
     public float NextFloat(float minValue, float maxValue)
     {
         if (minValue > maxValue)
-            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater or equal to minValue");
-        var range = maxValue - minValue;
-        if (range <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxValue), "maxValue must be greater than or equal to minValue");
+
+        if (minValue == maxValue)
             return minValue;
-        return NextFloat() * range + minValue;
+
+        float result = NextFloat() * (maxValue - minValue) + minValue;
+        return result < maxValue ? result : MathF.BitDecrement(maxValue);
     }
 
     /// <summary>
-    /// Generates a random integer between the specified minimum (inclusive) and maximum (inclusive).
+    /// Returns an integer from <paramref name="min"/> through <paramref name="max"/>,
+    /// including both bounds.
     /// </summary>
-    /// <param name="min">The inclusive lower bound.</param>
-    /// <param name="max">The inclusive upper bound. Must be greater than or equal to <paramref name="min"/>.</param>
-    /// <returns>A random integer between <paramref name="min"/> and <paramref name="max"/> inclusive.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="max"/> is less than <paramref name="min"/>.</exception>
-    /// <remarks>
-    /// This method differs from <see cref="Next(int, int)"/> in that the upper bound
-    /// is inclusive, making it useful for array index ranges where both bounds are valid.
-    /// </remarks>
+    /// <param name="min">Inclusive lower bound.</param>
+    /// <param name="max">Inclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="max"/> is less than <paramref name="min"/>.
+    /// </exception>
     public int RangeInt(int min, int max)
     {
         if (min > max)
-            throw new ArgumentOutOfRangeException(nameof(max), "max must be greater or equal to min");
-        if (min == max)
-            return min;
+            throw new ArgumentOutOfRangeException(nameof(max), "max must be greater than or equal to min");
 
-        return (int)((NextUInt() & 0x7FFFFFFF) % ((long)max - min + 1)) + min;
+        ulong range = (ulong)((long)max - min) + 1UL;
+        return (int)((long)min + NextUIntBounded(range));
     }
 
     /// <summary>
-    /// Generates a random single-precision floating-point number between the specified minimum (inclusive) and maximum (inclusive).
+    /// Returns a float from <paramref name="min"/> through <paramref name="max"/>,
+    /// including both bounds.
     /// </summary>
-    /// <param name="min">The inclusive lower bound.</param>
-    /// <param name="max">The inclusive upper bound. Must be greater than or equal to <paramref name="min"/>.</param>
-    /// <returns>A random float between <paramref name="min"/> and <paramref name="max"/> inclusive.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="max"/> is less than <paramref name="min"/>.</exception>
+    /// <param name="min">Inclusive lower bound.</param>
+    /// <param name="max">Inclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="max"/> is less than <paramref name="min"/>.
+    /// </exception>
     public float RangeFloat(float min, float max)
     {
         if (min > max)
-            throw new ArgumentOutOfRangeException(nameof(max), "max must be greater or equal to min");
+            throw new ArgumentOutOfRangeException(nameof(max), "max must be greater than or equal to min");
+
         if (min == max)
             return min;
-        return NextFloat() * (max - min) + min;
+
+        float unit = (NextUInt() >> 8) * FloatInclusiveScale;
+        return unit * (max - min) + min;
     }
 
     /// <summary>
-    /// Generates a random double-precision floating-point number between the specified minimum (inclusive) and maximum (inclusive).
+    /// Returns a double from <paramref name="min"/> through <paramref name="max"/>,
+    /// including both bounds.
     /// </summary>
-    /// <param name="min">The inclusive lower bound.</param>
-    /// <param name="max">The inclusive upper bound. Must be greater than or equal to <paramref name="min"/>.</param>
-    /// <returns>A random double between <paramref name="min"/> and <paramref name="max"/> inclusive.</returns>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="max"/> is less than <paramref name="min"/>.</exception>
+    /// <param name="min">Inclusive lower bound.</param>
+    /// <param name="max">Inclusive upper bound.</param>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="max"/> is less than <paramref name="min"/>.
+    /// </exception>
     public double RangeDouble(double min, double max)
     {
         if (min > max)
-            throw new ArgumentOutOfRangeException(nameof(max), "max must be greater or equal to min");
+            throw new ArgumentOutOfRangeException(nameof(max), "max must be greater than or equal to min");
+
         if (min == max)
             return min;
-        return NextDouble() * (max - min) + min;
+
+        double unit = NextUInt() / (double)uint.MaxValue;
+        return unit * (max - min) + min;
     }
 
     private static int GenerateSeed()
     {
         return (int)(Environment.TickCount ^ Environment.CurrentManagedThreadId ^ (uint)DateTime.Now.Ticks);
+    }
+
+    private uint NextUIntBounded(ulong upperExclusive)
+    {
+        if (upperExclusive == 0 || upperExclusive > UInt32Range)
+            throw new ArgumentOutOfRangeException(nameof(upperExclusive));
+
+        if (upperExclusive == UInt32Range)
+            return NextUInt();
+
+        ulong limit = UInt32Range - (UInt32Range % upperExclusive);
+
+        uint value;
+        do
+        {
+            value = NextUInt();
+        }
+        while ((ulong)value >= limit);
+
+        return (uint)((ulong)value % upperExclusive);
     }
 
     private uint NextUInt()

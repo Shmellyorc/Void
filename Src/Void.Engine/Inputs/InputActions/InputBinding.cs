@@ -3,7 +3,7 @@
 // ============================================================================
 //  Defines the trigger state of an input action and a single input binding.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
