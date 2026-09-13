@@ -301,6 +301,8 @@ public sealed class SceneGame : Scene
         // Update all entities
         _manager.Update(frameTime);
 
+        Globals.Camera.Rotation += 0.05f * frameTime.DeltaTime;
+
         base.Update(frameTime);
     }
 

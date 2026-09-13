@@ -62,8 +62,8 @@ public sealed class SoundInstance : IDisposable
     private string _soundName;
     private bool _hasNotifiedCompletion;
     private int _loopCount;
-    private bool _wasPlaying;
-    private bool _wasPaused;
+    // private bool _wasPlaying;
+    // private bool _wasPaused;
     private SoundStatus _status;
 
     private float _rawVolume = 1f;
@@ -246,8 +246,8 @@ public sealed class SoundInstance : IDisposable
         _playTime = 0f;
         _hasNotifiedCompletion = false;
         _loopCount = 0;
-        _wasPlaying = false;
-        _wasPaused = false;
+        // _wasPlaying = false;
+        // _wasPaused = false;
         _looping = false;
         _rawVolume = 1f;
         _volume = 1f;
@@ -327,8 +327,8 @@ public sealed class SoundInstance : IDisposable
                 _playTime = 0f;
 
             _hasNotifiedCompletion = false;
-            _wasPlaying = true;
-            _wasPaused = false;
+            // _wasPlaying = true;
+            // _wasPaused = false;
             AudioRuntime.SetLooping(_source, _looping);
             AudioRuntime.Play(_source);
             _status = SoundStatus.Playing;
@@ -349,8 +349,8 @@ public sealed class SoundInstance : IDisposable
         try
         {
             AudioRuntime.Pause(_source);
-            _wasPaused = true;
-            _wasPlaying = false;
+            // _wasPaused = true;
+            // _wasPlaying = false;
             _status = SoundStatus.Paused;
         }
         catch (Exception ex)
@@ -410,8 +410,8 @@ public sealed class SoundInstance : IDisposable
             Priority = SoundPriority.Normal;
             _hasNotifiedCompletion = false;
             _loopCount = 0;
-            _wasPlaying = false;
-            _wasPaused = false;
+            // _wasPlaying = false;
+            // _wasPaused = false;
             _rawVolume = 1f;
             _volume = 1f;
             _looping = false;
