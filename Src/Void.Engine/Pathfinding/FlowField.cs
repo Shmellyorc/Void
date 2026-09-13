@@ -1,8 +1,7 @@
 // ============================================================================
 //  FlowField.cs
 // ============================================================================
-//  Represents a computed flow field for pathfinding, providing direction
-//  guidance and next-node lookup for agents moving toward a target.
+//  Read-only next-step guidance for moving through a graph toward one target.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
@@ -13,67 +12,18 @@ using System.Collections.Generic;
 namespace Void.Engine.Pathfinding;
 
 /// <summary>
-/// Represents a computed flow field that provides directional guidance and
-/// next-node lookup for agents moving toward a target.
+/// Provides precomputed next-node and direction lookups toward a pathfinding target.
 /// </summary>
 /// <remarks>
 /// <para>
-/// A flow field is a data structure that stores, for each node in a navigation
-/// grid, the optimal direction and next node to move toward a target. It is
-/// computed using a combination of Dijkstra's algorithm (for distance-to-target)
-/// and a follow-the-gradient approach to generate smooth, natural movement.
+/// Instances are created by <see cref="AStar2D.ComputeFlowField(int)"/>. A node is
+/// included only when it can reach the target under the graph's directed connections,
+/// disabled-point state, diagonal rules, and enabled neighbor filter at computation time.
+/// The target itself is not stored because it has no next step.
 /// </para>
 /// <para>
-/// Flow fields are ideal for scenarios with many agents moving toward the
-/// same target, such as real-time strategy games, crowd simulations, or
-/// flocking behaviors. The computation is performed once per target change,
-/// and all agents can then query the field efficiently.
-/// </para>
-/// <para>
-/// <b>How It Works:</b>
-/// <list type="number">
-///   <item><description>Dijkstra's algorithm computes the shortest distance from every node to the target</description></item>
-///   <item><description>For each node, the algorithm identifies the neighbor with the lowest distance value</description></item>
-///   <item><description>The direction is calculated as the normalized vector from the current node to the chosen neighbor</description></item>
-///   <item><description>The flow field is stored as two dictionaries: next-node mapping and direction mapping</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a navigation grid
-/// var grid = new Grid(100, 100, 1.0f);
-/// 
-/// // Set obstacles
-/// grid.SetObstacle(10, 10, true);
-/// 
-/// // Compute flow field to a target position
-/// var flowField = FlowField.Compute(grid, targetNodeId, 0, 9999);
-/// 
-/// // Agents query the flow field
-/// int nextNode = flowField.GetNextNode(currentNodeId);
-/// Vect2 direction = flowField.GetDirection(currentNodeId);
-/// 
-/// // Check if a node is reachable
-/// if (flowField.HasNode(currentNodeId))
-/// {
-///     // Move agent in the direction of the flow field
-///     agent.Move(direction);
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Performance Considerations:</b>
-/// <list type="bullet">
-///   <item><description>Flow field computation is O(N) where N is the number of reachable nodes</description></item>
-///   <item><description>Once computed, queries are O(1) dictionary lookups</description></item>
-///   <item><description>The flow field should be recomputed when the target changes or the environment changes</description></item>
-///   <item><description>For dynamic environments, consider incremental updates or frequent recomputation</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is immutable and thread-safe after construction. All methods are read-only.
+/// Recompute the field after changing graph connections, relevant point positions,
+/// point weights, disabled states, or search overrides that affect traversal costs.
 /// </para>
 /// </remarks>
 public sealed class FlowField
@@ -88,31 +38,36 @@ public sealed class FlowField
     }
 
     /// <summary>
-    /// Gets the next node to move to from the specified node.
+    /// Gets the next point to visit from a node.
     /// </summary>
-    /// <param name="currentNodeId">The ID of the current node.</param>
-    /// <returns>The ID of the next node toward the target, or -1 if the node is unreachable or not in the flow field.</returns>
+    /// <param name="currentNodeId">The current point ID.</param>
+    /// <returns>
+    /// The next point ID toward the target, or <c>-1</c> when the node has no flow-field entry.
+    /// </returns>
     public int GetNextNode(int currentNodeId) =>
         _nextNode.TryGetValue(currentNodeId, out int next) ? next : -1;
 
     /// <summary>
-    /// Gets the normalized direction vector from the specified node toward the target.
+    /// Gets the normalized direction from a node toward its next flow-field point.
     /// </summary>
-    /// <param name="currentNodeId">The ID of the current node.</param>
-    /// <returns>A normalized <see cref="Vect2"/> direction toward the target, or <see cref="Vect2.Zero"/> if the node is unreachable or not in the flow field.</returns>
+    /// <param name="currentNodeId">The current point ID.</param>
+    /// <returns>
+    /// The direction toward the next point, or <see cref="Vect2.Zero"/> when the node
+    /// has no entry or the current and next points share the same position.
+    /// </returns>
     public Vect2 GetDirection(int currentNodeId) =>
-        _direction.TryGetValue(currentNodeId, out Vect2 dir) ? dir : Vect2.Zero;
+        _direction.TryGetValue(currentNodeId, out Vect2 direction) ? direction : Vect2.Zero;
 
     /// <summary>
-    /// Determines whether the specified node has flow field data.
+    /// Determines whether a node has a next-step entry in this flow field.
     /// </summary>
-    /// <param name="currentNodeId">The ID of the node to check.</param>
-    /// <returns><see langword="true"/> if the node is in the flow field and reachable; otherwise, <see langword="false"/>.</returns>
+    /// <param name="currentNodeId">The point ID to test.</param>
+    /// <returns><see langword="true"/> when next-step data exists for the node.</returns>
     public bool HasNode(int currentNodeId) =>
         _nextNode.ContainsKey(currentNodeId);
 
     /// <summary>
-    /// Gets the total number of nodes in the flow field.
+    /// Gets the number of non-target nodes that have next-step data.
     /// </summary>
     public int Count => _nextNode.Count;
 }

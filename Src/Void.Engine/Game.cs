@@ -9,6 +9,8 @@
 
 using System.Diagnostics;
 
+using Void.Engine.Inputs.InputActions;
+
 namespace Void.Engine;
 
 /// <summary>
@@ -289,6 +291,7 @@ public class Game : IDisposable
             {
                 while (_timing.Accumulator >= _timing.TargetElapsed)
                 {
+                    InputAction.Update();
                     CoroutineManager.Instance.Update(_timing.TargetElapsed);
                     OnUpdate(_timing);
                     _timing.ConsumeFixedUpdate();
@@ -300,6 +303,7 @@ public class Game : IDisposable
             }
             else
             {
+                InputAction.Update();
                 CoroutineManager.Instance.Update(_timing.DeltaTime);
                 OnUpdate(_timing);
 
