@@ -133,6 +133,9 @@
     * Improved Matrix inversion and equality behavior
     * Removed unused SoundInstance playback-state fields
     * Preserved SoundInstance stop-state reporting without redundant state tracking
+    * Reworked LDtk setting TryGet helpers to use non-throwing lookup and type-check paths instead of exception-driven control flow
+    * Preserved strict Get setting validation and detailed missing-field, invalid-type, and enum parsing errors
+    * Made LDtk setting existence checks safely return false for empty field names
 
     Logging improvements:
     * Hardened fatal and critical logging behavior
