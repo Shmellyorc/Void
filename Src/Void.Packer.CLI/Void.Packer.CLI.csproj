@@ -23,9 +23,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>void-packer</ToolCommandName>
-    <Version>1.0.1</Version>
-    <Description>Command-line tool for building, verifying, inspecting, extracting, and updating VOID asset packs with authenticated encryption and compression.</Description>
-
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Packer.CLI</PackageId>
     <Authors>Shmellyorc</Authors>
@@ -34,10 +31,14 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryType>git</RepositoryType>
+
     <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
-    <PackageTags>void;packer;cli;dotnet-tool;asset-packing;encryption;aes-gcm;compression;integrity;game-framework;dotnet</PackageTags>
-    <PackageReleaseNotes>1.0.1 refreshes the CLI documentation and NuGet metadata, including the installed command name (`packer`). Runtime pack behavior is unchanged by this documentation/metadata release.</PackageReleaseNotes>
+    <Description>Command-line tool for building, verifying, inspecting, extracting, and updating VOID asset packs with authenticated encryption and compression.</Description>
+    <PackageTags>void;void-engine;void-packer;packer;cli;command-line;dotnet-tool;asset-packing;game-assets;asset-pipeline;encryption;aes-gcm;compression;integrity;game-framework;game-development;dotnet;csharp</PackageTags>
+    <Version>1.0.1</Version>
+
+    <PackageReleaseNotes>1.0.1 refreshes the CLI documentation and NuGet metadata, including the installed command name (`void-packer`). Runtime pack behavior is unchanged by this documentation/metadata release.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

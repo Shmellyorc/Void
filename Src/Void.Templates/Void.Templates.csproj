@@ -3,8 +3,6 @@
   <PropertyGroup>
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Templates</PackageId>
-    <Version>1.0.1</Version>
-    <Description>Project templates for creating runnable VOID Engine games on .NET 10.</Description>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
     <Copyright>Copyright (c) 2026 Void Engine</Copyright>
@@ -12,18 +10,20 @@
     <PackageType>Template</PackageType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
-    <PackageTags>void;engine;game-engine;template;game;dotnet;csharp;2d</PackageTags>
-    <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReleaseNotes>1.0.1 refreshes the template package documentation and NuGet metadata for the current .NET 10 VOID workflow.</PackageReleaseNotes>
-
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
     <IncludeContentInPack>true</IncludeContentInPack>
     <IncludeBuildOutput>false</IncludeBuildOutput>
     <ContentTargetFolders>content</ContentTargetFolders>
     <PackageReadmeFile>README.md</PackageReadmeFile>
 
-    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
+    <Description>Project templates for creating runnable VOID Engine games on .NET 10.</Description>
+    <PackageTags>void;void-engine;engine;game-engine;game-framework;template;project-template;dotnet-template;game;game-development;dotnet;csharp;2d</PackageTags>
+    <Version>1.0.1</Version>
+
+    <PackageReleaseNotes>1.0.1 refreshes the template package documentation and NuGet metadata for the current .NET 10 VOID workflow.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

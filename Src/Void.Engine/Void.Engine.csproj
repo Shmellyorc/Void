@@ -5,20 +5,20 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
-
     <PackageIcon>Icon.png</PackageIcon>
     <PackageId>Void.Engine</PackageId>
-    <Version>2.0.0</Version>
     <Authors>Shmellyorc</Authors>
     <Company>Void Engine</Company>
-    <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
     <Copyright>Copyright (c) 2026 Void Engine</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+
     <RepositoryUrl>https://github.com/Shmellyorc/Void</RepositoryUrl>
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>game-engine;2d;game-framework;dotnet;sdl3;silk-net;opengl;rendering;pluggable-renderer;renderer-api;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
+    <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
+    <PackageTags>Modular, extensible, cross-platform 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</PackageTags>
+    <Version>2.0.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>
