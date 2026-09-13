@@ -2,7 +2,7 @@
 //  InputActionState.cs
 // ============================================================================
 //  Represents a snapshot of all input action states with query methods
-//  for Pressed, Held, Released, and Up states.
+//  for JustPressed, Pressed, JustReleased, and Released states.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
@@ -11,56 +11,54 @@
 namespace Void.Engine.Inputs.InputActions;
 
 /// <summary>
-/// Represents a snapshot of all input action states with query methods
-/// for Pressed, Held, Released, and Up states.
+/// Represents a read-only snapshot of the registered input actions for a game update.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="InputActionState"/> structure provides a read-only snapshot
-/// of all registered input actions at a specific moment in time. It is
-/// returned by <see cref="InputAction.GetState"/> and should be used for
-/// all action queries within a frame.
+/// A snapshot stores both the current and previous state of each action so transition
+/// queries remain stable for the lifetime of the value. Snapshots returned by
+/// <see cref="InputAction.GetState"/> may therefore be retained and queried later without
+/// being affected by subsequent input updates.
 /// </para>
 /// <para>
-/// This structure supports querying actions by either string name or enum,
-/// and provides methods for checking the four possible states:
-/// <list type="bullet">
-///   <item><description><see cref="ActionState.Pressed"/> - Action was just pressed this frame</description></item>
-///   <item><description><see cref="ActionState.Held"/> - Action is being held down</description></item>
-///   <item><description><see cref="ActionState.Released"/> - Action was just released this frame</description></item>
-///   <item><description><see cref="ActionState.Up"/> - Action is not active</description></item>
-/// </list>
+/// The boolean query methods describe two related kinds of state. <see cref="IsJustPressed(string)"/>
+/// and <see cref="IsJustReleased(string)"/> report transitions that occurred on this update,
+/// while <see cref="IsPressed(string)"/> and <see cref="IsReleased(string)"/> report whether
+/// the action is currently pressed or released. Because of this, an action is both
+/// just pressed and pressed on its first pressed update, and both just released and
+/// released on its first released update.
+/// </para>
+/// <para>
+/// <see cref="GetState(string)"/> returns one <see cref="ActionState"/> value describing the
+/// transition between the previous and current update. This differs from the boolean
+/// helpers, whose current-state queries intentionally overlap with transition queries.
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Get the action state snapshot
 /// var state = InputAction.GetState();
-/// 
-/// // Query by string name
-/// if (state.IsPressed("Jump"))
-///     Jump();
-/// 
-/// if (state.IsHeld("MoveLeft"))
+///
+/// if (state.IsJustPressed("Jump"))
+///     StartJump();
+///
+/// if (state.IsPressed("MoveLeft"))
 ///     MoveLeft();
-/// 
-/// // Query by enum
-/// if (state.IsPressed(Actions.Jump))
-///     Jump();
-/// 
-/// // Get detailed state
-/// var actionState = state.GetState("Sprint");
-/// switch (actionState)
-/// {
-///     case ActionState.Pressed: StartSprint(); break;
-///     case ActionState.Held: ContinueSprint(); break;
-///     case ActionState.Released: StopSprint(); break;
-/// }
+///
+/// if (state.IsJustReleased("Pause"))
+///     ClosePauseMenu();
 /// </code>
 /// </para>
 /// <para>
+/// <b>Missing and Default Actions:</b>
+/// A missing action, an empty action name, or a default <see cref="InputActionState"/> is
+/// treated as released. Transition queries return <see langword="false"/>,
+/// <see cref="IsPressed(string)"/> returns <see langword="false"/>,
+/// <see cref="IsReleased(string)"/> returns <see langword="true"/>, and
+/// <see cref="GetState(string)"/> returns <see cref="ActionState.Up"/>.
+/// </para>
+/// <para>
 /// <b>Thread Safety:</b>
-/// This structure is immutable and thread-safe. All fields are read-only.
+/// A constructed snapshot is immutable and may be read concurrently.
 /// </para>
 /// </remarks>
 public readonly struct InputActionState
@@ -70,92 +68,131 @@ public readonly struct InputActionState
 
     internal InputActionState(Dictionary<string, bool> states, Dictionary<string, bool> previousStates)
     {
-        _states = states;
-        _previousStates = previousStates;
+        _states = new Dictionary<string, bool>(states, StringComparer.OrdinalIgnoreCase);
+        _previousStates = new Dictionary<string, bool>(previousStates, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>
-    /// Gets the trigger state of an action by string name.
+    /// Gets the transition state of the specified action.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
-    /// <returns>The current <see cref="ActionState"/> of the action.</returns>
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see cref="ActionState.JustPressed"/> if the action changed from released to pressed;
+    /// <see cref="ActionState.Pressed"/> if it was pressed on both updates;
+    /// <see cref="ActionState.JustReleased"/> if it changed from pressed to released;
+    /// otherwise, <see cref="ActionState.Up"/>.
+    /// </returns>
     public ActionState GetState(string name)
     {
-        bool current = _states.TryGetValue(name, out var c) && c;
-        bool previous = _previousStates.TryGetValue(name, out var p) && p;
+        if (string.IsNullOrEmpty(name))
+            return ActionState.Up;
+
+        bool current = _states != null && _states.TryGetValue(name, out var c) && c;
+        bool previous = _previousStates != null && _previousStates.TryGetValue(name, out var p) && p;
 
         if (current && !previous)
+            return ActionState.JustPressed;
+        if (current)
             return ActionState.Pressed;
-        if (current && previous)
-            return ActionState.Held;
-        if (!current && previous)
-            return ActionState.Released;
+        if (previous)
+            return ActionState.JustReleased;
         return ActionState.Up;
     }
 
     /// <summary>
-    /// Gets the trigger state of an action by enum.
+    /// Gets the transition state of the action identified by the specified enum value.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
-    /// <returns>The current <see cref="ActionState"/> of the action.</returns>
-    public ActionState GetState(Enum name) => GetState(name.ToEnumString());
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// The action's <see cref="ActionState"/>, or <see cref="ActionState.Up"/> when
+    /// <paramref name="name"/> is <see langword="null"/> or the action does not exist.
+    /// </returns>
+    public ActionState GetState(Enum name)
+        => name == null ? ActionState.Up : GetState(name.ToEnumString());
 
     /// <summary>
-    /// Checks if an action was just pressed this frame.
+    /// Determines whether the specified action became pressed during this update.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
-    /// <returns><see langword="true"/> if the action was just pressed; otherwise, <see langword="false"/>.</returns>
-    public bool IsPressed(string name) => GetState(name) == ActionState.Pressed;
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the action changed from released to pressed;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsJustPressed(string name) => GetState(name) == ActionState.JustPressed;
 
     /// <summary>
-    /// Checks if an action was just pressed this frame (enum).
+    /// Determines whether the action identified by the specified enum value became pressed during this update.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
-    /// <returns><see langword="true"/> if the action was just pressed; otherwise, <see langword="false"/>.</returns>
-    public bool IsPressed(Enum name) => GetState(name) == ActionState.Pressed;
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the action changed from released to pressed;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsJustPressed(Enum name) => GetState(name) == ActionState.JustPressed;
 
     /// <summary>
-    /// Checks if an action is currently held.
+    /// Determines whether the specified action is currently pressed.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
-    /// <returns><see langword="true"/> if the action is being held; otherwise, <see langword="false"/>.</returns>
-    public bool IsHeld(string name)
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see langword="true"/> while the action is pressed, including the update on which
+    /// it first became pressed; otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsPressed(string name)
     {
-        return _states.TryGetValue(name, out var c) && c;
+        if (string.IsNullOrEmpty(name) || _states == null)
+            return false;
+
+        return _states.TryGetValue(name, out var current) && current;
     }
 
     /// <summary>
-    /// Checks if an action is currently held (enum).
+    /// Determines whether the action identified by the specified enum value is currently pressed.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
-    /// <returns><see langword="true"/> if the action is being held; otherwise, <see langword="false"/>.</returns>
-    public bool IsHeld(Enum name) => IsHeld(name.ToEnumString());
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// <see langword="true"/> while the action is pressed, including the update on which
+    /// it first became pressed; otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsPressed(Enum name) => name != null && IsPressed(name.ToEnumString());
 
     /// <summary>
-    /// Checks if an action was just released this frame.
+    /// Determines whether the specified action became released during this update.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
-    /// <returns><see langword="true"/> if the action was just released; otherwise, <see langword="false"/>.</returns>
-    public bool IsReleased(string name) => GetState(name) == ActionState.Released;
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the action changed from pressed to released;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsJustReleased(string name) => GetState(name) == ActionState.JustReleased;
 
     /// <summary>
-    /// Checks if an action was just released this frame (enum).
+    /// Determines whether the action identified by the specified enum value became released during this update.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
-    /// <returns><see langword="true"/> if the action was just released; otherwise, <see langword="false"/>.</returns>
-    public bool IsReleased(Enum name) => GetState(name) == ActionState.Released;
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// <see langword="true"/> only when the action changed from pressed to released;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsJustReleased(Enum name) => GetState(name) == ActionState.JustReleased;
 
     /// <summary>
-    /// Checks if an action is not active.
+    /// Determines whether the specified action is currently released.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
-    /// <returns><see langword="true"/> if the action is not active; otherwise, <see langword="false"/>.</returns>
-    public bool IsUp(string name) => GetState(name) == ActionState.Up;
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see langword="true"/> while the action is released, including the update on which
+    /// it first became released. Missing actions are also treated as released.
+    /// </returns>
+    public bool IsReleased(string name) => !IsPressed(name);
 
     /// <summary>
-    /// Checks if an action is not active (enum).
+    /// Determines whether the action identified by the specified enum value is currently released.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
-    /// <returns><see langword="true"/> if the action is not active; otherwise, <see langword="false"/>.</returns>
-    public bool IsUp(Enum name) => GetState(name) == ActionState.Up;
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// <see langword="true"/> while the action is released, including the update on which
+    /// it first became released. Missing or <see langword="null"/> actions are also treated as released.
+    /// </returns>
+    public bool IsReleased(Enum name) => !IsPressed(name);
 }

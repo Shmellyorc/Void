@@ -1,5 +1,5 @@
 // ============================================================================
-//  KeyboardKey.cs
+//  KeyboardKeys.cs
 // ============================================================================
 //  Defines all keyboard keys supported by the input system.
 //
@@ -10,62 +10,24 @@
 namespace Void.Engine.Inputs.Keyboards;
 
 /// <summary>
-/// Defines all keyboard keys supported by the input system.
+/// Identifies a keyboard key supported by VOID's keyboard input system.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="KeyboardKey"/> enumeration provides a comprehensive list
-/// of keyboard keys, including letters, numbers, function keys, navigation
-/// keys, and modifier keys.
+/// Values from <see cref="A"/> through <see cref="Pause"/> are used as indexes
+/// into the packed key data stored by <see cref="KeyboardState"/>. Their numeric
+/// values are therefore part of the keyboard-state layout and should remain stable.
 /// </para>
 /// <para>
-/// <b>Key Categories:</b>
-/// <list type="bullet">
-///   <item><description><b>Letters:</b> <see cref="A"/> through <see cref="Z"/></description></item>
-///   <item><description><b>Numbers:</b> <see cref="Num0"/> through <see cref="Num9"/></description></item>
-///   <item><description><b>Function Keys:</b> <see cref="F1"/> through <see cref="F15"/></description></item>
-///   <item><description><b>Navigation:</b> <see cref="Left"/>, <see cref="Right"/>, <see cref="Up"/>, <see cref="Down"/>, <see cref="PageUp"/>, <see cref="PageDown"/>, <see cref="Home"/>, <see cref="End"/></description></item>
-///   <item><description><b>Modifiers:</b> <see cref="LControl"/>, <see cref="RControl"/>, <see cref="LShift"/>, <see cref="RShift"/>, <see cref="LAlt"/>, <see cref="RAlt"/></description></item>
-///   <item><description><b>Numpad:</b> <see cref="Numpad0"/> through <see cref="Numpad9"/>, <see cref="Add"/>, <see cref="Subtract"/>, <see cref="Multiply"/>, <see cref="Divide"/></description></item>
-///   <item><description><b>System:</b> <see cref="LSystem"/>, <see cref="RSystem"/>, <see cref="Menu"/></description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// var state = Keyboard.GetState();
-/// 
-/// // Check letter keys
-/// if (state.IsKeyDown(KeyboardKey.W))
-///     MoveForward();
-/// 
-/// // Check modifier combinations
-/// if (state.IsKeyDown(KeyboardKey.LControl) &amp;&amp; state.IsKeyDown(KeyboardKey.S))
-///     SaveGame();
-/// 
-/// // Check navigation keys
-/// if (state.IsKeyDown(KeyboardKey.Left))
-///     MoveLeft();
-/// 
-/// // Check function keys
-/// if (state.IsKeyDown(KeyboardKey.F11))
-///     ToggleFullscreen();
-/// </code>
-/// </para>
-/// <para>
-/// <b>Obsolete Keys:</b>
-/// Some keys have been renamed for consistency. The obsolete entries remain
-/// for backward compatibility but should not be used in new code.
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This enumeration is thread-safe by nature and can be used from any thread.
+/// <see cref="Unknown"/> and <see cref="None"/> are non-key values and are treated
+/// as up by <see cref="KeyboardState"/>. <see cref="KeyCount"/> marks the number
+/// of supported packed keys and is not itself a keyboard key.
 /// </para>
 /// </remarks>
 public enum KeyboardKey
 {
     /// <summary>
-    /// Represents an unknown or unbound key.
+    /// Represents an unknown keyboard key.
     /// </summary>
     Unknown = -1,
 
@@ -200,52 +162,52 @@ public enum KeyboardKey
     Z = 25,
 
     /// <summary>
-    /// The 0 key.
+    /// The 0 key on the main keyboard.
     /// </summary>
     Num0 = 26,
 
     /// <summary>
-    /// The 1 key.
+    /// The 1 key on the main keyboard.
     /// </summary>
     Num1 = 27,
 
     /// <summary>
-    /// The 2 key.
+    /// The 2 key on the main keyboard.
     /// </summary>
     Num2 = 28,
 
     /// <summary>
-    /// The 3 key.
+    /// The 3 key on the main keyboard.
     /// </summary>
     Num3 = 29,
 
     /// <summary>
-    /// The 4 key.
+    /// The 4 key on the main keyboard.
     /// </summary>
     Num4 = 30,
 
     /// <summary>
-    /// The 5 key.
+    /// The 5 key on the main keyboard.
     /// </summary>
     Num5 = 31,
 
     /// <summary>
-    /// The 6 key.
+    /// The 6 key on the main keyboard.
     /// </summary>
     Num6 = 32,
 
     /// <summary>
-    /// The 7 key.
+    /// The 7 key on the main keyboard.
     /// </summary>
     Num7 = 33,
 
     /// <summary>
-    /// The 8 key.
+    /// The 8 key on the main keyboard.
     /// </summary>
     Num8 = 34,
 
     /// <summary>
-    /// The 9 key.
+    /// The 9 key on the main keyboard.
     /// </summary>
     Num9 = 35,
 
@@ -270,7 +232,7 @@ public enum KeyboardKey
     LAlt = 39,
 
     /// <summary>
-    /// The left system key (Windows key on Windows, Command on macOS).
+    /// The left system key, such as the Windows key or Command key.
     /// </summary>
     LSystem = 40,
 
@@ -290,12 +252,12 @@ public enum KeyboardKey
     RAlt = 43,
 
     /// <summary>
-    /// The right system key (Windows key on Windows, Command on macOS).
+    /// The right system key, such as the Windows key or Command key.
     /// </summary>
     RSystem = 44,
 
     /// <summary>
-    /// The menu key (context menu key on Windows).
+    /// The application or context-menu key.
     /// </summary>
     Menu = 45,
 
@@ -330,12 +292,12 @@ public enum KeyboardKey
     Apostrophe = 51,
 
     /// <summary>
-    /// The slash key (/).
+    /// The forward slash key (/).
     /// </summary>
     Slash = 52,
 
     /// <summary>
-    /// The backslash key (\).
+    /// The backslash key (\\).
     /// </summary>
     Backslash = 53,
 
@@ -355,7 +317,7 @@ public enum KeyboardKey
     Hyphen = 56,
 
     /// <summary>
-    /// The space key.
+    /// The Space key.
     /// </summary>
     Space = 57,
 
@@ -405,92 +367,92 @@ public enum KeyboardKey
     Delete = 66,
 
     /// <summary>
-    /// The Numpad Add key (+).
+    /// The numeric keypad Add key (+).
     /// </summary>
     Add = 67,
 
     /// <summary>
-    /// The Numpad Subtract key (-).
+    /// The numeric keypad Subtract key (-).
     /// </summary>
     Subtract = 68,
 
     /// <summary>
-    /// The Numpad Multiply key (*).
+    /// The numeric keypad Multiply key (*).
     /// </summary>
     Multiply = 69,
 
     /// <summary>
-    /// The Numpad Divide key (/).
+    /// The numeric keypad Divide key (/).
     /// </summary>
     Divide = 70,
 
     /// <summary>
-    /// The Left arrow key.
+    /// The Left Arrow key.
     /// </summary>
     Left = 71,
 
     /// <summary>
-    /// The Right arrow key.
+    /// The Right Arrow key.
     /// </summary>
     Right = 72,
 
     /// <summary>
-    /// The Up arrow key.
+    /// The Up Arrow key.
     /// </summary>
     Up = 73,
 
     /// <summary>
-    /// The Down arrow key.
+    /// The Down Arrow key.
     /// </summary>
     Down = 74,
 
     /// <summary>
-    /// The Numpad 0 key.
+    /// The 0 key on the numeric keypad.
     /// </summary>
     Numpad0 = 75,
 
     /// <summary>
-    /// The Numpad 1 key.
+    /// The 1 key on the numeric keypad.
     /// </summary>
     Numpad1 = 76,
 
     /// <summary>
-    /// The Numpad 2 key.
+    /// The 2 key on the numeric keypad.
     /// </summary>
     Numpad2 = 77,
 
     /// <summary>
-    /// The Numpad 3 key.
+    /// The 3 key on the numeric keypad.
     /// </summary>
     Numpad3 = 78,
 
     /// <summary>
-    /// The Numpad 4 key.
+    /// The 4 key on the numeric keypad.
     /// </summary>
     Numpad4 = 79,
 
     /// <summary>
-    /// The Numpad 5 key.
+    /// The 5 key on the numeric keypad.
     /// </summary>
     Numpad5 = 80,
 
     /// <summary>
-    /// The Numpad 6 key.
+    /// The 6 key on the numeric keypad.
     /// </summary>
     Numpad6 = 81,
 
     /// <summary>
-    /// The Numpad 7 key.
+    /// The 7 key on the numeric keypad.
     /// </summary>
     Numpad7 = 82,
 
     /// <summary>
-    /// The Numpad 8 key.
+    /// The 8 key on the numeric keypad.
     /// </summary>
     Numpad8 = 83,
 
     /// <summary>
-    /// The Numpad 9 key.
+    /// The 9 key on the numeric keypad.
     /// </summary>
     Numpad9 = 84,
 
@@ -575,54 +537,12 @@ public enum KeyboardKey
     Pause = 100,
 
     /// <summary>
-    /// The total number of keyboard keys.
+    /// The number of supported keyboard keys stored in a keyboard snapshot.
     /// </summary>
     KeyCount = 101,
 
     /// <summary>
-    /// Obsolete. Use <see cref="Grave"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Grave")]
-    Tilde = 54,
-
-    /// <summary>
-    /// Obsolete. Use <see cref="Hyphen"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Hyphen")]
-    Dash = 56,
-
-    /// <summary>
-    /// Obsolete. Use <see cref="Backspace"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Backspace")]
-    BackSpace = 59,
-
-    /// <summary>
-    /// Obsolete. Use <see cref="Enter"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Enter")]
-    Return = 58,
-
-    /// <summary>
-    /// Obsolete. Use <see cref="Backslash"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Backslash")]
-    BackSlash = 53,
-
-    /// <summary>
-    /// Obsolete. Use <see cref="Semicolon"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Semicolon")]
-    SemiColon = 48,
-
-    /// <summary>
-    /// Obsolete. Use <see cref="Apostrophe"/> instead.
-    /// </summary>
-    [Obsolete("Replace with Apostrophe")]
-    Quote = 51,
-
-    /// <summary>
-    /// Alias for <see cref="Unknown"/>.
+    /// Represents no keyboard binding. This value is equivalent to <see cref="Unknown"/>.
     /// </summary>
     None = Unknown,
 }

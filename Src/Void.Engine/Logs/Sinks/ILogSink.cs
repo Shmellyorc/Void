@@ -1,66 +1,36 @@
 // ============================================================================
 //  ILogSink.cs
 // ============================================================================
-//  Interface for log sinks that receive and process log messages from
-//  the logging system.
+//  Defines the extension point used to receive log entries.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
+using Void.Engine.Logs;
+
 namespace Void.Engine.Logs.Sinks;
 
 /// <summary>
-/// Defines the contract for log sinks that receive and process log messages
-/// from the logging system.
+/// Defines a destination that receives log entries from <see cref="Logger"/>.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ILogSink"/> interface is implemented by classes that consume
-/// log entries from the <see cref="Logger"/> and write them to their
-/// respective destinations (console, file, network, etc.).
+/// Register sinks with <see cref="Logger.AddSink"/>. VOID includes
+/// <see cref="ConsoleSink"/> and <see cref="FileSink"/>, and applications can
+/// provide their own implementations for other destinations.
 /// </para>
 /// <para>
-/// Implementations should handle their own thread safety, as the logger
-/// may call <see cref="Write"/> from its background processing thread.
-/// </para>
-/// <para>
-/// <b>Built-in Implementations:</b>
-/// <list type="bullet">
-///   <item><description><see cref="ConsoleSink"/> - Writes to the console with color coding</description></item>
-///   <item><description><see cref="FileSink"/> - Writes to daily rotating text files</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Create a custom sink
-/// public class NetworkSink : ILogSink
-/// {
-///     public void Write(LogEntry entry)
-///     {
-///         // Send log entry to a remote server
-///         var json = JsonSerializer.Serialize(entry);
-///         HttpClient.PostAsync("https://logs.example.com", json);
-///     }
-/// }
-/// 
-/// // Add the sink to the logger
-/// Logger.Instance.AddSink(new NetworkSink());
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// The <see cref="Write"/> method may be called from the logger's background
-/// thread. Implementations should be thread-safe or use synchronization
-/// mechanisms to handle concurrent writes.
+/// The logger serializes calls to registered sinks. Implementations that are also
+/// called directly from other threads should provide any additional synchronization
+/// required by their own destination.
 /// </para>
 /// </remarks>
 public interface ILogSink
 {
     /// <summary>
-    /// Writes a log entry to the sink's destination.
+    /// Writes one log entry to the sink's destination.
     /// </summary>
-    /// <param name="entry">The log entry containing the message and metadata to write.</param>
+    /// <param name="entry">The log entry to write.</param>
     void Write(LogEntry entry);
 }

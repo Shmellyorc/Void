@@ -1,34 +1,7 @@
 namespace Void.Engine.Inputs.Gamepads;
 
-
-internal enum InputType { None, Button, Axis, AxisDirection, Hat }
-
-internal struct GamepadInput
-{
-    public InputType Type;
-    public int Index;
-    public int HatMask;
-    public bool AxisNegative;
-    public bool AxisInverted;
-}
-
-internal class GamepadMapping
-{
-    public GamepadInput A, B, X, Y;
-    public GamepadInput Back, Start, Guide;
-    public GamepadInput LeftShoulder, RightShoulder;
-    public GamepadInput LeftStick, RightStick;
-    public GamepadInput LeftTrigger, RightTrigger;
-    public GamepadInput LeftX, LeftY, RightX, RightY;
-    public GamepadInput DPadUp, DPadDown, DPadLeft, DPadRight;
-    public GamepadInput Touchpad;
-    public GamepadInput Paddle1, Paddle2, Paddle3, Paddle4;
-    public GamepadInput Misc1;
-}
-
 internal static class GamepadDatabase
 {
-    private static readonly Dictionary<string, GamepadMapping> _mappings = [];
     private static bool _loaded;
 
     public static void Load()
@@ -49,68 +22,27 @@ internal static class GamepadDatabase
             if (string.IsNullOrWhiteSpace(line) || line.StartsWith('#'))
                 continue;
 
-            int firstComma = line.IndexOf(',');
-            if (firstComma < 0) continue;
+            int platformIndex = line.LastIndexOf("platform:", StringComparison.OrdinalIgnoreCase);
+            if (platformIndex < 0)
+                continue;
 
-            string guid = line[..firstComma].ToLowerInvariant();
-            string rest = line[(firstComma + 1)..];
-
-            int platformIndex = rest.LastIndexOf("platform:", StringComparison.OrdinalIgnoreCase);
-            if (platformIndex < 0) continue;
-
-            int platformEnd = rest.IndexOf(',', platformIndex);
+            int platformEnd = line.IndexOf(',', platformIndex);
             string platform = platformEnd > platformIndex
-                ? rest[(platformIndex + 9)..platformEnd].Trim()
-                : rest[(platformIndex + 9)..].Trim();
+                ? line[(platformIndex + 9)..platformEnd].Trim()
+                : line[(platformIndex + 9)..].Trim();
 
             if (!string.Equals(platform, currentPlatform, StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Keep VOID's bundled SDL database useful after the SDL3 migration.
-            // SDL owns the hardware-specific mapping; VOID owns the public state API.
             SDL3.SDL.AddGamepadMapping(line);
-
-            int mappingsEnd = rest.LastIndexOf(',', platformIndex);
-            int nameComma = rest.IndexOf(",");
-            if (nameComma < 0) continue;
-
-            string mappingPart = rest[(nameComma + 1)..mappingsEnd];
-
-            if (_mappings.ContainsKey(guid))
-                continue;
-
-            _mappings[guid] = ParseMapping(mappingPart);
-
-            // For debugging SDLDatabase -> Parsing
-            // if (_mappings.Count <= 3)
-            // {
-            //     var m = _mappings[guid];
-            //     Console.WriteLine($"Loader: {guid}");
-            //     Console.WriteLine($"   A: {FormatInput(m.A)}");
-            //     Console.WriteLine($"   B: {FormatInput(m.B)}");
-            //     Console.WriteLine($"   X: {FormatInput(m.X)}");
-            //     Console.WriteLine($"   Y: {FormatInput(m.Y)}");
-            //     Console.WriteLine($"   Start: {FormatInput(m.Start)}");
-            //     Console.WriteLine($"   Guide: {FormatInput(m.Guide)}");
-            //     Console.WriteLine($"   LeftShoulder: {FormatInput(m.LeftShoulder)}");
-            //     Console.WriteLine($"   RightShoulder: {FormatInput(m.RightShoulder)}");
-            //     Console.WriteLine($"   LeftStick: {FormatInput(m.LeftStick)}");
-            //     Console.WriteLine($"   RightStick: {FormatInput(m.RightStick)}");
-            //     Console.WriteLine($"   LeftTrigger: {FormatInput(m.LeftTrigger)}");
-            //     Console.WriteLine($"   RightTrigger: {FormatInput(m.RightTrigger)}");
-            //     Console.WriteLine($"   LeftX: {FormatInput(m.LeftX)}");
-            //     Console.WriteLine($"   LeftY: {FormatInput(m.LeftY)}");
-            //     Console.WriteLine($"   RightX: {FormatInput(m.RightX)}");
-            //     Console.WriteLine($"   RightY: {FormatInput(m.RightY)}");
-            //     Console.WriteLine($"   DPadUp: {FormatInput(m.DPadUp)}");
-            //     Console.WriteLine($"   DPadDown: {FormatInput(m.DPadDown)}");
-            //     Console.WriteLine($"   DPadLeft: {FormatInput(m.DPadLeft)}");
-            //     Console.WriteLine($"   DPadRight: {FormatInput(m.DPadRight)}");
-            //     Console.WriteLine();
-            // }
         }
 
         _loaded = true;
+    }
+
+    internal static void Reset()
+    {
+        _loaded = false;
     }
 
     private static string GetCurrentPlatform() =>
@@ -118,129 +50,4 @@ internal static class GamepadDatabase
         OperatingSystem.IsMacOS() ? "Mac OS X" :
         OperatingSystem.IsLinux() ? "Linux" :
         "Windows";
-
-    private static string FormatInput(GamepadInput input)
-    {
-        return input.Type switch
-        {
-            InputType.None => "None",
-            InputType.Button => $"Button b{input.Index}",
-            InputType.Hat => $"Hat h{input.Index}.{input.HatMask}",
-            InputType.Axis => $"Axis a{input.Index}{(input.AxisInverted ? "~" : "")}",
-            InputType.AxisDirection => $"AxisDir {(input.AxisNegative ? "-" : "+")}a{input.Index}{(input.AxisInverted ? "~" : "")}",
-            _ => "Unknown"
-        };
-    }
-
-    private static GamepadMapping ParseMapping(string data)
-    {
-        var mapping = new GamepadMapping();
-        var parts = data.Split(',');
-
-        foreach (string part in parts)
-        {
-            int colon = part.IndexOf(':');
-            if (colon <= 0) continue;
-
-            string key = part[..colon];
-            string value = part[(colon + 1)..];
-
-            switch (key)
-            {
-                case "a": mapping.A = ParseInput(value); break;
-                case "b": mapping.B = ParseInput(value); break;
-                case "x": mapping.X = ParseInput(value); break;
-                case "y": mapping.Y = ParseInput(value); break;
-                case "back": mapping.Back = ParseInput(value); break;
-                case "start": mapping.Start = ParseInput(value); break;
-                case "guide": mapping.Guide = ParseInput(value); break;
-                case "leftshoulder": mapping.LeftShoulder = ParseInput(value); break;
-                case "rightshoulder": mapping.RightShoulder = ParseInput(value); break;
-                case "leftstick": mapping.LeftStick = ParseInput(value); break;
-                case "rightstick": mapping.RightStick = ParseInput(value); break;
-                case "lefttrigger": mapping.LeftTrigger = ParseInput(value); break;
-                case "righttrigger": mapping.RightTrigger = ParseInput(value); break;
-                case "leftx": mapping.LeftX = ParseInput(value); break;
-                case "lefty": mapping.LeftY = ParseInput(value); break;
-                case "rightx": mapping.RightX = ParseInput(value); break;
-                case "righty": mapping.RightY = ParseInput(value); break;
-                case "dpup": mapping.DPadUp = ParseInput(value); break;
-                case "dpdown": mapping.DPadDown = ParseInput(value); break;
-                case "dpleft": mapping.DPadLeft = ParseInput(value); break;
-                case "dpright": mapping.DPadRight = ParseInput(value); break;
-                case "touchpad": mapping.Touchpad = ParseInput(value); break;
-                case "paddle1": mapping.Paddle1 = ParseInput(value); break;
-                case "paddle2": mapping.Paddle2 = ParseInput(value); break;
-                case "paddle3": mapping.Paddle3 = ParseInput(value); break;
-                case "paddle4": mapping.Paddle4 = ParseInput(value); break;
-                case "misc1": mapping.Misc1 = ParseInput(value); break;
-            }
-        }
-
-        return mapping;
-    }
-
-    private static GamepadInput ParseInput(string value)
-    {
-        // b0-b31 = button
-        // a0-a5 = axis
-        // h0.1-h0.8 = hat with mask
-        // +a0, -a0 = axis direction
-        // +a0~, -a0~ = inverted axis direction
-
-        if (value.StartsWith('b'))
-            return new GamepadInput { Type = InputType.Button, Index = int.Parse(value[1..]) };
-
-        if (value.StartsWith('h'))
-        {
-            int dot = value.IndexOf('.');
-            return new GamepadInput
-            {
-                Type = InputType.Hat,
-                Index = int.Parse(value[1..dot]),
-                HatMask = int.Parse(value[(dot + 1)..])
-            };
-        }
-
-        if (value.StartsWith("+a") || value.StartsWith("-a"))
-        {
-            bool negative = value.StartsWith('-');
-            string numStr = value[2..].TrimEnd('~');
-            bool inverted = value.EndsWith('~');
-            return new GamepadInput
-            {
-                Type = InputType.AxisDirection,
-                Index = int.Parse(numStr),
-                AxisNegative = negative,
-                AxisInverted = inverted
-            };
-        }
-
-        if (value.StartsWith('a'))
-        {
-            string numStr = value[1..].TrimEnd('~');
-            bool inverted = value.EndsWith('~');
-
-            return new GamepadInput
-            {
-                Type = InputType.Axis,
-                Index = int.Parse(numStr),
-                AxisInverted = inverted
-            };
-
-            // return new GamepadInput { Type = InputType.Axis, Index = int.Parse(value[1..]) };
-        }
-
-        return new GamepadInput { Type = InputType.None };
-    }
-
-#pragma warning disable CS8632 
-    public static GamepadMapping? GetMapping(string guid)
-#pragma warning restore CS8632 
-    {
-        Load();
-        guid = guid.ToLowerInvariant();
-        return _mappings.TryGetValue(guid, out var mapping) ? mapping : null;
-    }
 }
-

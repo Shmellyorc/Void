@@ -1,69 +1,31 @@
 // ============================================================================
 //  HashHelper.cs
 // ============================================================================
-//  High-performance FNV-1a hashing utilities with caching support for
-//  both 32-bit and 64-bit hash values.
+//  FNV-1a hashing helpers with optional string-result caches.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Helpers;
 
 /// <summary>
-/// Provides high-performance FNV-1a hashing utilities with caching support
-/// for both 32-bit and 64-bit hash values.
+/// Provides 32-bit and 64-bit FNV-1a hashing for byte data and UTF-8 strings.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="HashHelper"/> class implements the FNV-1a (Fowler-Noll-Vo)
-/// non-cryptographic hash algorithm, which is fast and produces high-quality
-/// hash values suitable for hash tables, dictionaries, and other data
-/// structures.
+/// The string cache overloads retain computed results for repeated string keys.
+/// Direct hash overloads are allocation-conscious: small strings use stack storage
+/// and larger strings rent temporary buffers from <see cref="ArrayPool{T}"/>.
 /// </para>
 /// <para>
-/// <b>Features:</b>
-/// <list type="bullet">
-///   <item><description>32-bit and 64-bit hash variants</description></item>
-///   <item><description>Caching for frequently accessed strings</description></item>
-///   <item><description>Stack allocation for small strings (≤256 characters)</description></item>
-///   <item><description>Array pool usage for large strings to minimize allocations</description></item>
-///   <item><description>Enum support via <see cref="System.StringExtensions.ToEnumString(Enum)"/></description></item>
-/// </list>
+/// FNV-1a is a non-cryptographic hash. Do not use these methods for passwords,
+/// signatures, authentication, or other security-sensitive hashing.
 /// </para>
-/// <para>
-/// <b>Usage Example:</b>
 /// <code>
-/// // Hash a string without caching
-/// uint hash32 = HashHelper.Hash32("Hello World");
-/// ulong hash64 = HashHelper.Hash64("Hello World");
-/// 
-/// // Hash with caching (recommended for repeated hashing)
-/// uint cached32 = HashHelper.Cache32("Hello World");
-/// ulong cached64 = HashHelper.Cache64("Hello World");
-/// 
-/// // Hash an enum
-/// uint enumHash = HashHelper.Cache32(MyEnum.Value);
-/// 
-/// // Hash byte data
-/// byte[] data = Encoding.UTF8.GetBytes("Hello");
-/// uint dataHash = HashHelper.Hash32(data);
+/// uint id = HashHelper.Cache32("player.spawn");
+/// ulong contentId = HashHelper.Hash64(data);
 /// </code>
-/// </para>
-/// <para>
-/// <b>Performance Notes:</b>
-/// <list type="bullet">
-///   <item><description>FNV-1a is optimized for speed over cryptographic security</description></item>
-///   <item><description>Caching uses <see cref="Lazy{T}"/> for thread-safe deferred computation</description></item>
-///   <item><description>Small strings are processed on the stack to avoid heap allocations</description></item>
-///   <item><description>Large strings use the ArrayPool to reduce GC pressure</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe. All methods use concurrent collections or
-/// are stateless.
-/// </para>
 /// </remarks>
 public sealed class HashHelper
 {
@@ -73,41 +35,37 @@ public sealed class HashHelper
     private static readonly ConcurrentDictionary<string, Lazy<uint>> _cache32 = [];
     private static readonly ConcurrentDictionary<string, Lazy<ulong>> _cache64 = [];
 
-    /// <summary>
-    /// Gets a cached 32-bit hash for the specified input string.
-    /// </summary>
-    /// <param name="input">The string to hash.</param>
-    /// <returns>The cached 32-bit hash value.</returns>
+    /// <summary>Gets a cached 32-bit FNV-1a hash for a string.</summary>
+    /// <param name="input">String to encode as UTF-8 and hash.</param>
+    /// <returns>The cached 32-bit hash.</returns>
     public static uint Cache32(string input)
         => _cache32.GetOrAdd(input, new Lazy<uint>(() => Hash32(input))).Value;
 
     /// <summary>
-    /// Gets a cached 32-bit hash for the specified enum.
+    /// Computes a 32-bit FNV-1a hash for an enum's stable enum-string representation.
     /// </summary>
-    /// <param name="input">The enum to hash.</param>
-    /// <returns>The cached 32-bit hash value.</returns>
-    public static uint Cache32(Enum input) => Hash32(input.ToEnumString());
+    /// <param name="input">Enum value to hash.</param>
+    /// <returns>The 32-bit hash.</returns>
+    /// <remarks>
+    /// This overload currently computes the hash directly rather than storing it in
+    /// the string cache used by <see cref="Cache32(string)"/>.
+    /// </remarks>
+    public static uint Cache32(Enum input) => Cache32(input.ToEnumString());
 
-    /// <summary>
-    /// Gets a cached 64-bit hash for the specified input string.
-    /// </summary>
-    /// <param name="input">The string to hash.</param>
-    /// <returns>The cached 64-bit hash value.</returns>
+    /// <summary>Gets a cached 64-bit FNV-1a hash for a string.</summary>
+    /// <param name="input">String to encode as UTF-8 and hash.</param>
+    /// <returns>The cached 64-bit hash.</returns>
     public static ulong Cache64(string input)
         => _cache64.GetOrAdd(input, new Lazy<ulong>(() => Hash64(input))).Value;
 
-    /// <summary>
-    /// Gets a cached 64-bit hash for the specified enum.
-    /// </summary>
-    /// <param name="input">The enum to hash.</param>
-    /// <returns>The cached 64-bit hash value.</returns>
+    /// <summary>Gets a cached 64-bit FNV-1a hash for an enum's stable enum-string representation.</summary>
+    /// <param name="input">Enum value to hash.</param>
+    /// <returns>The cached 64-bit hash.</returns>
     public static ulong Cache64(Enum input) => Cache64(input.ToEnumString());
 
-    /// <summary>
-    /// Computes a 32-bit FNV-1a hash from a span of bytes.
-    /// </summary>
-    /// <param name="data">The data to hash.</param>
-    /// <returns>The 32-bit hash value.</returns>
+    /// <summary>Computes a 32-bit FNV-1a hash from bytes.</summary>
+    /// <param name="data">Bytes to hash.</param>
+    /// <returns>The 32-bit hash.</returns>
     public static uint Hash32(ReadOnlySpan<byte> data)
     {
         var hash = OffsetBasis32;
@@ -120,19 +78,15 @@ public sealed class HashHelper
         return hash;
     }
 
-    /// <summary>
-    /// Computes a 32-bit FNV-1a hash from a byte array.
-    /// </summary>
-    /// <param name="data">The data to hash.</param>
-    /// <returns>The 32-bit hash value.</returns>
+    /// <summary>Computes a 32-bit FNV-1a hash from a byte array.</summary>
+    /// <param name="data">Bytes to hash.</param>
+    /// <returns>The 32-bit hash.</returns>
     public static uint Hash32(byte[] data)
         => Hash32((ReadOnlySpan<byte>)data);
 
-    /// <summary>
-    /// Computes a 32-bit FNV-1a hash from a string.
-    /// </summary>
-    /// <param name="data">The string to hash.</param>
-    /// <returns>The 32-bit hash value.</returns>
+    /// <summary>Computes a 32-bit FNV-1a hash from the UTF-8 bytes of a string.</summary>
+    /// <param name="data">String to hash.</param>
+    /// <returns>The 32-bit hash.</returns>
     public static uint Hash32(string data)
     {
         if (data.Length <= 256)
@@ -157,11 +111,9 @@ public sealed class HashHelper
         }
     }
 
-    /// <summary>
-    /// Computes a 64-bit FNV-1a hash from a span of bytes.
-    /// </summary>
-    /// <param name="data">The data to hash.</param>
-    /// <returns>The 64-bit hash value.</returns>
+    /// <summary>Computes a 64-bit FNV-1a hash from bytes.</summary>
+    /// <param name="data">Bytes to hash.</param>
+    /// <returns>The 64-bit hash.</returns>
     public static ulong Hash64(ReadOnlySpan<byte> data)
     {
         var hash = OffsetBasis64;
@@ -175,19 +127,15 @@ public sealed class HashHelper
         return hash;
     }
 
-    /// <summary>
-    /// Computes a 64-bit FNV-1a hash from a byte array.
-    /// </summary>
-    /// <param name="data">The data to hash.</param>
-    /// <returns>The 64-bit hash value.</returns>
+    /// <summary>Computes a 64-bit FNV-1a hash from a byte array.</summary>
+    /// <param name="data">Bytes to hash.</param>
+    /// <returns>The 64-bit hash.</returns>
     public static ulong Hash64(byte[] data)
         => Hash64((ReadOnlySpan<byte>)data);
 
-    /// <summary>
-    /// Computes a 64-bit FNV-1a hash from a string.
-    /// </summary>
-    /// <param name="data">The string to hash.</param>
-    /// <returns>The 64-bit hash value.</returns>
+    /// <summary>Computes a 64-bit FNV-1a hash from the UTF-8 bytes of a string.</summary>
+    /// <param name="data">String to hash.</param>
+    /// <returns>The 64-bit hash.</returns>
     public static ulong Hash64(string data)
     {
         if (data.Length <= 256)

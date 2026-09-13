@@ -15,53 +15,35 @@ using Void.Engine.Inputs.Mouses;
 namespace Void.Engine.Inputs.InputActions;
 
 /// <summary>
-/// Represents a named input action with multiple bindings to keyboard,
-/// mouse, and gamepad inputs.
+/// Represents a named input action and the inputs that can activate it.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ActionBinding"/> class defines a named action that can be
-/// triggered by one or more input bindings. Each binding can be a keyboard key,
-/// mouse button, or gamepad button. When any of the bound inputs are active,
-/// the action is considered to be triggered.
+/// An action may contain any number of keyboard, mouse, and gamepad bindings.
+/// During action evaluation, the action is considered active when any one of its
+/// bindings is active.
 /// </para>
 /// <para>
-/// Actions are created and managed through the <see cref="InputAction"/>
-/// static class and are typically defined once during game initialization.
+/// Instances are created through <see cref="InputAction.AddAction(string)"/> or
+/// <see cref="InputAction.AddAction(Enum)"/>. Binding methods return the same instance,
+/// allowing an action to be configured with method chaining.
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Create an action with multiple bindings
-/// var jumpAction = InputAction.AddAction("Jump")
+/// InputAction.AddAction("Jump")
 ///     .AddKey(KeyboardKey.Space)
 ///     .AddKey(KeyboardKey.Up)
 ///     .AddGamepad(GamepadButton.A);
-/// 
-/// // Create a movement action
-/// var moveAction = InputAction.AddAction("MoveLeft")
-///     .AddKey(KeyboardKey.Left)
-///     .AddKey(KeyboardKey.A)
-///     .AddGamepad(GamepadButton.DPadLeft)
-///     .AddGamepad(GamepadButton.LeftStickLeft);
-/// 
-/// // Check the action state each frame
-/// var state = InputAction.GetState();
-/// if (state.IsPressed("Jump"))
-/// {
-///     // Handle jump
-/// }
+///
+/// InputAction.AddAction("Pause")
+///     .AddKey(KeyboardKey.Escape)
+///     .AddMouse(MouseButton.Middle);
 /// </code>
 /// </para>
 /// <para>
-/// <b>Evaluation Order:</b>
-/// Bindings are evaluated in the order they were added. The first binding
-/// that is active will cause the action to return true.
-/// </para>
-/// <para>
 /// <b>Thread Safety:</b>
-/// This class is not thread-safe. All operations should be performed on
-/// the main thread.
+/// Binding changes are intended for the main game thread.
 /// </para>
 /// </remarks>
 public sealed class ActionBinding
@@ -69,13 +51,17 @@ public sealed class ActionBinding
     private readonly List<InputBinding> _bindings = new();
 
     /// <summary>
-    /// Gets the name of this action.
+    /// Gets the name used to identify this action.
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets the current bindings for this action.
+    /// Gets the bindings currently assigned to this action.
     /// </summary>
+    /// <remarks>
+    /// The collection is read-only to callers. Use the add methods or <see cref="ClearBindings"/>
+    /// to modify the action's bindings.
+    /// </remarks>
     public IReadOnlyList<InputBinding> Bindings => _bindings;
 
     internal ActionBinding(string name)
@@ -84,10 +70,10 @@ public sealed class ActionBinding
     }
 
     /// <summary>
-    /// Adds a binding to this action.
+    /// Adds an input binding to this action.
     /// </summary>
-    /// <param name="binding">The input binding to add.</param>
-    /// <returns>This action binding instance for method chaining.</returns>
+    /// <param name="binding">The binding to add.</param>
+    /// <returns>This <see cref="ActionBinding"/> instance.</returns>
     public ActionBinding AddBinding(InputBinding binding)
     {
         _bindings.Add(binding);
@@ -95,30 +81,30 @@ public sealed class ActionBinding
     }
 
     /// <summary>
-    /// Adds a keyboard key binding to this action.
+    /// Adds a keyboard key that can activate this action.
     /// </summary>
     /// <param name="key">The keyboard key to bind.</param>
-    /// <returns>This action binding instance for method chaining.</returns>
+    /// <returns>This <see cref="ActionBinding"/> instance.</returns>
     public ActionBinding AddKey(KeyboardKey key) => AddBinding(InputBinding.FromKey(key));
 
     /// <summary>
-    /// Adds a mouse button binding to this action.
+    /// Adds a mouse button that can activate this action.
     /// </summary>
     /// <param name="button">The mouse button to bind.</param>
-    /// <returns>This action binding instance for method chaining.</returns>
+    /// <returns>This <see cref="ActionBinding"/> instance.</returns>
     public ActionBinding AddMouse(MouseButton button) => AddBinding(InputBinding.FromMouse(button));
 
     /// <summary>
-    /// Adds a gamepad button binding to this action.
+    /// Adds a gamepad button that can activate this action.
     /// </summary>
     /// <param name="button">The gamepad button to bind.</param>
-    /// <returns>This action binding instance for method chaining.</returns>
+    /// <returns>This <see cref="ActionBinding"/> instance.</returns>
     public ActionBinding AddGamepad(GamepadButton button) => AddBinding(InputBinding.FromGamepad(button));
 
     /// <summary>
-    /// Removes all bindings from this action.
+    /// Removes every input binding from this action.
     /// </summary>
-    /// <returns>This action binding instance for method chaining.</returns>
+    /// <returns>This <see cref="ActionBinding"/> instance.</returns>
     public ActionBinding ClearBindings()
     {
         _bindings.Clear();

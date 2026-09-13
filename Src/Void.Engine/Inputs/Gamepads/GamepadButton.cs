@@ -1,98 +1,53 @@
 // ============================================================================
 //  GamepadButton.cs
 // ============================================================================
-//  Defines the standard button layout for gamepad controllers, supporting
-//  modern Xbox, PlayStation, and Nintendo-style controllers.
+//  Defines VOID's standardized mapped gamepad buttons and stick directions.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 namespace Void.Engine.Inputs.Gamepads;
 
 /// <summary>
-/// Defines the standard button layout for gamepad controllers, supporting
-/// modern Xbox, PlayStation, and Nintendo-style controllers through the
-/// SDL gamepad mapping system.
+/// Identifies standardized gamepad buttons, triggers, and virtual stick directions.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="GamepadButton"/> enumeration provides a standardized set of
-/// button names that map to physical buttons on supported gamepads. The
-/// mapping system translates hardware-specific button indices to these
-/// standardized names.
+/// Physical controller layouts are normalized through SDL's gamepad mapping system.
+/// The face-button names follow the conventional Xbox-style labels used by VOID;
+/// the physical labels shown on PlayStation and Nintendo controllers differ.
 /// </para>
 /// <para>
-/// Button Categories:
-/// <list type="bullet">
-///   <item><description>Face Buttons: <see cref="A"/>, <see cref="B"/>, <see cref="X"/>, <see cref="Y"/></description></item>
-///   <item><description>Directional Pad: <see cref="DPadUp"/>, <see cref="DPadDown"/>, <see cref="DPadLeft"/>, <see cref="DPadRight"/></description></item>
-///   <item><description>Shoulder Buttons: <see cref="LeftShoulder"/>, <see cref="RightShoulder"/></description></item>
-///   <item><description>Trigger Buttons: <see cref="LeftTrigger"/>, <see cref="RightTrigger"/></description></item>
-///   <item><description>Stick Presses: <see cref="LeftStick"/>, <see cref="RightStick"/></description></item>
-///   <item><description>Stick Directions: <see cref="LeftStickUp"/>, <see cref="LeftStickDown"/>, <see cref="LeftStickLeft"/>, <see cref="LeftStickRight"/>, <see cref="RightStickUp"/>, <see cref="RightStickDown"/>, <see cref="RightStickLeft"/>, <see cref="RightStickRight"/></description></item>
-///   <item><description>System Buttons: <see cref="Start"/>, <see cref="Back"/>, <see cref="Guide"/></description></item>
-///   <item><description>Advanced: <see cref="Paddle1"/>, <see cref="Paddle2"/>, <see cref="Paddle3"/>, <see cref="Paddle4"/>, <see cref="Touchpad"/>, <see cref="Misc1"/></description></item>
-/// </list>
-/// </para>
-/// <para>
-/// Usage Example:
-/// <code>
-/// var state = Gamepad.GetState();
-/// 
-/// if (state.IsButtonPressed(GamepadButton.A))
-/// {
-///     // Handle jump action
-/// }
-/// 
-/// if (state.IsButtonPressed(GamepadButton.Start))
-/// {
-///     // Open pause menu
-/// }
-/// 
-/// // Get force/analog value for triggers and sticks
-/// float triggerForce = state.GetForce(GamepadButton.LeftTrigger);
-/// Vect2 stick = state.GetStick(GamepadButton.LeftStick);
-/// </code>
-/// </para>
-/// <para>
-/// Controller Layout Mapping:
-/// <list type="bullet">
-///   <item><description><see cref="A"/> = Xbox: A, PlayStation: Cross (×), Nintendo: B (A on Switch)</description></item>
-///   <item><description><see cref="B"/> = Xbox: B, PlayStation: Circle (○), Nintendo: A (B on Switch)</description></item>
-///   <item><description><see cref="X"/> = Xbox: X, PlayStation: Square (□), Nintendo: Y (X on Switch)</description></item>
-///   <item><description><see cref="Y"/> = Xbox: Y, PlayStation: Triangle (△), Nintendo: X (Y on Switch)</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// Thread Safety:
-/// This enumeration is thread-safe by nature and can be used from any thread.
+/// Trigger and stick-direction values can be queried as analog values with
+/// <see cref="GamepadState.GetForce(GamepadButton)"/>. <see cref="LeftStick"/>
+/// and <see cref="RightStick"/> can be passed to <see cref="GamepadState.GetStick(GamepadButton)"/>.
 /// </para>
 /// </remarks>
 public enum GamepadButton
 {
     /// <summary>
-    /// Represents no button. Used for unbound or invalid button references.
+    /// Represents no gamepad button.
     /// </summary>
     None = -1,
 
     /// <summary>
-    /// The primary action button (A on Xbox, Cross on PlayStation, B on Nintendo Switch).
+    /// The mapped south face button.
     /// </summary>
     A,
 
     /// <summary>
-    /// The secondary action button (B on Xbox, Circle on PlayStation, A on Nintendo Switch).
+    /// The mapped east face button.
     /// </summary>
     B,
 
     /// <summary>
-    /// The tertiary action button (X on Xbox, Square on PlayStation, Y on Nintendo Switch).
+    /// The mapped west face button.
     /// </summary>
     X,
 
     /// <summary>
-    /// The quaternary action button (Y on Xbox, Triangle on PlayStation, X on Nintendo Switch).
+    /// The mapped north face button.
     /// </summary>
     Y,
 
@@ -117,117 +72,117 @@ public enum GamepadButton
     DPadRight,
 
     /// <summary>
-    /// The left shoulder/bumper button (LB on Xbox, L1 on PlayStation).
+    /// The left shoulder or bumper button.
     /// </summary>
     LeftShoulder,
 
     /// <summary>
-    /// The right shoulder/bumper button (RB on Xbox, R1 on PlayStation).
+    /// The right shoulder or bumper button.
     /// </summary>
     RightShoulder,
 
     /// <summary>
-    /// The left trigger analog button (LT on Xbox, L2 on PlayStation).
+    /// The left analog trigger.
     /// </summary>
     LeftTrigger,
 
     /// <summary>
-    /// The right trigger analog button (RT on Xbox, R2 on PlayStation).
+    /// The right analog trigger.
     /// </summary>
     RightTrigger,
 
     /// <summary>
-    /// The left thumbstick press (L3 on Xbox, L3 on PlayStation).
+    /// The left thumbstick press.
     /// </summary>
     LeftStick,
 
     /// <summary>
-    /// The right thumbstick press (R3 on Xbox, R3 on PlayStation).
+    /// The right thumbstick press.
     /// </summary>
     RightStick,
 
     /// <summary>
-    /// The left thumbstick is pushed upward.
+    /// A virtual button indicating upward left-stick deflection.
     /// </summary>
     LeftStickUp,
 
     /// <summary>
-    /// The left thumbstick is pushed downward.
+    /// A virtual button indicating downward left-stick deflection.
     /// </summary>
     LeftStickDown,
 
     /// <summary>
-    /// The left thumbstick is pushed leftward.
+    /// A virtual button indicating leftward left-stick deflection.
     /// </summary>
     LeftStickLeft,
 
     /// <summary>
-    /// The left thumbstick is pushed rightward.
+    /// A virtual button indicating rightward left-stick deflection.
     /// </summary>
     LeftStickRight,
 
     /// <summary>
-    /// The right thumbstick is pushed upward.
+    /// A virtual button indicating upward right-stick deflection.
     /// </summary>
     RightStickUp,
 
     /// <summary>
-    /// The right thumbstick is pushed downward.
+    /// A virtual button indicating downward right-stick deflection.
     /// </summary>
     RightStickDown,
 
     /// <summary>
-    /// The right thumbstick is pushed leftward.
+    /// A virtual button indicating leftward right-stick deflection.
     /// </summary>
     RightStickLeft,
 
     /// <summary>
-    /// The right thumbstick is pushed rightward.
+    /// A virtual button indicating rightward right-stick deflection.
     /// </summary>
     RightStickRight,
 
     /// <summary>
-    /// The start/menu button (Start on Xbox, Options on PlayStation, Plus on Nintendo Switch).
+    /// The mapped start, menu, options, or plus button.
     /// </summary>
     Start,
 
     /// <summary>
-    /// The back/view button (Back on Xbox, Share on PlayStation, Minus on Nintendo Switch).
+    /// The mapped back, view, share, or minus button.
     /// </summary>
     Back,
 
     /// <summary>
-    /// The guide/home button (Xbox button on Xbox, PlayStation button on PlayStation, Home on Nintendo Switch).
+    /// The mapped guide or home button.
     /// </summary>
     Guide,
 
     /// <summary>
-    /// The first paddle button (found on advanced/pro controllers).
+    /// The first mapped rear paddle button.
     /// </summary>
     Paddle1,
 
     /// <summary>
-    /// The second paddle button (found on advanced/pro controllers).
+    /// The second mapped rear paddle button.
     /// </summary>
     Paddle2,
 
     /// <summary>
-    /// The third paddle button (found on advanced/pro controllers).
+    /// The third mapped rear paddle button.
     /// </summary>
     Paddle3,
 
     /// <summary>
-    /// The fourth paddle button (found on advanced/pro controllers).
+    /// The fourth mapped rear paddle button.
     /// </summary>
     Paddle4,
 
     /// <summary>
-    /// The touchpad button (found on PlayStation controllers).
+    /// The mapped touchpad button when supported by the controller.
     /// </summary>
     Touchpad,
 
     /// <summary>
-    /// A miscellaneous button for controller-specific functions.
+    /// The mapped controller-specific miscellaneous button.
     /// </summary>
     Misc1
 }

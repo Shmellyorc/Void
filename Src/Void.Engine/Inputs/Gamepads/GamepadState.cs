@@ -7,7 +7,7 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using Void.Engine.Inputs.Gamepads;
+namespace Void.Engine.Inputs.Gamepads;
 
 /// <summary>
 /// Represents a snapshot of a gamepad's state at a specific moment in time.
@@ -103,8 +103,9 @@ public struct GamepadState
     /// <returns><see langword="true"/> if the button is pressed; otherwise, <see langword="false"/>.</returns>
     public bool IsButtonPressed(GamepadButton button)
     {
-        if (button == GamepadButton.None)
+        if (!IsValidButton(button))
             return false;
+
         return (_buttons & (1UL << (int)button)) != 0;
     }
 
@@ -115,8 +116,9 @@ public struct GamepadState
     /// <returns><see langword="true"/> if the button is released; otherwise, <see langword="false"/>.</returns>
     public bool IsButtonReleased(GamepadButton button)
     {
-        if (button == GamepadButton.None)
+        if (!IsValidButton(button))
             return true;
+
         return (_buttons & (1UL << (int)button)) == 0;
     }
 
@@ -173,4 +175,7 @@ public struct GamepadState
             _ => Vect2.Zero
         };
     }
+
+    private static bool IsValidButton(GamepadButton button) =>
+        (uint)button <= (uint)GamepadButton.Misc1;
 }

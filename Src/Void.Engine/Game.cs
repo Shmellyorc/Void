@@ -230,17 +230,21 @@ public class Game : IDisposable
     {
         var exception = e.ExceptionObject as Exception;
 
-        if (!string.IsNullOrEmpty(exception?.Message))
-            Logger.Instance.FatalWithCategory("Game", $"Message: {exception.Message}");
-
-        if (!string.IsNullOrEmpty(exception?.StackTrace))
+        // Critical logging already writes the crash block before throwing.
+        if (exception is not CriticalLogException)
         {
-            Logger.Instance.FatalWithCategory("Game", "Stack Trace:");
-            Logger.Instance.FatalWithCategory("Game", exception.StackTrace);
-        }
+            if (!string.IsNullOrEmpty(exception?.Message))
+                Logger.Instance.FatalWithCategory("Game", $"Message: {exception.Message}");
 
-        if (exception == null || (string.IsNullOrEmpty(exception.Message) && string.IsNullOrEmpty(exception.StackTrace)))
-            Logger.Instance.FatalWithCategory("Game", "Unknown crash - no exception details available");
+            if (!string.IsNullOrEmpty(exception?.StackTrace))
+            {
+                Logger.Instance.FatalWithCategory("Game", "Stack Trace:");
+                Logger.Instance.FatalWithCategory("Game", exception.StackTrace);
+            }
+
+            if (exception == null || (string.IsNullOrEmpty(exception.Message) && string.IsNullOrEmpty(exception.StackTrace)))
+                Logger.Instance.FatalWithCategory("Game", "Unknown crash - no exception details available");
+        }
 
         _settings.OnCrash?.Invoke(exception);
     }
@@ -371,8 +375,8 @@ public class Game : IDisposable
     /// </summary>
     /// <remarks>
     /// Disposal is idempotent. <see cref="OnExit"/> is called before the engine
-    /// clears coroutines, beacons, assets, atlas resources, input devices, and the
-    /// window.
+    /// clears coroutines, beacons, assets, atlas resources, input devices, the
+    /// window, and finally the logger.
     /// </remarks>
     public void Dispose()
     {
@@ -388,9 +392,11 @@ public class Game : IDisposable
         Inputs.Gamepads.Gamepad.Shutdown();
         _window.Dispose();
 
+        AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
+
         GC.SuppressFinalize(this);
         _isDisposed = true;
 
-        AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
+        Logger.Instance.Dispose();
     }
 }

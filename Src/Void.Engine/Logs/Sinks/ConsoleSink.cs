@@ -1,54 +1,32 @@
 // ============================================================================
 //  ConsoleSink.cs
 // ============================================================================
-//  Log sink that writes formatted log messages to the console with
-//  color-coded output based on log level.
+//  Writes formatted log entries to the console.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 using System;
+using System.Threading;
+
+using Void.Engine.Logs;
 
 namespace Void.Engine.Logs.Sinks;
 
 /// <summary>
-/// A log sink that writes formatted log messages to the console with
-/// color-coded output based on the severity level.
+/// Writes log entries to the console using a color associated with each severity.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ConsoleSink"/> implements <see cref="ILogSink"/> and writes
-/// log entries to the standard output with color coding:
-/// <list type="bullet">
-///   <item><description><see cref="LogLevel.Debug"/> - Gray</description></item>
-///   <item><description><see cref="LogLevel.Info"/> - White</description></item>
-///   <item><description><see cref="LogLevel.Warning"/> - Yellow</description></item>
-///   <item><description><see cref="LogLevel.Error"/> - Red</description></item>
-///   <item><description><see cref="LogLevel.Fatal"/> - Dark Red</description></item>
-/// </list>
+/// Entries are written as <c>[HH:mm:ss] [Level] [Category] Message</c>. The
+/// category segment is omitted when no category is present. An associated
+/// exception is appended on the following line as part of the same colored output.
 /// </para>
 /// <para>
-/// Each log entry is formatted as:
-/// <c>[HH:mm:ss] [Level] [Category] Message</c>
-/// If an exception is present, it is included on a new line after the message.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Add the console sink to the logger
-/// Logger.Instance.AddSink(new ConsoleSink());
-/// 
-/// // Now all log messages will appear in the console with colors
-/// Logger.Instance.Info("Game started");
-/// Logger.Instance.Warning("Low memory warning");
-/// Logger.Instance.Error("Failed to load texture", exception);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe. A lock is used to prevent console output
-/// from multiple threads from being interleaved.
+/// Debug entries use gray, informational entries white, warnings yellow, errors red,
+/// and fatal entries dark red. Console writes are synchronized so one entry is not
+/// interleaved with another call to this sink.
 /// </para>
 /// </remarks>
 public sealed class ConsoleSink : ILogSink
@@ -56,45 +34,23 @@ public sealed class ConsoleSink : ILogSink
     private readonly Lock _lock = new();
 
     /// <summary>
-    /// Writes a log entry to the console with color-coded output.
+    /// Writes a log entry to the console.
     /// </summary>
-    /// <param name="entry">The log entry to write.</param>
-    /// <remarks>
-    /// <para>
-    /// This method formats the log entry and writes it to the console using
-    /// the appropriate color for the log level:
-    /// <list type="bullet">
-    ///   <item><description><see cref="LogLevel.Debug"/> - Gray</description></item>
-    ///   <item><description><see cref="LogLevel.Info"/> - White</description></item>
-    ///   <item><description><see cref="LogLevel.Warning"/> - Yellow</description></item>
-    ///   <item><description><see cref="LogLevel.Error"/> - Red</description></item>
-    ///   <item><description><see cref="LogLevel.Fatal"/> - Dark Red</description></item>
-    /// </list>
-    /// </para>
-    /// <para>
-    /// The entry is formatted as: <c>[HH:mm:ss] [Level] [Category] Message</c>
-    /// If the entry contains an exception, it is written on a new line
-    /// with a red color, regardless of the log level.
-    /// </para>
-    /// <para>
-    /// This method is thread-safe and uses a lock to prevent output
-    /// from multiple threads from being interleaved.
-    /// </para>
-    /// </remarks>
+    /// <param name="entry">The entry to format and write.</param>
     public void Write(LogEntry entry)
     {
-        var line = Format(entry);
+        string line = Format(entry);
 
         lock (_lock)
         {
-            var originalColor = Console.ForegroundColor;
+            ConsoleColor originalColor = Console.ForegroundColor;
             Console.ForegroundColor = GetColor(entry.Level);
             Console.WriteLine(line);
             Console.ForegroundColor = originalColor;
         }
     }
 
-    private ConsoleColor GetColor(LogLevel level) => level switch
+    private static ConsoleColor GetColor(LogLevel level) => level switch
     {
         LogLevel.Debug => ConsoleColor.Gray,
         LogLevel.Info => ConsoleColor.White,
@@ -104,10 +60,11 @@ public sealed class ConsoleSink : ILogSink
         _ => ConsoleColor.White
     };
 
-    private string Format(LogEntry entry)
+    private static string Format(LogEntry entry)
     {
-        var category = string.IsNullOrEmpty(entry.Category) ? "" : $"[{entry.Category}] ";
-        var exception = entry.Exception != null ? $"\n{entry.Exception}" : "";
+        string category = string.IsNullOrEmpty(entry.Category) ? "" : $"[{entry.Category}] ";
+        string exception = entry.Exception != null ? $"\n{entry.Exception}" : "";
+
         return $"[{entry.Timestamp:HH:mm:ss}] [{entry.Level}] {category}{entry.Message}{exception}";
     }
 }

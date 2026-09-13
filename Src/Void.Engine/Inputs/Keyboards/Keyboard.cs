@@ -1,7 +1,7 @@
 // ============================================================================
 //  Keyboard.cs
 // ============================================================================
-//  SDL3-backed keyboard polling with VOID's existing bit-packed state format.
+//  SDL3-backed keyboard polling with VOID's bit-packed state format.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
@@ -10,9 +10,45 @@
 namespace Void.Engine.Inputs.Keyboards;
 
 /// <summary>
-/// Provides access to keyboard input with bit-packed key states for
-/// low-memory and high-performance key state tracking.
+/// Provides access to the current keyboard state.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <see cref="Keyboard"/> polls SDL3 and converts supported keys into VOID's
+/// bit-packed <see cref="KeyboardState"/> snapshot format. Use <see cref="GetState"/>
+/// when direct keyboard input is needed.
+/// </para>
+/// <para>
+/// <b>Usage Example:</b>
+/// <code>
+/// var keyboard = Keyboard.GetState();
+///
+/// if (keyboard.IsKeyDown(KeyboardKey.W))
+///     MoveForward();
+///
+/// if (keyboard.IsKeyDown(KeyboardKey.Space))
+///     Jump();
+///
+/// if (keyboard.CapsLock)
+///     ShowCapsLockIndicator();
+/// </code>
+/// </para>
+/// <para>
+/// Each call to <see cref="GetState"/> polls the current keyboard state. The
+/// returned <see cref="KeyboardState"/> is a snapshot and does not change after
+/// it is created.
+/// </para>
+/// <para>
+/// When <see cref="GameSettings.IgnoreInputWhenUnfocused"/> is enabled and the
+/// game window is closed or unfocused, keyboard input is suppressed. All keys
+/// are reported as up and the Caps Lock and Num Lock values are reported as
+/// inactive for that snapshot.
+/// </para>
+/// <para>
+/// This class uses shared polling state and is not synchronized. Keyboard input
+/// should be queried from the game thread.
+/// </para>
+/// </remarks>
 public static class Keyboard
 {
     private static ulong _keysLow;
@@ -20,8 +56,8 @@ public static class Keyboard
     private static bool _capsLock;
     private static bool _numLock;
 
-    // KeyboardKey intentionally keeps VOID's existing numeric values. Never cast
-    // those values directly to an SDL scancode; the enum layouts are different.
+    // KeyboardKey keeps VOID's numeric values because they are used as packed
+    // state indexes. SDL scancodes use a different layout and must be mapped.
     private static readonly SDL3.SDL.Scancode[] _scancodes =
     [
         SDL3.SDL.Scancode.A,
@@ -128,10 +164,16 @@ public static class Keyboard
         SDL3.SDL.Scancode.F15,
         SDL3.SDL.Scancode.Pause,
     ];
-
     /// <summary>
-    /// Gets a snapshot of the current keyboard state.
+    /// Polls the keyboard and returns a snapshot of its current state.
     /// </summary>
+    /// <remarks>
+    /// Each call reads the current SDL keyboard state before creating the snapshot.
+    /// When <see cref="GameSettings.IgnoreInputWhenUnfocused"/> is enabled and the
+    /// game window is closed or unfocused, the returned snapshot reports every key
+    /// as up and both lock states as inactive.
+    /// </remarks>
+    /// <returns>A snapshot containing the current key and keyboard lock states.</returns>
     public static KeyboardState GetState()
     {
         UpdateState();
@@ -166,15 +208,8 @@ public static class Keyboard
                 _keysHigh |= 1UL << (i - 64);
         }
 
-        // Preserve the previous VOID behavior for now; these were always false
-        // in the SFML implementation too. Lock-state reporting can be added later
-        // without changing KeyboardState's public API.
-        _capsLock = false;
-        _numLock = false;
+        var modifiers = SDL3.SDL.GetModState();
+        _capsLock = (modifiers & SDL3.SDL.Keymod.Caps) != SDL3.SDL.Keymod.None;
+        _numLock = (modifiers & SDL3.SDL.Keymod.Num) != SDL3.SDL.Keymod.None;
     }
-
-    /// <summary>
-    /// Updates the keyboard state. This method is called automatically by GetState.
-    /// </summary>
-    public static void Update() => UpdateState();
 }

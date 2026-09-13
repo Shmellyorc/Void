@@ -14,124 +14,106 @@ using Void.Engine.Inputs.Mouses;
 namespace Void.Engine.Inputs.InputActions;
 
 /// <summary>
-/// Defines the trigger state of an input action.
+/// Defines the transition state returned for an input action.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="ActionState"/> enumeration represents the state of an action
-/// based on its current and previous frame states. It is used by
-/// <see cref="InputActionState"/> to provide detailed state information.
+/// <see cref="InputActionState.GetState(string)"/> compares the current and previous
+/// value of an action and returns exactly one <see cref="ActionState"/> for that update.
 /// </para>
 /// <para>
-/// <b>State Transitions:</b>
+/// This enum is intentionally different from the boolean state helpers. For example,
+/// an action that was first pressed this update returns <see cref="JustPressed"/> from
+/// <see cref="InputActionState.GetState(string)"/>, while
+/// <see cref="InputActionState.IsPressed(string)"/> is also <see langword="true"/> because
+/// the action is currently pressed.
+/// </para>
+/// <para>
+/// <b>State Flow:</b>
 /// <list type="bullet">
-///   <item><description><see cref="Pressed"/> - The action was not active last frame but is active this frame</description></item>
-///   <item><description><see cref="Held"/> - The action was active last frame and is still active this frame</description></item>
-///   <item><description><see cref="Released"/> - The action was active last frame but is not active this frame</description></item>
-///   <item><description><see cref="Up"/> - The action was not active last frame and is not active this frame</description></item>
+///   <item><description><see cref="JustPressed"/> - Released previously and pressed now.</description></item>
+///   <item><description><see cref="Pressed"/> - Pressed previously and still pressed now.</description></item>
+///   <item><description><see cref="JustReleased"/> - Pressed previously and released now.</description></item>
+///   <item><description><see cref="Up"/> - Released previously and still released now.</description></item>
 /// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// var state = InputAction.GetState();
-/// var jumpState = state.GetState("Jump");
-/// 
-/// switch (jumpState)
-/// {
-///     case ActionState.Pressed:
-///         StartJump();
-///         break;
-///     case ActionState.Held:
-///         ContinueJump();
-///         break;
-///     case ActionState.Released:
-///         EndJump();
-///         break;
-/// }
-/// </code>
 /// </para>
 /// </remarks>
 public enum ActionState
 {
     /// <summary>
-    /// The action was just pressed this frame (transition from Up/Released to active).
+    /// The action changed from released to pressed during the current update.
+    /// </summary>
+    JustPressed,
+
+    /// <summary>
+    /// The action was already pressed and remains pressed during the current update.
     /// </summary>
     Pressed,
 
     /// <summary>
-    /// The action is currently held down (active for multiple consecutive frames).
+    /// The action changed from pressed to released during the current update.
     /// </summary>
-    Held,
+    JustReleased,
 
     /// <summary>
-    /// The action was just released this frame (transition from active to Up/Released).
-    /// </summary>
-    Released,
-
-    /// <summary>
-    /// The action is not active.
+    /// The action was already released and remains released during the current update.
     /// </summary>
     Up
 }
 
 /// <summary>
-/// Defines a single input binding for an action, linking it to a keyboard key,
-/// mouse button, or gamepad button.
+/// Represents one keyboard, mouse, or gamepad binding for an input action.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="InputBinding"/> structure represents a single binding between
-/// an action and a specific input device button or key. An action can have
-/// multiple bindings, and the action is considered active if any of its
-/// bindings are active.
+/// An <see cref="InputBinding"/> stores one device input. Unused device fields are set
+/// to their corresponding <c>None</c> value. An <see cref="ActionBinding"/> may contain
+/// multiple input bindings, and any active binding can activate the action.
 /// </para>
 /// <para>
-/// Bindings are created using the static factory methods:
-/// <list type="bullet">
-///   <item><description><see cref="FromKey(KeyboardKey)"/> - Creates a keyboard binding</description></item>
-///   <item><description><see cref="FromMouse(MouseButton)"/> - Creates a mouse binding</description></item>
-///   <item><description><see cref="FromGamepad(GamepadButton)"/> - Creates a gamepad binding</description></item>
-/// </list>
+/// Bindings are normally created with <see cref="FromKey(KeyboardKey)"/>,
+/// <see cref="FromMouse(MouseButton)"/>, or <see cref="FromGamepad(GamepadButton)"/>.
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Create bindings individually
-/// var binding1 = InputBinding.FromKey(KeyboardKey.Space);
-/// var binding2 = InputBinding.FromGamepad(GamepadButton.A);
-/// 
-/// // Add bindings to an action
+/// var keyboard = InputBinding.FromKey(KeyboardKey.Space);
+/// var gamepad = InputBinding.FromGamepad(GamepadButton.A);
+///
 /// InputAction.AddAction("Jump")
-///     .AddBinding(binding1)
-///     .AddBinding(binding2);
-/// 
-/// // Or use the convenience methods
-/// InputAction.AddAction("Jump")
-///     .AddKey(KeyboardKey.Space)
-///     .AddGamepad(GamepadButton.A);
+///     .AddBinding(keyboard)
+///     .AddBinding(gamepad);
 /// </code>
 /// </para>
 /// <para>
 /// <b>Thread Safety:</b>
-/// This structure is immutable and thread-safe.
+/// This structure is immutable after construction.
 /// </para>
 /// </remarks>
 public readonly struct InputBinding
 {
     /// <summary>
-    /// Gets the keyboard key for this binding, or <see cref="KeyboardKey.None"/> if unused.
+    /// Gets the keyboard key assigned to this binding.
     /// </summary>
+    /// <value>
+    /// The bound <see cref="KeyboardKey"/>, or <see cref="KeyboardKey.None"/> when this is not a keyboard binding.
+    /// </value>
     public KeyboardKey Key { get; }
 
     /// <summary>
-    /// Gets the mouse button for this binding, or <see cref="MouseButton.None"/> if unused.
+    /// Gets the mouse button assigned to this binding.
     /// </summary>
+    /// <value>
+    /// The bound <see cref="MouseButton"/>, or <see cref="MouseButton.None"/> when this is not a mouse binding.
+    /// </value>
     public MouseButton MouseButton { get; }
 
     /// <summary>
-    /// Gets the gamepad button for this binding, or <see cref="GamepadButton.None"/> if unused.
+    /// Gets the gamepad button assigned to this binding.
     /// </summary>
+    /// <value>
+    /// The bound <see cref="GamepadButton"/>, or <see cref="GamepadButton.None"/> when this is not a gamepad binding.
+    /// </value>
     public GamepadButton GamepadButton { get; }
 
     internal InputBinding(KeyboardKey key = KeyboardKey.None, MouseButton mouseButton = MouseButton.None, GamepadButton gamepadButton = GamepadButton.None)
@@ -142,23 +124,23 @@ public readonly struct InputBinding
     }
 
     /// <summary>
-    /// Creates a new input binding for a keyboard key.
+    /// Creates an input binding for a keyboard key.
     /// </summary>
     /// <param name="key">The keyboard key to bind.</param>
-    /// <returns>A new <see cref="InputBinding"/> for the specified key.</returns>
+    /// <returns>A binding that uses the specified keyboard key.</returns>
     public static InputBinding FromKey(KeyboardKey key) => new(key: key);
 
     /// <summary>
-    /// Creates a new input binding for a mouse button.
+    /// Creates an input binding for a mouse button.
     /// </summary>
     /// <param name="button">The mouse button to bind.</param>
-    /// <returns>A new <see cref="InputBinding"/> for the specified mouse button.</returns>
+    /// <returns>A binding that uses the specified mouse button.</returns>
     public static InputBinding FromMouse(MouseButton button) => new(mouseButton: button);
 
     /// <summary>
-    /// Creates a new input binding for a gamepad button.
+    /// Creates an input binding for a gamepad button.
     /// </summary>
     /// <param name="button">The gamepad button to bind.</param>
-    /// <returns>A new <see cref="InputBinding"/> for the specified gamepad button.</returns>
+    /// <returns>A binding that uses the specified gamepad button.</returns>
     public static InputBinding FromGamepad(GamepadButton button) => new(gamepadButton: button);
 }

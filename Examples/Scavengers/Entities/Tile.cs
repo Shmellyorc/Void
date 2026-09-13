@@ -41,8 +41,8 @@ public sealed class Tile(Vect2 position, Rect2 source, TextureEffects effects) :
             Position,                       // World position
             _source,                        // Source rectangle in the spritesheet
             Color.White,                    // Full opacity, no tinting
-            0f,                             // No rotation
             Vect2.One,                      // No scaling
+            0f,                             // No rotation
             Vect2.Zero,                     // No origin offset
             _effects,                       // Texture effects (flips)
             0f                              // Depth (0 = base layer)

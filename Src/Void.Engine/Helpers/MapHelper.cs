@@ -1,134 +1,107 @@
 // ============================================================================
 //  MapHelper.cs
 // ============================================================================
-//  Utility methods for converting between tile-based grid coordinates and
-//  world-space positions, including spatial queries and pathfinding helpers.
+//  Tile-grid coordinate conversion and spatial query helpers.
 //
-//  Copyright (c) 2025 Void Engine
+//  Copyright (c) 2026 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
+
+using System;
+using System.Collections.Generic;
 
 namespace Void.Engine.Helpers;
 
 /// <summary>
-/// Provides helper methods for converting between tile-based map coordinates
-/// and world-space positions.
+/// Provides coordinate conversion and spatial-query helpers for tile-based maps.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="MapHelper"/> class provides utility methods for tile-based
-/// game development, including coordinate conversion, spatial queries, and
-/// pathfinding helpers.
-/// </para>
-/// <para>
-/// <b>Key Features:</b>
-/// <list type="bullet">
-///   <item><description>Tile-to-world and world-to-tile coordinate conversion</description></item>
-///   <item><description>1D to 2D index conversion and vice versa</description></item>
-///   <item><description>Spatial queries: circle, ring, line, rectangle, edge</description></item>
-///   <item><description>Distance calculations (Manhattan, Chebyshev)</description></item>
-///   <item><description>Adjacency and flood fill operations</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Convert between tile and world coordinates
-/// var worldPos = MapHelper.MapToWorld(new Vect2(5, 3), 32);
-/// var tilePos = MapHelper.WorldToMap(new Vect2(160, 96), 32);
-/// 
-/// // Convert between 1D and 2D indices
-/// var tile2D = MapHelper.To2D(index, mapWidth);
-/// var index = MapHelper.To1D(tile2D, mapWidth);
-/// 
-/// // Spatial queries
-/// var circleTiles = MapHelper.ToCircle(center, 3);
-/// var lineTiles = MapHelper.ToLine(start, end);
-/// var ringTiles = MapHelper.ToRing(center, 2, 5);
-/// 
-/// // Check adjacency
-/// bool isAdjacent = MapHelper.IsUnitAround(pos1, pos2, true);
-/// 
-/// // Flood fill
-/// var walkableTiles = MapHelper.FloodFill(start, tile => IsWalkable(tile));
-/// </code>
-/// </para>
+/// Tile coordinates are expected to represent whole grid cells even though VOID
+/// uses <see cref="Vect2"/> as the coordinate container.
 /// </remarks>
 public static class MapHelper
 {
-    /// <summary>
-    /// Converts a tile-based grid location into world-space coordinates.
-    /// </summary>
-    /// <param name="location">The grid location in tile coordinates.</param>
-    /// <param name="tilesize">The size of one tile in world units.</param>
-    /// <returns>The world-space coordinates in pixels.</returns>
+    private static readonly Vect2[] CardinalDirections =
+    [
+        Vect2.Up,
+        Vect2.Right,
+        Vect2.Down,
+        Vect2.Left
+    ];
+
+    /// <summary>Converts a tile coordinate to world-space pixels.</summary>
+    /// <param name="location">Tile coordinate.</param>
+    /// <param name="tilesize">Positive tile size in world units.</param>
+    /// <returns>The tile's world-space position.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tilesize"/> is not positive.</exception>
     public static Vect2 MapToWorld(in Vect2 location, int tilesize)
-        => Vect2.Floor(location * tilesize);
+    {
+        ValidateTileSize(tilesize, nameof(tilesize));
+        return Vect2.Floor(location * tilesize);
+    }
 
-    /// <summary>
-    /// Converts a world-space position into map grid coordinates.
-    /// </summary>
-    /// <param name="position">The world-space position in pixels.</param>
-    /// <param name="tilesize">The size of one tile in world units.</param>
-    /// <returns>The tile-based grid coordinates.</returns>
+    /// <summary>Converts a world-space position to a tile coordinate.</summary>
+    /// <param name="position">World-space position.</param>
+    /// <param name="tilesize">Positive tile size in world units.</param>
+    /// <returns>The tile containing the position.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tilesize"/> is not positive.</exception>
     public static Vect2 WorldToMap(in Vect2 position, int tilesize)
-        => Vect2.Floor(position / tilesize);
+    {
+        ValidateTileSize(tilesize, nameof(tilesize));
+        return Vect2.Floor(position / tilesize);
+    }
 
-    /// <summary>
-    /// Converts a 1-dimensional tile index into a 2D coordinate.
-    /// </summary>
-    /// <param name="index">The flat tile index.</param>
-    /// <param name="mapWidth">The width of the tile grid in tiles.</param>
-    /// <returns>A <see cref="Vect2"/> representing the (x, y) tile position.</returns>
-    public static Vect2 To2D(int index, int mapWidth) =>
-        new(index % mapWidth, index / mapWidth);
+    /// <summary>Converts a flat tile index to a two-dimensional tile coordinate.</summary>
+    /// <param name="index">Flat tile index.</param>
+    /// <param name="mapWidth">Positive map width in tiles.</param>
+    /// <returns>The corresponding tile coordinate.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="mapWidth"/> is not positive.</exception>
+    public static Vect2 To2D(int index, int mapWidth)
+    {
+        ValidateMapWidth(mapWidth);
+        return new Vect2(index % mapWidth, index / mapWidth);
+    }
 
-    /// <summary>
-    /// Converts a 2D tile coordinate into a 1-dimensional index.
-    /// </summary>
-    /// <param name="location">The (x, y) tile position.</param>
-    /// <param name="mapWidth">The width of the tile grid in tiles.</param>
-    /// <returns>The flat index corresponding to <paramref name="location"/>.</returns>
-    public static int To1D(Vect2 location, int mapWidth) =>
-        (int)location.Y * mapWidth + (int)location.X;
+    /// <summary>Converts a two-dimensional tile coordinate to a flat tile index.</summary>
+    /// <param name="location">Tile coordinate.</param>
+    /// <param name="mapWidth">Positive map width in tiles.</param>
+    /// <returns>The corresponding flat tile index.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="mapWidth"/> is not positive.</exception>
+    public static int To1D(Vect2 location, int mapWidth)
+    {
+        ValidateMapWidth(mapWidth);
+        return (int)location.Y * mapWidth + (int)location.X;
+    }
 
-    /// <summary>
-    /// Converts a world-space position into a 1D tile index.
-    /// </summary>
-    /// <param name="position">The world-space position in pixels.</param>
-    /// <param name="tileSize">The size of one tile in world units.</param>
-    /// <param name="mapWidth">The width of the tile grid in tiles.</param>
-    /// <returns>The flat tile index at the given world position.</returns>
+    /// <summary>Converts a world-space position directly to a flat tile index.</summary>
     public static int WorldToIndex(Vect2 position, int tileSize, int mapWidth)
     {
-        var tile = WorldToMap(position, tileSize);
+        Vect2 tile = WorldToMap(position, tileSize);
         return To1D(tile, mapWidth);
     }
 
-    /// <summary>
-    /// Converts a 1D tile index into a world-space position (top-left corner of the tile).
-    /// </summary>
-    /// <param name="index">The flat tile index.</param>
-    /// <param name="tileSize">The size of one tile in world units.</param>
-    /// <param name="mapWidth">The width of the tile grid in tiles.</param>
-    /// <returns>The world-space position of the tile's top-left corner.</returns>
+    /// <summary>Converts a flat tile index to the world-space top-left of that tile.</summary>
     public static Vect2 IndexToWorld(int index, int tileSize, int mapWidth)
     {
-        var tile = To2D(index, mapWidth);
+        Vect2 tile = To2D(index, mapWidth);
         return MapToWorld(tile, tileSize);
     }
 
-    /// <summary>
-    /// Converts a world-space size into a list of tile coordinates covering the area.
-    /// </summary>
-    /// <param name="size">The size of the area in world units.</param>
-    /// <param name="location">The top-left tile coordinate where the area begins.</param>
-    /// <param name="tileSize">The size of a single tile in world units.</param>
-    /// <returns>A list of tile coordinates covering the specified area.</returns>
+    /// <summary>Gets every tile touched by a world-space size starting at a tile coordinate.</summary>
+    /// <param name="size">World-space width and height to cover.</param>
+    /// <param name="location">Top-left tile coordinate.</param>
+    /// <param name="tileSize">Positive tile size in world units.</param>
+    /// <returns>Tile coordinates covering the requested area, including partially covered edge tiles.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="tileSize"/> is not positive.</exception>
     public static List<Vect2> ToMap(Vect2 size, Vect2 location, int tileSize)
     {
-        var xSize = (int)MathF.Floor(size.X / tileSize);
-        var ySize = (int)MathF.Floor(size.Y / tileSize);
+        ValidateTileSize(tileSize, nameof(tileSize));
+
+        if (size.X <= 0f || size.Y <= 0f)
+            return [];
+
+        int xSize = (int)MathF.Ceiling(size.X / tileSize);
+        int ySize = (int)MathF.Ceiling(size.Y / tileSize);
         var result = new List<Vect2>(xSize * ySize);
 
         for (int y = 0; y < ySize; y++)
@@ -140,16 +113,18 @@ public static class MapHelper
         return result;
     }
 
-    /// <summary>
-    /// Returns all tile coordinates within a circular radius of a center point.
-    /// </summary>
-    /// <param name="center">The center tile coordinate.</param>
-    /// <param name="radius">The radius in tiles.</param>
-    /// <returns>A list of tile coordinates within the circle.</returns>
+    /// <summary>Gets all tiles whose centers lie within a circular tile radius.</summary>
+    /// <param name="center">Center tile.</param>
+    /// <param name="radius">Nonnegative radius in tiles.</param>
+    /// <returns>Tiles inside or on the radius.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="radius"/> is negative.</exception>
     public static List<Vect2> ToCircle(Vect2 center, int radius)
     {
+        if (radius < 0)
+            throw new ArgumentOutOfRangeException(nameof(radius));
+
         var result = new List<Vect2>((radius * 2 + 1) * (radius * 2 + 1));
-        float radiusSquared = radius * radius;
+        int radiusSquared = radius * radius;
 
         for (int y = -radius; y <= radius; y++)
         {
@@ -163,25 +138,29 @@ public static class MapHelper
         return result;
     }
 
-    /// <summary>
-    /// Returns all tile coordinates within a circular ring (donut shape).
-    /// </summary>
-    /// <param name="center">The center tile coordinate.</param>
-    /// <param name="innerRadius">The inner radius in tiles (exclusive).</param>
-    /// <param name="outerRadius">The outer radius in tiles (inclusive).</param>
-    /// <returns>A list of tile coordinates within the ring.</returns>
+    /// <summary>Gets all tiles in a circular ring.</summary>
+    /// <param name="center">Center tile.</param>
+    /// <param name="innerRadius">Nonnegative exclusive inner radius.</param>
+    /// <param name="outerRadius">Inclusive outer radius greater than or equal to <paramref name="innerRadius"/>.</param>
+    /// <returns>Tiles in the requested ring.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown for invalid radius values.</exception>
     public static List<Vect2> ToRing(Vect2 center, int innerRadius, int outerRadius)
     {
+        if (innerRadius < 0)
+            throw new ArgumentOutOfRangeException(nameof(innerRadius));
+        if (outerRadius < innerRadius)
+            throw new ArgumentOutOfRangeException(nameof(outerRadius));
+
         var result = new List<Vect2>();
-        float outerSquared = outerRadius * outerRadius;
-        float innerSquared = innerRadius * innerRadius;
+        int outerSquared = outerRadius * outerRadius;
+        int innerSquared = innerRadius * innerRadius;
 
         for (int y = -outerRadius; y <= outerRadius; y++)
         {
             for (int x = -outerRadius; x <= outerRadius; x++)
             {
-                float distSquared = x * x + y * y;
-                if (distSquared <= outerSquared && distSquared > innerSquared)
+                int distanceSquared = x * x + y * y;
+                if (distanceSquared <= outerSquared && distanceSquared > innerSquared)
                     result.Add(center + new Vect2(x, y));
             }
         }
@@ -189,43 +168,57 @@ public static class MapHelper
         return result;
     }
 
-    /// <summary>
-    /// Returns all tile coordinates along a line between two tile positions using Bresenham's algorithm.
-    /// </summary>
-    /// <param name="start">The starting tile coordinate.</param>
-    /// <param name="end">The ending tile coordinate.</param>
-    /// <returns>A list of tile coordinates forming a line from <paramref name="start"/> to <paramref name="end"/>.</returns>
+    /// <summary>Gets the tiles on a Bresenham line between two tile coordinates.</summary>
     public static List<Vect2> ToLine(Vect2 start, Vect2 end)
     {
         var result = new List<Vect2>();
-        int x0 = (int)start.X, y0 = (int)start.Y;
-        int x1 = (int)end.X, y1 = (int)end.Y;
-        int dx = Math.Abs(x1 - x0), dy = -Math.Abs(y1 - y0);
-        int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-        int err = dx + dy;
+        int x0 = (int)start.X;
+        int y0 = (int)start.Y;
+        int x1 = (int)end.X;
+        int y1 = (int)end.Y;
+        int dx = Math.Abs(x1 - x0);
+        int dy = -Math.Abs(y1 - y0);
+        int sx = x0 < x1 ? 1 : -1;
+        int sy = y0 < y1 ? 1 : -1;
+        int error = dx + dy;
 
         while (true)
         {
             result.Add(new Vect2(x0, y0));
-            if (x0 == x1 && y0 == y1) break;
-            int e2 = 2 * err;
-            if (e2 >= dy) { err += dy; x0 += sx; }
-            if (e2 <= dx) { err += dx; y0 += sy; }
+            if (x0 == x1 && y0 == y1)
+                break;
+
+            int doubledError = error * 2;
+            if (doubledError >= dy)
+            {
+                error += dy;
+                x0 += sx;
+            }
+
+            if (doubledError <= dx)
+            {
+                error += dx;
+                y0 += sy;
+            }
         }
 
         return result;
     }
 
-    /// <summary>
-    /// Returns all tiles on the border of a rectangular area.
-    /// </summary>
-    /// <param name="start">The top-left tile coordinate of the area.</param>
-    /// <param name="width">The width of the area in tiles.</param>
-    /// <param name="height">The height of the area in tiles.</param>
-    /// <returns>A list of tile coordinates forming the border of the rectangle.</returns>
+    /// <summary>Gets the unique border tiles of a rectangular tile area.</summary>
+    /// <param name="start">Top-left tile.</param>
+    /// <param name="width">Width in tiles.</param>
+    /// <param name="height">Height in tiles.</param>
+    /// <returns>The border tiles, or an empty list for a nonpositive size.</returns>
     public static List<Vect2> ToEdge(Vect2 start, int width, int height)
     {
-        var result = new List<Vect2>(2 * width + 2 * height - 4);
+        if (width <= 0 || height <= 0)
+            return [];
+
+        int capacity = width == 1 || height == 1
+            ? width * height
+            : 2 * width + 2 * height - 4;
+        var result = new List<Vect2>(capacity);
 
         for (int x = 0; x < width; x++)
         {
@@ -233,6 +226,7 @@ public static class MapHelper
             if (height > 1)
                 result.Add(start + new Vect2(x, height - 1));
         }
+
         for (int y = 1; y < height - 1; y++)
         {
             result.Add(start + new Vect2(0, y));
@@ -243,102 +237,47 @@ public static class MapHelper
         return result;
     }
 
-    /// <summary>
-    /// Determines whether a tile coordinate is within the bounds of a map.
-    /// </summary>
-    /// <param name="tile">The tile coordinate to check.</param>
-    /// <param name="mapWidth">The width of the map in tiles.</param>
-    /// <param name="mapHeight">The height of the map in tiles.</param>
-    /// <returns><see langword="true"/> if the tile is within bounds; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a tile coordinate lies inside a map.</summary>
     public static bool IsInBounds(Vect2 tile, int mapWidth, int mapHeight)
-        => tile.X >= 0 && tile.X < mapWidth && tile.Y >= 0 && tile.Y < mapHeight;
+        => mapWidth > 0 && mapHeight > 0 &&
+           tile.X >= 0 && tile.X < mapWidth && tile.Y >= 0 && tile.Y < mapHeight;
 
-    /// <summary>
-    /// Calculates the Manhattan distance between two tile coordinates.
-    /// </summary>
-    /// <param name="a">The first tile coordinate.</param>
-    /// <param name="b">The second tile coordinate.</param>
-    /// <returns>The Manhattan distance (sum of absolute differences).</returns>
+    /// <summary>Calculates Manhattan distance between two tile coordinates.</summary>
     public static int ManhattanDistance(Vect2 a, Vect2 b)
         => (int)(Math.Abs(a.X - b.X) + Math.Abs(a.Y - b.Y));
 
-    /// <summary>
-    /// Calculates the Chebyshev distance between two tile coordinates.
-    /// </summary>
-    /// <param name="a">The first tile coordinate.</param>
-    /// <param name="b">The second tile coordinate.</param>
-    /// <returns>The Chebyshev distance (maximum of absolute differences).</returns>
+    /// <summary>Calculates Chebyshev distance between two tile coordinates.</summary>
     public static int ChebyshevDistance(Vect2 a, Vect2 b)
         => (int)Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
 
-    /// <summary>
-    /// Determines whether a unit located at <paramref name="bLocation"/> is adjacent to <paramref name="aLocation"/> on a tile grid.
-    /// </summary>
-    /// <param name="aLocation">The tile location of the reference unit.</param>
-    /// <param name="bLocation">The tile location of the unit being checked.</param>
-    /// <param name="includeCorners">
-    /// If <see langword="true"/>, diagonal tiles are considered adjacent.
-    /// If <see langword="false"/>, only orthogonal tiles are considered.
-    /// </param>
-    /// <returns><see langword="true"/> if <paramref name="bLocation"/> is adjacent to <paramref name="aLocation"/>; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether two distinct tiles are immediate neighbors.</summary>
+    /// <param name="aLocation">Reference tile.</param>
+    /// <param name="bLocation">Candidate neighboring tile.</param>
+    /// <param name="includeCorners">Whether diagonal neighbors count.</param>
+    /// <returns><see langword="true"/> only for a distinct immediate neighbor.</returns>
     public static bool IsUnitAround(Vect2 aLocation, Vect2 bLocation, bool includeCorners)
     {
-        if (aLocation == bLocation)
-            return true;
+        float dx = MathF.Abs(aLocation.X - bLocation.X);
+        float dy = MathF.Abs(aLocation.Y - bLocation.Y);
+
+        if (dx == 0f && dy == 0f)
+            return false;
 
         if (includeCorners)
-        {
-            if (aLocation.Distance(bLocation) > 2)
-                return false;
-        }
-        else
-        {
-            if (aLocation.Distance(bLocation) > 1)
-                return false;
-        }
+            return dx <= 1f && dy <= 1f;
 
-        Vect2[] neighbours = includeCorners
-            ?
-                [
-                    aLocation + Vect2.Up,
-                    aLocation + Vect2.Right,
-                    aLocation + Vect2.Down,
-                    aLocation + Vect2.Left,
-
-                    aLocation + new Vect2(-1),       // Top Left
-                    aLocation + new Vect2(1, -1),    // Top Right
-                    aLocation + new Vect2(-1, 1),    // Bottom Left
-                    aLocation + new Vect2(1),        // Bottom Right
-                ]
-            :
-                [
-                    aLocation + Vect2.Up,
-                    aLocation + Vect2.Right,
-                    aLocation + Vect2.Down,
-                    aLocation + Vect2.Left,
-                ];
-
-        for (int i = neighbours.Length - 1; i >= 0; i--)
-        {
-            var neighbour = neighbours[i];
-
-            if (bLocation != neighbour)
-                continue;
-
-            return true;
-        }
-
-        return false;
+        return dx + dy == 1f;
     }
 
-    /// <summary>
-    /// Performs a flood fill starting from a tile coordinate.
-    /// </summary>
-    /// <param name="start">The starting tile coordinate.</param>
-    /// <param name="isWalkable">A function that returns <see langword="true"/> if the tile is walkable.</param>
-    /// <returns>A list of all connected walkable tile coordinates.</returns>
+    /// <summary>Flood-fills orthogonally connected walkable tiles.</summary>
+    /// <param name="start">Starting tile.</param>
+    /// <param name="isWalkable">Predicate that must also enforce any desired map bounds.</param>
+    /// <returns>All connected walkable tiles reachable from <paramref name="start"/>.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="isWalkable"/> is null.</exception>
     public static List<Vect2> FloodFill(Vect2 start, Func<Vect2, bool> isWalkable)
     {
+        ArgumentNullException.ThrowIfNull(isWalkable);
+
         var result = new List<Vect2>();
         var visited = new HashSet<Vect2>();
         var queue = new Queue<Vect2>();
@@ -351,21 +290,29 @@ public static class MapHelper
 
         while (queue.Count > 0)
         {
-            var current = queue.Dequeue();
+            Vect2 current = queue.Dequeue();
             result.Add(current);
 
-            Vect2[] directions = [Vect2.Up, Vect2.Right, Vect2.Down, Vect2.Left];
-            foreach (var dir in directions)
+            foreach (Vect2 direction in CardinalDirections)
             {
-                var neighbor = current + dir;
-                if (!visited.Contains(neighbor) && isWalkable(neighbor))
-                {
-                    visited.Add(neighbor);
+                Vect2 neighbor = current + direction;
+                if (visited.Add(neighbor) && isWalkable(neighbor))
                     queue.Enqueue(neighbor);
-                }
             }
         }
 
         return result;
+    }
+
+    private static void ValidateTileSize(int tileSize, string parameterName)
+    {
+        if (tileSize <= 0)
+            throw new ArgumentOutOfRangeException(parameterName, "Tile size must be greater than zero.");
+    }
+
+    private static void ValidateMapWidth(int mapWidth)
+    {
+        if (mapWidth <= 0)
+            throw new ArgumentOutOfRangeException(nameof(mapWidth), "Map width must be greater than zero.");
     }
 }

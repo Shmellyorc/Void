@@ -63,7 +63,7 @@ public sealed class Birb
         {
             // Use 70% of the sprite size for a forgiving hitbox
             var size = _anims[0].Size * 0.7f;
-            
+
             return new Rect2(
                 _position.X + (_anims[0].Size.X - size.X) / 2f,
                 _position.Y + (_anims[0].Size.Y - size.Y) / 2f,
@@ -264,6 +264,6 @@ public sealed class Birb
         float rotationRadians = _rotate * MathHelper.DegToRad;
 
         // Draw centered on the bird's position with rotation
-        batch.Draw(Globals.Texture, _position, rect, Color.White, rotationRadians, Vect2.One, rect.Size / 2f, TextureEffects.None, 0.3f);
+        batch.Draw(Globals.Texture, _position, rect, Color.White, Vect2.One, rotationRadians, rect.Size / 2f, TextureEffects.None, 0.3f);
     }
 }

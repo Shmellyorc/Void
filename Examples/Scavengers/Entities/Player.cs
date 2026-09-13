@@ -124,20 +124,20 @@ public sealed class Player(LDtkEntityInstance inst) : Entity(inst)
             // ====================================================================
             // Movement Input
             // ====================================================================
-            if (state.IsHeld(GameInputs.MoveUp))
+            if (state.IsPressed(GameInputs.MoveUp))
             {
                 vel.Y = -1;
             }
-            else if (state.IsHeld(GameInputs.MoveRight))
+            else if (state.IsPressed(GameInputs.MoveRight))
             {
                 vel.X = 1;
                 _direction = 1;
             }
-            else if (state.IsHeld(GameInputs.MoveDown))
+            else if (state.IsPressed(GameInputs.MoveDown))
             {
                 vel.Y = 1;
             }
-            else if (state.IsHeld(GameInputs.MoveLeft))
+            else if (state.IsPressed(GameInputs.MoveLeft))
             {
                 vel.X = -1;
                 _direction = -1;
@@ -145,7 +145,7 @@ public sealed class Player(LDtkEntityInstance inst) : Entity(inst)
             // ====================================================================
             // Attack Input
             // ====================================================================
-            else if (state.IsPressed(GameInputs.Interact))
+            else if (state.IsJustPressed(GameInputs.Interact))
             {
                 // Play attack sound
                 SoundHelper.PlayRandom([Globals.Chop1, Globals.Chop2], Globals.SoundFxVolume);

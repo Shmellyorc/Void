@@ -2,7 +2,7 @@
 //  InputAction.cs
 // ============================================================================
 //  Static manager for named input actions with string and enum support,
-//  providing zero-GC snapshot-based state tracking.
+//  providing frame-based action state tracking.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
@@ -17,66 +17,53 @@ using Void.Engine.Inputs.Mouses;
 namespace Void.Engine.Inputs.InputActions;
 
 /// <summary>
-/// Static manager for named input actions with string and enum support,
-/// providing zero-GC snapshot-based state tracking.
+/// Manages named input actions and their keyboard, mouse, and gamepad bindings.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="InputAction"/> class manages a collection of named input
-/// actions that can be bound to keyboard keys, mouse buttons, and gamepad
-/// buttons. It provides a snapshot-based state system that captures the
-/// state of all actions in a single frame, eliminating garbage collection
-/// and ensuring consistent input handling.
+/// Actions are registered by name and may contain one or more bindings. An action
+/// is active when any of its bindings is active during the current game update.
+/// Names are matched without regard to letter casing.
 /// </para>
 /// <para>
-/// <b>Key Features:</b>
+/// The engine updates the action system once per game update. <see cref="GetState"/>
+/// returns the snapshot produced by that update and does not poll devices or advance
+/// action state when called. This allows multiple systems to query the same snapshot
+/// without changing transition results.
+/// </para>
+/// <para>
+/// <b>State Queries:</b>
 /// <list type="bullet">
-///   <item><description>Named actions with string or enum identifiers</description></item>
-///   <item><description>Multiple bindings per action (keyboard, mouse, gamepad)</description></item>
-///   <item><description>Zero-GC snapshot-based state tracking</description></item>
-///   <item><description>Pressed, Held, Released, and Up state detection</description></item>
+///   <item><description><see cref="InputActionState.IsJustPressed(string)"/> is true only on the update an action becomes pressed.</description></item>
+///   <item><description><see cref="InputActionState.IsPressed(string)"/> is true while an action is currently pressed, including the update it was first pressed.</description></item>
+///   <item><description><see cref="InputActionState.IsJustReleased(string)"/> is true only on the update an action becomes released.</description></item>
+///   <item><description><see cref="InputActionState.IsReleased(string)"/> is true while an action is currently released, including the update it was first released.</description></item>
 /// </list>
 /// </para>
 /// <para>
 /// <b>Usage Example:</b>
 /// <code>
-/// // Define actions during initialization
 /// InputAction.AddAction("Jump")
 ///     .AddKey(KeyboardKey.Space)
 ///     .AddGamepad(GamepadButton.A);
-/// 
+///
 /// InputAction.AddAction("MoveLeft")
 ///     .AddKey(KeyboardKey.Left)
 ///     .AddKey(KeyboardKey.A)
 ///     .AddGamepad(GamepadButton.LeftStickLeft);
-/// 
-/// // In the game loop, get the state snapshot
+///
 /// var state = InputAction.GetState();
-/// 
-/// // Query action states
-/// if (state.IsPressed("Jump"))
+///
+/// if (state.IsJustPressed("Jump"))
 ///     HandleJump();
-/// 
-/// if (state.IsHeld("MoveLeft"))
+///
+/// if (state.IsPressed("MoveLeft"))
 ///     MoveLeft();
-/// 
-/// if (state.IsReleased("Pause"))
-///     TogglePause();
 /// </code>
 /// </para>
 /// <para>
-/// <b>State Transitions:</b>
-/// <list type="bullet">
-///   <item><description><see cref="ActionState.Pressed"/> - Action was just pressed this frame</description></item>
-///   <item><description><see cref="ActionState.Held"/> - Action is being held down</description></item>
-///   <item><description><see cref="ActionState.Released"/> - Action was just released this frame</description></item>
-///   <item><description><see cref="ActionState.Up"/> - Action is not active</description></item>
-/// </list>
-/// </para>
-/// <para>
 /// <b>Thread Safety:</b>
-/// This class is not thread-safe. All operations should be performed on
-/// the main thread.
+/// Registration, binding changes, and state access are intended for the main game thread.
 /// </para>
 /// </remarks>
 public static class InputAction
@@ -84,22 +71,34 @@ public static class InputAction
     private static readonly Dictionary<string, ActionBinding> _actions = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<string, bool> _currentStates = new(StringComparer.OrdinalIgnoreCase);
     private static Dictionary<string, bool> _previousStates = new(StringComparer.OrdinalIgnoreCase);
+    private static InputActionState _state;
 
     /// <summary>
-    /// Gets all registered actions.
+    /// Gets the registered input actions.
     /// </summary>
+    /// <remarks>
+    /// The returned collection reflects the actions currently registered with the manager.
+    /// </remarks>
     public static IReadOnlyCollection<ActionBinding> Actions => _actions.Values;
 
     /// <summary>
-    /// Creates or gets an action by string name.
+    /// Gets an existing action or creates a new action with the specified name.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
+    /// <param name="name">The action name.</param>
     /// <returns>The existing or newly created <see cref="ActionBinding"/>.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null or empty.</exception>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="name"/> is <see langword="null"/>.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="name"/> is empty or consists only of whitespace.
+    /// </exception>
     public static ActionBinding AddAction(string name)
     {
-        if (string.IsNullOrEmpty(name))
+        if (name is null)
             throw new ArgumentNullException(nameof(name));
+
+        if (name.IsEmpty())
+            throw new ArgumentException("Action name cannot be empty or whitespace.", nameof(name));
 
         if (_actions.TryGetValue(name, out var existing))
             return existing;
@@ -110,82 +109,151 @@ public static class InputAction
     }
 
     /// <summary>
-    /// Creates or gets an action by enum.
+    /// Gets an existing action or creates a new action using the specified enum value as its name.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
+    /// <param name="name">The enum value used to identify the action.</param>
     /// <returns>The existing or newly created <see cref="ActionBinding"/>.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="name"/> is <see langword="null"/>.
+    /// </exception>
     public static ActionBinding AddAction(Enum name)
-        => AddAction(name.ToEnumString());
+    {
+        if (name is null)
+            throw new ArgumentNullException(nameof(name));
+
+        return AddAction(name.ToEnumString());
+    }
 
     /// <summary>
-    /// Gets an action by string name.
+    /// Gets the action registered with the specified name.
     /// </summary>
-    /// <param name="name">The name of the action.</param>
-    /// <returns>The <see cref="ActionBinding"/>, or <see langword="null"/> if not found.</returns>
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// The matching <see cref="ActionBinding"/>, or <see langword="null"/> when the name is null,
+    /// empty, whitespace, or no action is registered with that name.
+    /// </returns>
     public static ActionBinding GetAction(string name)
-        => _actions.TryGetValue(name, out var action) ? action : null;
+        => TryGetAction(name, out var action) ? action : null;
 
     /// <summary>
-    /// Gets an action by enum.
+    /// Gets the action registered for the specified enum value.
     /// </summary>
-    /// <param name="name">The enum representing the action name.</param>
-    /// <returns>The <see cref="ActionBinding"/>, or <see langword="null"/> if not found.</returns>
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// The matching <see cref="ActionBinding"/>, or <see langword="null"/> when the value is
+    /// <see langword="null"/> or no action is registered for it.
+    /// </returns>
     public static ActionBinding GetAction(Enum name)
-        => _actions.TryGetValue(name.ToEnumString(), out var action) ? action : null;
+        => TryGetAction(name, out var action) ? action : null;
 
     /// <summary>
-    /// Checks if an action with the given name exists.
+    /// Attempts to get the action registered with the specified name.
     /// </summary>
-    public static bool HasAction(string name) => _actions.ContainsKey(name);
+    /// <param name="name">The action name.</param>
+    /// <param name="action">
+    /// When this method returns, contains the matching <see cref="ActionBinding"/> when found;
+    /// otherwise, <see langword="null"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the action exists; otherwise, <see langword="false"/>.
+    /// </returns>
+    public static bool TryGetAction(string name, out ActionBinding action)
+    {
+        if (name.IsEmpty())
+        {
+            action = null;
+            return false;
+        }
+
+        return _actions.TryGetValue(name, out action);
+    }
 
     /// <summary>
-    /// Checks if an action with the given enum exists.
+    /// Attempts to get the action registered for the specified enum value.
     /// </summary>
-    public static bool HasAction(Enum name) => _actions.ContainsKey(name.ToEnumString());
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <param name="action">
+    /// When this method returns, contains the matching <see cref="ActionBinding"/> when found;
+    /// otherwise, <see langword="null"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the action exists; otherwise, <see langword="false"/>.
+    /// </returns>
+    public static bool TryGetAction(Enum name, out ActionBinding action)
+    {
+        if (name is null)
+        {
+            action = null;
+            return false;
+        }
+
+        return TryGetAction(name.ToEnumString(), out action);
+    }
 
     /// <summary>
-    /// Removes an action by string name.
+    /// Determines whether an action is registered with the specified name.
     /// </summary>
-    /// <returns><see langword="true"/> if the action was removed; otherwise, <see langword="false"/>.</returns>
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see langword="true"/> if the action exists; otherwise, <see langword="false"/>.
+    /// Null, empty, or whitespace names return <see langword="false"/>.
+    /// </returns>
+    public static bool HasAction(string name) => TryGetAction(name, out _);
+
+    /// <summary>
+    /// Determines whether an action is registered for the specified enum value.
+    /// </summary>
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// <see langword="true"/> if the action exists; otherwise, <see langword="false"/>.
+    /// A <see langword="null"/> value returns <see langword="false"/>.
+    /// </returns>
+    public static bool HasAction(Enum name) => TryGetAction(name, out _);
+
+    /// <summary>
+    /// Removes the action registered with the specified name.
+    /// </summary>
+    /// <param name="name">The action name.</param>
+    /// <returns>
+    /// <see langword="true"/> if an action was removed; otherwise, <see langword="false"/>.
+    /// Null, empty, or whitespace names are ignored and return <see langword="false"/>.
+    /// </returns>
     public static bool RemoveAction(string name)
     {
+        if (name.IsEmpty())
+            return false;
+
         _previousStates.Remove(name);
         _currentStates.Remove(name);
         return _actions.Remove(name);
     }
 
     /// <summary>
-    /// Removes an action by enum.
+    /// Removes the action registered for the specified enum value.
     /// </summary>
-    /// <returns><see langword="true"/> if the action was removed; otherwise, <see langword="false"/>.</returns>
-    public static bool RemoveAction(Enum name) => RemoveAction(name.ToEnumString());
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// <see langword="true"/> if an action was removed; otherwise, <see langword="false"/>.
+    /// A <see langword="null"/> value is ignored and returns <see langword="false"/>.
+    /// </returns>
+    public static bool RemoveAction(Enum name)
+        => name is not null && RemoveAction(name.ToEnumString());
 
     /// <summary>
-    /// Clears all actions and states. Call on engine shutdown.
+    /// Removes all registered actions and resets the current action state snapshot.
     /// </summary>
+    /// <remarks>
+    /// After clearing, <see cref="GetState"/> returns the default snapshot until the engine updates the action system again.
+    /// </remarks>
     public static void Clear()
     {
         _actions.Clear();
         _currentStates.Clear();
         _previousStates.Clear();
+        _state = default;
     }
 
-    /// <summary>
-    /// Gets a snapshot of all action states.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// This method reads input directly from the input systems and evaluates
-    /// all registered actions. It reuses internal dictionaries to achieve
-    /// zero allocation and garbage-free operation.
-    /// </para>
-    /// <para>
-    /// The returned <see cref="InputActionState"/> provides a consistent
-    /// snapshot of all action states for the current frame.
-    /// </para>
-    /// </remarks>
-    /// <returns>An <see cref="InputActionState"/> containing all action states.</returns>
-    public static InputActionState GetState()
+    internal static void Update()
     {
         var mouse = Mouse.GetState();
         var keyboard = Keyboard.GetState();
@@ -200,6 +268,17 @@ public static class InputAction
         foreach (var (name, action) in _actions)
             _currentStates[name] = action.Evaluate(mouse, keyboard, gamepad);
 
-        return new InputActionState(_currentStates, _previousStates);
+        _state = new InputActionState(_currentStates, _previousStates);
     }
+
+    /// <summary>
+    /// Gets the input action snapshot produced by the current game update.
+    /// </summary>
+    /// <remarks>
+    /// This method only returns the current snapshot. It does not poll input devices or
+    /// advance action transitions. Before the first action-system update, or after
+    /// <see cref="Clear"/>, the default snapshot treats every action as released.
+    /// </remarks>
+    /// <returns>The current <see cref="InputActionState"/> snapshot.</returns>
+    public static InputActionState GetState() => _state;
 }

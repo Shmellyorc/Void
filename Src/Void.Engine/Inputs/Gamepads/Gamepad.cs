@@ -34,19 +34,23 @@ public static class Gamepad
         if (!SDL3.SDL.InitSubSystem(SDL3.SDL.InitFlags.Gamepad))
             throw new InvalidOperationException($"SDL gamepad initialization failed: {SDL3.SDL.GetError()}");
 
-        GamepadDatabase.Load();
-        _initialized = true;
+        try
+        {
+            GamepadDatabase.Load();
+            _initialized = true;
+        }
+        catch
+        {
+            GamepadDatabase.Reset();
+            SDL3.SDL.QuitSubSystem(SDL3.SDL.InitFlags.Gamepad);
+            throw;
+        }
     }
 
     /// <summary>
     /// Gets the current state of the gamepad for the specified player.
     /// </summary>
     public static GamepadState GetState(PlayerIndex player) => GetState((int)player);
-
-    /// <summary>
-    /// Updates the gamepad state for the specified player.
-    /// </summary>
-    public static void Update(PlayerIndex player) => Update((int)player);
 
     /// <summary>
     /// Gets the current state of the gamepad at the specified index.
@@ -62,36 +66,16 @@ public static class Gamepad
         return _states[index];
     }
 
-    /// <summary>
-    /// Updates the gamepad state for the specified index.
-    /// </summary>
-    public static void Update(int index)
-    {
-        Initialize();
-        if (index < 0 || index >= MaxGamepads)
-            return;
-
-        RefreshGamepads();
-        UpdateState(index);
-    }
-
-    /// <summary>
-    /// Updates the state of all connected gamepads.
-    /// </summary>
-    public static void UpdateAll()
-    {
-        Initialize();
-        RefreshGamepads();
-
-        for (int i = 0; i < MaxGamepads; i++)
-            UpdateState(i);
-    }
-
     internal static void Shutdown()
     {
         for (int i = 0; i < MaxGamepads; i++)
             CloseSlot(i);
 
+        if (!_initialized)
+            return;
+
+        SDL3.SDL.QuitSubSystem(SDL3.SDL.InitFlags.Gamepad);
+        GamepadDatabase.Reset();
         _initialized = false;
     }
 
@@ -196,11 +180,11 @@ public static class Gamepad
 
         SetStickButtons(ref buttons, lx, ly,
             GamepadButton.LeftStickLeft, GamepadButton.LeftStickRight,
-            GamepadButton.LeftStickUp, GamepadButton.LeftStickDown, deadZone);
+            GamepadButton.LeftStickUp, GamepadButton.LeftStickDown);
 
         SetStickButtons(ref buttons, rx, ry,
             GamepadButton.RightStickLeft, GamepadButton.RightStickRight,
-            GamepadButton.RightStickUp, GamepadButton.RightStickDown, deadZone);
+            GamepadButton.RightStickUp, GamepadButton.RightStickDown);
 
         float leftTrigger = ReadTriggerAxis(gamepad, SDL3.SDL.GamepadAxis.LeftTrigger);
         float rightTrigger = ReadTriggerAxis(gamepad, SDL3.SDL.GamepadAxis.RightTrigger);
@@ -262,13 +246,12 @@ public static class Gamepad
         GamepadButton left,
         GamepadButton right,
         GamepadButton up,
-        GamepadButton down,
-        float deadZone)
+        GamepadButton down)
     {
-        if (x < -deadZone) buttons |= 1UL << (int)left;
-        if (x > deadZone) buttons |= 1UL << (int)right;
-        if (y < -deadZone) buttons |= 1UL << (int)up;
-        if (y > deadZone) buttons |= 1UL << (int)down;
+        if (x < 0f) buttons |= 1UL << (int)left;
+        if (x > 0f) buttons |= 1UL << (int)right;
+        if (y < 0f) buttons |= 1UL << (int)up;
+        if (y > 0f) buttons |= 1UL << (int)down;
     }
 
     private static GamepadState DisconnectedState()

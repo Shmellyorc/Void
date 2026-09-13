@@ -1,148 +1,234 @@
 // ============================================================================
 //  FileSink.cs
 // ============================================================================
-//  Log sink that writes formatted log messages to daily rotating files
-//  with size-based rollover and automatic cleanup of old files.
+//  Writes log entries to daily files with size rollover and retention cleanup.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Threading;
+
+using Void.Engine.Logs;
 
 namespace Void.Engine.Logs.Sinks;
 
 /// <summary>
-/// A log sink that writes formatted log messages to daily rotating files
-/// with size-based rollover and automatic cleanup of old files.
+/// Writes log entries to daily text files with size-based rollover and retention cleanup.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="FileSink"/> implements <see cref="ILogSink"/> and writes
-/// log entries to text files in the specified folder. It provides:
-/// <list type="bullet">
-///   <item><description>Daily file rotation with date-based naming</description></item>
-///   <item><description>Size-based rollover to prevent individual files from growing too large</description></item>
-///   <item><description>Automatic cleanup of old files to manage disk usage</description></item>
-/// </list>
+/// The first file for a day is named <c>log_dd-MM-yyyy.txt</c>. When that file
+/// reaches the configured size limit, additional files use numeric suffixes such as
+/// <c>log_dd-MM-yyyy_1.txt</c>, <c>log_dd-MM-yyyy_2.txt</c>, and so on.
 /// </para>
 /// <para>
-/// Each log entry is formatted as:
-/// <c>[dd-MM-yyyy HH:mm:ss.fff] [Level] [Category] Message</c>
-/// If an exception is present, it is included on a new line after the message.
+/// Entries are written as
+/// <c>[dd-MM-yyyy HH:mm:ss.fff] [Level] [Category] Message</c>. The category
+/// segment is omitted when no category is present. An associated exception is
+/// appended on the following line.
 /// </para>
 /// <para>
-/// <b>File Naming:</b>
-/// Files are named <c>log_dd-MM-yyyy.txt</c> and stored in the specified log folder.
-/// If a file exceeds the maximum size, a new file is created for the same day.
-/// </para>
-/// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// // Add a file sink with 10MB max file size and keep 10 files
-/// var fileSink = new FileSink("Logs/", 10, 10);
-/// Logger.Instance.AddSink(fileSink);
-/// 
-/// // Now all log messages will be written to files
-/// Logger.Instance.Info("Game started");
-/// Logger.Instance.Error("Failed to load texture", exception);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Thread Safety:</b>
-/// This class is thread-safe. A lock is used to ensure that file writes
-/// from multiple threads are properly synchronized.
+/// The sink keeps at most the configured number of matching log files, removing
+/// the oldest files by last-write time when daily or size-based rotation creates
+/// a newer file.
 /// </para>
 /// </remarks>
 public sealed class FileSink : ILogSink
 {
+    private static readonly Encoding Utf8 = new UTF8Encoding(false);
+
     private readonly string _logFolder;
     private readonly long _maxFileSize;
     private readonly int _maxFiles;
-    private string _currentFilePath;
-    private DateTime _currentDate;
-    private long _currentSize;
     private readonly Lock _lock = new();
 
+    private string _currentFilePath;
+    private DateTime _currentDate;
+    private int _currentFileIndex;
+    private long _currentSize;
+
     /// <summary>
-    /// Initializes a new instance of the <see cref="FileSink"/> class.
+    /// Initializes a file sink.
     /// </summary>
-    /// <param name="logFolder">The folder where log files will be stored. The folder is created if it does not exist.</param>
-    /// <param name="maxFileSizeMB">The maximum size of each log file in megabytes. Default is 10.</param>
-    /// <param name="maxFiles">The maximum number of log files to keep. Default is 10.</param>
+    /// <param name="logFolder">
+    /// The folder where log files are stored. The folder is created when necessary.
+    /// </param>
+    /// <param name="maxFileSizeMB">
+    /// The maximum size of one log file in megabytes. The default is 10.
+    /// </param>
+    /// <param name="maxFiles">
+    /// The maximum number of matching log files retained in <paramref name="logFolder"/>.
+    /// The default is 10.
+    /// </param>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="logFolder"/> is <see langword="null"/>, empty,
+    /// or contains only whitespace.
+    /// </exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="maxFileSizeMB"/> or <paramref name="maxFiles"/>
+    /// is less than or equal to zero.
+    /// </exception>
     public FileSink(string logFolder, long maxFileSizeMB = 10, int maxFiles = 10)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(logFolder);
+
+        if (maxFileSizeMB <= 0 || maxFileSizeMB > long.MaxValue / (1024L * 1024L))
+            throw new ArgumentOutOfRangeException(nameof(maxFileSizeMB), "Maximum file size is outside the supported range.");
+
+        if (maxFiles <= 0)
+            throw new ArgumentOutOfRangeException(nameof(maxFiles), "Maximum file count must be greater than zero.");
+
         _logFolder = logFolder;
-        _maxFileSize = maxFileSizeMB * 1024 * 1024;
+        _maxFileSize = maxFileSizeMB * 1024L * 1024L;
         _maxFiles = maxFiles;
-        Directory.CreateDirectory(logFolder);
-        CreateNewFileIfNeeded();
+
+        Directory.CreateDirectory(_logFolder);
     }
 
     /// <summary>
     /// Writes a log entry to the current log file.
     /// </summary>
-    /// <param name="entry">The log entry to write.</param>
+    /// <param name="entry">The entry to format and write.</param>
     public void Write(LogEntry entry)
     {
         lock (_lock)
         {
-            CreateNewFileIfNeeded();
+            bool changedFile = SelectCurrentFile();
 
-            var line = Format(entry);
-            File.AppendAllText(_currentFilePath, line + Environment.NewLine);
-            _currentSize += line.Length;
+            string text = Format(entry) + Environment.NewLine;
+            int byteCount = Utf8.GetByteCount(text);
 
-            if (_currentSize >= _maxFileSize)
+            if (_currentSize > 0 && _currentSize + byteCount > _maxFileSize)
             {
-                CleanupOldFiles();
-                CreateNewFileIfNeeded(forceNew: true);
+                SelectNextFile();
+                changedFile = true;
             }
+
+            File.AppendAllText(_currentFilePath, text, Utf8);
+            _currentSize += byteCount;
+
+            if (changedFile)
+                CleanupOldFiles();
         }
     }
 
-    private void CreateNewFileIfNeeded(bool forceNew = false)
+    private bool SelectCurrentFile()
     {
-        var today = DateTime.Now.Date;
+        DateTime today = DateTime.Now.Date;
 
-        if (!forceNew && _currentDate == today && File.Exists(_currentFilePath))
-            return;
+        if (_currentFilePath != null && _currentDate == today)
+            return false;
 
         _currentDate = today;
-        _currentFilePath = Path.Combine(_logFolder, $"log_{today:dd-MM-yyyy}.txt");
+        _currentFileIndex = FindLatestFileIndex(today);
 
-        _currentSize = File.Exists(_currentFilePath) ? new FileInfo(_currentFilePath).Length : 0;
+        if (_currentFileIndex < 0)
+        {
+            _currentFileIndex = 0;
+            _currentFilePath = GetFilePath(today, _currentFileIndex);
+            _currentSize = 0;
+            return true;
+        }
+
+        _currentFilePath = GetFilePath(today, _currentFileIndex);
+        _currentSize = File.Exists(_currentFilePath)
+            ? new FileInfo(_currentFilePath).Length
+            : 0;
+
+        if (_currentSize >= _maxFileSize)
+        {
+            SelectNextFile();
+            return true;
+        }
+
+        return true;
+    }
+
+    private void SelectNextFile()
+    {
+        _currentFileIndex++;
+
+        string nextPath = GetFilePath(_currentDate, _currentFileIndex);
+
+        while (File.Exists(nextPath))
+        {
+            _currentFileIndex++;
+            nextPath = GetFilePath(_currentDate, _currentFileIndex);
+        }
+
+        _currentFilePath = nextPath;
+        _currentSize = 0;
+    }
+
+    private int FindLatestFileIndex(DateTime date)
+    {
+        string baseName = $"log_{date:dd-MM-yyyy}";
+        int latestIndex = -1;
+
+        foreach (string file in Directory.GetFiles(_logFolder, $"{baseName}*.txt"))
+        {
+            string name = Path.GetFileNameWithoutExtension(file);
+
+            if (string.Equals(name, baseName, StringComparison.Ordinal))
+            {
+                latestIndex = Math.Max(latestIndex, 0);
+                continue;
+            }
+
+            string prefix = baseName + "_";
+
+            if (!name.StartsWith(prefix, StringComparison.Ordinal))
+                continue;
+
+            if (int.TryParse(name[prefix.Length..], out int index) && index > latestIndex)
+                latestIndex = index;
+        }
+
+        return latestIndex;
+    }
+
+    private string GetFilePath(DateTime date, int index)
+    {
+        string suffix = index == 0 ? "" : $"_{index}";
+        return Path.Combine(_logFolder, $"log_{date:dd-MM-yyyy}{suffix}.txt");
     }
 
     private void CleanupOldFiles()
     {
+        string currentPath = Path.GetFullPath(_currentFilePath);
+
         var logFiles = Directory.GetFiles(_logFolder, "log_*.txt")
-            .OrderByDescending(f => f)
+            .Select(path => new FileInfo(path))
+            .OrderByDescending(file => string.Equals(file.FullName, currentPath, StringComparison.Ordinal))
+            .ThenByDescending(file => file.LastWriteTimeUtc)
             .ToList();
 
-        if (logFiles.Count > _maxFiles)
+        if (logFiles.Count <= _maxFiles)
+            return;
+
+        foreach (FileInfo file in logFiles.Skip(_maxFiles))
         {
-            foreach (var file in logFiles.Skip(_maxFiles))
+            try
             {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch
-                {
-                    // Ignore deletion errors to prevent logging failures
-                }
+                file.Delete();
+            }
+            catch
+            {
+                // Cleanup failure must not stop logging.
             }
         }
     }
 
-    private string Format(LogEntry entry)
+    private static string Format(LogEntry entry)
     {
-        var category = string.IsNullOrEmpty(entry.Category) ? "" : $"[{entry.Category}] ";
-        var exception = entry.Exception != null ? $"\n{entry.Exception}" : "";
+        string category = string.IsNullOrEmpty(entry.Category) ? "" : $"[{entry.Category}] ";
+        string exception = entry.Exception != null ? $"\n{entry.Exception}" : "";
+
         return $"[{entry.Timestamp:dd-MM-yyyy HH:mm:ss.fff}] [{entry.Level}] {category}{entry.Message}{exception}";
     }
 }

@@ -1,330 +1,95 @@
+// ============================================================================
+//  CollisionHelper.cs
+// ============================================================================
+//  Collision detection, queries, resolution, and swept movement for 2D shapes.
+//
+//  Copyright (c) 2026 Void Engine
+//  Licensed under the MIT License.
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+
 namespace Void.Engine.Helpers;
 
 /// <summary>
-/// Provides comprehensive collision detection and resolution for 2D games using <see cref="Rect2"/> and <see cref="Vect2"/>.
+/// Provides collision tests, distance queries, raycasts, swept tests, normals,
+/// overlap resolution, and simple move-and-slide helpers for rectangles and circles.
 /// </summary>
 /// <remarks>
-/// <para>
-/// The <see cref="CollisionHelper"/> class offers a complete suite of collision utilities built on public primitive methods:
-/// <list type="bullet">
-///   <item><description><b>Primitives:</b> Distance checks, closest point calculations, line intersection</description></item>
-///   <item><description><b>Detection:</b> Rect-Rect, Circle-Circle, Rect-Circle, Point-Rect, Point-Circle, Line-Rect, Line-Circle, Line-Line</description></item>
-///   <item><description><b>Containment:</b> Check if one shape fully contains another</description></item>
-///   <item><description><b>Distance:</b> Calculate distance between shapes</description></item>
-///   <item><description><b>Closest Point:</b> Find the nearest point on a shape to a given point</description></item>
-///   <item><description><b>Raycasting:</b> Cast rays against rectangles and circles with hit point, normal, and distance</description></item>
-///   <item><description><b>Swept Collision:</b> Detect collisions for fast-moving objects to prevent tunneling</description></item>
-///   <item><description><b>Collision Normals:</b> Get the direction of impact for collision resolution</description></item>
-///   <item><description><b>Reflection:</b> Bounce velocities off surfaces</description></item>
-///   <item><description><b>Pushback/Resolution:</b> Resolve overlaps by pushing objects out of each other</description></item>
-///   <item><description><b>Move &amp; Slide:</b> Move objects with axis-separated collision resolution for proper wall sliding</description></item>
-///   <item><description><b>Bounds Conversion:</b> Convert shapes to bounding boxes for broadphase optimization</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// All methods use <see cref="Rect2"/> for rectangles and <see cref="Vect2"/> with a <c>float</c> radius for circles — no separate <c>Circle</c> struct is required.
-/// </para>
-/// <para>
-/// <b>Basic Collision Detection:</b>
-/// <code>
-/// // Create shapes
-/// Rect2 player = new Rect2(100, 100, 32, 32);
-/// Rect2 wall = new Rect2(200, 100, 64, 64);
-/// Vect2 circleCenter = new Vect2(300, 300);
-/// float circleRadius = 20f;
-/// 
-/// // Check for overlaps
-/// if (CollisionHelper.RectRect(player, wall))
-/// {
-///     Console.WriteLine("Player hit the wall!");
-/// }
-/// 
-/// if (CollisionHelper.RectCircle(wall, circleCenter, circleRadius))
-/// {
-///     Console.WriteLine("Circle overlaps the wall!");
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Collision Resolution:</b>
-/// <code>
-/// // Resolve rectangle overlap
-/// if (CollisionHelper.RectRect(player, wall))
-/// {
-///     Vect2 push = CollisionHelper.PushRectRect(player, wall);
-///     player.Position += push;
-/// }
-/// 
-/// // Get collision normal for sliding/bouncing
-/// Vect2 normal = CollisionHelper.GetCollisionNormal(player, wall);
-/// Vect2 velocity = new Vect2(5, 0);
-/// Vect2 reflected = CollisionHelper.Reflect(velocity, normal, 0.8f); // 80% bounciness
-/// </code>
-/// </para>
-/// <para>
-/// <b>Raycasting:</b>
-/// <code>
-/// // Raycast from player to mouse
-/// Vect2 mousePos = new Vect2(400, 200);
-/// Vect2 direction = (mousePos - player.Center).Normalized();
-/// 
-/// if (CollisionHelper.RaycastRect(player.Center, direction, wall, out Vect2 hit, out float distance))
-/// {
-///     Console.WriteLine($"Hit wall at {hit}, distance: {distance}");
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Move with Collision Resolution:</b>
-/// <code>
-/// // Move player with slide along walls
-/// Vect2 velocity = new Vect2(5, 0);
-/// List&lt;Rect2&gt; obstacles = new List&lt;Rect2&gt; { wall };
-/// player.Position = CollisionHelper.MoveAndSlideRect(player, velocity, obstacles);
-/// 
-/// // Move circle with collision against rects and circles
-/// Vect2 circlePos = new Vect2(150, 150);
-/// float circleRadius = 16f;
-/// List&lt;(Vect2 center, float radius)&gt; circleObstacles = new()
-/// {
-///     (new Vect2(250, 250), 20f)
-/// };
-/// circlePos = CollisionHelper.MoveAndSlideCircle(circlePos, circleRadius, velocity, obstacles, circleObstacles);
-/// </code>
-/// </para>
-/// <para>
-/// <b>Swept Collision (prevents tunneling):</b>
-/// <code>
-/// // Fast-moving bullet
-/// Rect2 bullet = new Rect2(100, 100, 4, 4);
-/// Vect2 bulletVelocity = new Vect2(1000, 0); // Very fast!
-/// 
-/// if (CollisionHelper.SweptRectRect(bullet, bulletVelocity, wall, 
-///     out float timeOfImpact, out Vect2 hitPoint, out Vect2 hitNormal))
-/// {
-///     // Bullet will hit wall at timeOfImpact (0-1)
-///     Console.WriteLine($"Bullet will hit at time {timeOfImpact}, point {hitPoint}");
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Distance Checks (for AI/proximity):</b>
-/// <code>
-/// // Check if enemy is close to player
-/// Rect2 enemy = new Rect2(300, 100, 32, 32);
-/// float distanceToPlayer = CollisionHelper.DistanceRectRect(enemy, player);
-/// 
-/// if (distanceToPlayer &lt; 100f)
-/// {
-///     Console.WriteLine("Enemy is within 100 pixels of player!");
-/// }
-/// </code>
-/// </para>
-/// <para>
-/// <b>Bounds Conversion (for broadphase):</b>
-/// <code>
-/// // Convert circle to AABB for broadphase check
-/// Vect2 circlePos = new Vect2(400, 300);
-/// float circleRadius = 25f;
-/// Rect2 circleBounds = CollisionHelper.GetCircleBounds(circlePos, circleRadius);
-/// 
-/// // Quick broadphase check
-/// if (CollisionHelper.RectRect(circleBounds, wall))
-/// {
-///     // Do precise circle-rect check
-///     if (CollisionHelper.RectCircle(wall, circlePos, circleRadius))
-///     {
-///         Console.WriteLine("Circle actually hit the wall!");
-///     }
-/// }
-/// </code>
-/// </para>
+/// Rectangles use <see cref="Rect2"/>. Circles are represented by a center
+/// <see cref="Vect2"/> and a radius. Unless otherwise documented, touching counts
+/// as a hit for circle and line queries.
 /// </remarks>
 public static class CollisionHelper
 {
-    #region Public Primitives
-    /// <summary>
-    /// Checks if a point is within a specified radius of another point.
-    /// This is the fundamental distance check used by all circle and point collisions.
-    /// </summary>
-    /// <param name="point">The point to check.</param>
-    /// <param name="center">The center point.</param>
-    /// <param name="radius">The radius to check within.</param>
-    /// <returns><see langword="true"/> if the point is within the radius; otherwise, <see langword="false"/>.</returns>
+    private static float EpsilonSquared => MathHelper.Epsilon * MathHelper.Epsilon;
+
+    /// <summary>Checks whether a point is within a radius of a center point.</summary>
     public static bool IsWithinRadius(Vect2 point, Vect2 center, float radius)
         => Vect2.DistanceSquared(point, center) <= radius * radius;
 
-    /// <summary>
-    /// Checks if two circles overlap based on their centers and combined radius.
-    /// </summary>
-    /// <param name="centerA">Center of the first circle.</param>
-    /// <param name="radiusA">Radius of the first circle.</param>
-    /// <param name="centerB">Center of the second circle.</param>
-    /// <param name="radiusB">Radius of the second circle.</param>
-    /// <returns><see langword="true"/> if the circles overlap; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether two circles overlap or touch.</summary>
     public static bool IsCircleOverlap(Vect2 centerA, float radiusA, Vect2 centerB, float radiusB)
         => IsWithinRadius(centerA, centerB, radiusA + radiusB);
 
-    /// <summary>
-    /// Gets the closest point on a rectangle to a given point.
-    /// </summary>
-    /// <param name="point">The point to find the closest point to.</param>
-    /// <param name="rect">The rectangle.</param>
-    /// <returns>The closest point on the rectangle to the given point.</returns>
+    /// <summary>Gets the closest point in or on a rectangle to a point.</summary>
     public static Vect2 ClosestPointRect(Vect2 point, Rect2 rect)
         => point.Clamp(rect.TopLeft, rect.BottomRight);
 
-    /// <summary>
-    /// Gets the closest point on a circle to a given point.
-    /// </summary>
-    /// <param name="point">The point to find the closest point to.</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns>The closest point on the circle to the given point.</returns>
+    /// <summary>Gets the closest point on a circle perimeter to a point.</summary>
     public static Vect2 ClosestPointCircle(Vect2 point, Vect2 center, float radius)
     {
         Vect2 direction = point - center;
-
-        if (direction.LengthSquared() < MathHelper.Epsilon * MathHelper.Epsilon)
-            return center + new Vect2(0, radius);
+        if (direction.LengthSquared() <= EpsilonSquared)
+            return center + new Vect2(0f, radius);
 
         return center + direction.Normalized() * radius;
     }
 
-    /// <summary>
-    /// Checks if two line segments intersect.
-    /// </summary>
-    /// <param name="a1">Start point of the first line.</param>
-    /// <param name="a2">End point of the first line.</param>
-    /// <param name="b1">Start point of the second line.</param>
-    /// <param name="b2">End point of the second line.</param>
-    /// <returns><see langword="true"/> if the line segments intersect; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether two finite line segments intersect or overlap.</summary>
     public static bool LineLine(Vect2 a1, Vect2 a2, Vect2 b1, Vect2 b2)
-    {
-        float d1 = Cross(b1 - a1, a2 - a1);
-        float d2 = Cross(b2 - a1, a2 - a1);
-        float d3 = Cross(a1 - b1, b2 - b1);
-        float d4 = Cross(a2 - b1, b2 - b1);
+        => TrySegmentIntersection(a1, a2, b1, b2, out _, out _);
 
-        // Check if any point is exactly on the other line
-        if (MathF.Abs(d1) < MathHelper.Epsilon) return PointOnSegment(b1, a1, a2);
-        if (MathF.Abs(d2) < MathHelper.Epsilon) return PointOnSegment(b2, a1, a2);
-        if (MathF.Abs(d3) < MathHelper.Epsilon) return PointOnSegment(a1, b1, b2);
-        if (MathF.Abs(d4) < MathHelper.Epsilon) return PointOnSegment(a2, b1, b2);
-
-        // Standard intersection test
-        return (d1 > 0 && d2 < 0 || d1 < 0 && d2 > 0) &&
-               (d3 > 0 && d4 < 0 || d3 < 0 && d4 > 0);
-    }
-
-    private static bool PointOnSegment(Vect2 point, Vect2 start, Vect2 end)
-    {
-        // Check if point is within the bounding box of the segment
-        return point.X >= MathF.Min(start.X, end.X) - MathHelper.Epsilon &&
-               point.X <= MathF.Max(start.X, end.X) + MathHelper.Epsilon &&
-               point.Y >= MathF.Min(start.Y, end.Y) - MathHelper.Epsilon &&
-               point.Y <= MathF.Max(start.Y, end.Y) + MathHelper.Epsilon;
-    }
-    #endregion
-
-
-
-    #region Point <---> Shape
-    /// <summary>
-    /// Checks if a point is inside a rectangle.
-    /// </summary>
-    /// <param name="point">The point to check.</param>
-    /// <param name="rect">The rectangle.</param>
-    /// <returns><see langword="true"/> if the point is inside the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a point lies inside or on a rectangle.</summary>
     public static bool PointRect(Vect2 point, Rect2 rect)
         => point.X >= rect.Left && point.X <= rect.Right &&
            point.Y >= rect.Top && point.Y <= rect.Bottom;
 
-    /// <summary>
-    /// Checks if a point is inside a circle.
-    /// </summary>
-    /// <param name="point">The point to check.</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns><see langword="true"/> if the point is inside the circle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a point lies inside or on a circle.</summary>
     public static bool PointCircle(Vect2 point, Vect2 center, float radius)
         => IsWithinRadius(point, center, radius);
-    #endregion
 
-
-
-    #region Shape <---> Shape
-    /// <summary>
-    /// Checks if two rectangles overlap.
-    /// </summary>
-    /// <param name="a">First rectangle.</param>
-    /// <param name="b">Second rectangle.</param>
-    /// <returns><see langword="true"/> if the rectangles overlap; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether two rectangles overlap with positive area.</summary>
     public static bool RectRect(Rect2 a, Rect2 b)
         => a.Left < b.Right && a.Right > b.Left &&
            a.Top < b.Bottom && a.Bottom > b.Top;
 
-    /// <summary>
-    /// Checks if two circles overlap.
-    /// </summary>
-    /// <param name="centerA">Center of the first circle.</param>
-    /// <param name="radiusA">Radius of the first circle.</param>
-    /// <param name="centerB">Center of the second circle.</param>
-    /// <param name="radiusB">Radius of the second circle.</param>
-    /// <returns><see langword="true"/> if the circles overlap; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether two circles overlap or touch.</summary>
     public static bool CircleCircle(Vect2 centerA, float radiusA, Vect2 centerB, float radiusB)
         => IsCircleOverlap(centerA, radiusA, centerB, radiusB);
 
-    /// <summary>
-    /// Checks if a rectangle and a circle overlap.
-    /// </summary>
-    /// <param name="rect">The rectangle.</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns><see langword="true"/> if the rectangle and circle overlap; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a rectangle and circle overlap or touch.</summary>
     public static bool RectCircle(Rect2 rect, Vect2 center, float radius)
     {
         Vect2 closest = ClosestPointRect(center, rect);
         return IsWithinRadius(center, closest, radius);
     }
-    #endregion
 
-
-
-    #region Line <---> Shape
-    /// <summary>
-    /// Computes the 2D cross product of two vectors.
-    /// </summary>
-    private static float Cross(Vect2 a, Vect2 b)
-        => a.X * b.Y - a.Y * b.X;
-
-    /// <summary>
-    /// Checks if a line segment intersects a rectangle.
-    /// </summary>
-    /// <param name="start">Start point of the line segment.</param>
-    /// <param name="end">End point of the line segment.</param>
-    /// <param name="rect">The rectangle.</param>
-    /// <returns><see langword="true"/> if the line segment intersects the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a finite line segment intersects a rectangle.</summary>
     public static bool LineRect(Vect2 start, Vect2 end, Rect2 rect)
-    {
-        if (PointRect(start, rect) || PointRect(end, rect))
-            return true;
-
-        return LineLine(start, end, rect.TopLeft, rect.TopRight) ||
-               LineLine(start, end, rect.TopRight, rect.BottomRight) ||
-               LineLine(start, end, rect.BottomRight, rect.BottomLeft) ||
-               LineLine(start, end, rect.BottomLeft, rect.TopLeft);
-    }
+        => LineRect(start, end, rect, out _, out _);
 
     /// <summary>
-    /// Checks if a line segment intersects a rectangle and returns the closest hit point and normal.
+    /// Checks whether a finite line segment intersects a rectangle and reports the
+    /// closest hit to <paramref name="start"/>.
     /// </summary>
-    /// <param name="start">Start point of the line segment.</param>
-    /// <param name="end">End point of the line segment.</param>
-    /// <param name="rect">The rectangle.</param>
-    /// <param name="hitPoint">The point where the line hits the rectangle.</param>
-    /// <param name="hitNormal">The normal at the hit point.</param>
-    /// <returns><see langword="true"/> if the line segment intersects the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <param name="start">Segment start.</param>
+    /// <param name="end">Segment end.</param>
+    /// <param name="rect">Rectangle to test.</param>
+    /// <param name="hitPoint">Closest hit point, or zero when no hit occurs.</param>
+    /// <param name="hitNormal">Outward rectangle normal at the reported hit.</param>
+    /// <returns><see langword="true"/> when the segment intersects the rectangle.</returns>
     public static bool LineRect(Vect2 start, Vect2 end, Rect2 rect, out Vect2 hitPoint, out Vect2 hitNormal)
     {
         hitPoint = Vect2.Zero;
@@ -337,161 +102,42 @@ public static class CollisionHelper
             return true;
         }
 
-        if (PointRect(end, rect))
-        {
-            hitPoint = end;
-            hitNormal = GetNormalFromInside(end, rect);
-            return true;
-        }
-
-        float closestDistance = float.MaxValue;
+        float closestT = float.PositiveInfinity;
         bool hit = false;
 
-        if (LineLine(start, end, rect.TopLeft, rect.TopRight))
-        {
-            if (TryGetLineIntersection(start, end, rect.TopLeft, rect.TopRight, out Vect2 point))
-            {
-                float dist = Vect2.DistanceSquared(start, point);
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    hitPoint = point;
-                    hitNormal = new Vect2(0, -1);
-                    hit = true;
-                }
-            }
-        }
-
-        if (LineLine(start, end, rect.TopRight, rect.BottomRight))
-        {
-            if (TryGetLineIntersection(start, end, rect.TopRight, rect.BottomRight, out Vect2 point))
-            {
-                float dist = Vect2.DistanceSquared(start, point);
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    hitPoint = point;
-                    hitNormal = new Vect2(1, 0);
-                    hit = true;
-                }
-            }
-        }
-
-        if (LineLine(start, end, rect.BottomRight, rect.BottomLeft))
-        {
-            if (TryGetLineIntersection(start, end, rect.BottomRight, rect.BottomLeft, out Vect2 point))
-            {
-                float dist = Vect2.DistanceSquared(start, point);
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    hitPoint = point;
-                    hitNormal = new Vect2(0, 1);
-                    hit = true;
-                }
-            }
-        }
-
-        if (LineLine(start, end, rect.BottomLeft, rect.TopLeft))
-        {
-            if (TryGetLineIntersection(start, end, rect.BottomLeft, rect.TopLeft, out Vect2 point))
-            {
-                float dist = Vect2.DistanceSquared(start, point);
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    hitPoint = point;
-                    hitNormal = new Vect2(-1, 0);
-                    hit = true;
-                }
-            }
-        }
+        TestRectEdge(start, end, rect.TopLeft, rect.TopRight, new Vect2(0f, -1f), ref hit, ref closestT, ref hitPoint, ref hitNormal);
+        TestRectEdge(start, end, rect.TopRight, rect.BottomRight, new Vect2(1f, 0f), ref hit, ref closestT, ref hitPoint, ref hitNormal);
+        TestRectEdge(start, end, rect.BottomRight, rect.BottomLeft, new Vect2(0f, 1f), ref hit, ref closestT, ref hitPoint, ref hitNormal);
+        TestRectEdge(start, end, rect.BottomLeft, rect.TopLeft, new Vect2(-1f, 0f), ref hit, ref closestT, ref hitPoint, ref hitNormal);
 
         return hit;
     }
 
-    private static bool TryGetLineIntersection(Vect2 a1, Vect2 a2, Vect2 b1, Vect2 b2, out Vect2 intersection)
-    {
-        intersection = Vect2.Zero;
-
-        float x1 = a1.X, y1 = a1.Y;
-        float x2 = a2.X, y2 = a2.Y;
-        float x3 = b1.X, y3 = b1.Y;
-        float x4 = b2.X, y4 = b2.Y;
-
-        float denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-
-        if (MathF.Abs(denominator) < MathHelper.Epsilon)
-            return false;
-
-        float t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
-        float u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator;
-
-        if (t >= 0 && t <= 1 && u >= 0 && u <= 1)
-        {
-            intersection = new Vect2(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
-            return true;
-        }
-
-        return false;
-    }
-
-    private static Vect2 GetNormalFromInside(Vect2 point, Rect2 rect)
-    {
-        float distToLeft = point.X - rect.Left;
-        float distToRight = rect.Right - point.X;
-        float distToTop = point.Y - rect.Top;
-        float distToBottom = rect.Bottom - point.Y;
-
-        float minDist = MathF.Min(MathF.Min(distToLeft, distToRight), MathF.Min(distToTop, distToBottom));
-
-        if (minDist == distToLeft) return new Vect2(-1, 0);
-        if (minDist == distToRight) return new Vect2(1, 0);
-        if (minDist == distToTop) return new Vect2(0, -1);
-        return new Vect2(0, 1);
-    }
-
-    /// <summary>
-    /// Checks if a line segment intersects a circle.
-    /// </summary>
-    /// <param name="start">Start point of the line segment.</param>
-    /// <param name="end">End point of the line segment.</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns><see langword="true"/> if the line segment intersects the circle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a finite line segment intersects a circle.</summary>
     public static bool LineCircle(Vect2 start, Vect2 end, Vect2 center, float radius)
     {
         Vect2 d = end - start;
-        Vect2 f = start - center;
-
         float a = Vect2.Dot(d, d);
-        float b = 2 * Vect2.Dot(f, d);
+
+        if (a <= EpsilonSquared)
+            return PointCircle(start, center, radius);
+
+        Vect2 f = start - center;
+        float b = 2f * Vect2.Dot(f, d);
         float c = Vect2.Dot(f, f) - radius * radius;
+        float discriminant = b * b - 4f * a * c;
 
-        float discriminant = b * b - 4 * a * c;
-
-        if (discriminant < 0)
+        if (discriminant < 0f)
             return false;
 
-        discriminant = MathF.Sqrt(discriminant);
-
-        float t1 = (-b - discriminant) / (2 * a);
-        float t2 = (-b + discriminant) / (2 * a);
-
-        return (t1 >= 0 && t1 <= 1) || (t2 >= 0 && t2 <= 1);
+        float root = MathF.Sqrt(MathF.Max(0f, discriminant));
+        float denominator = 2f * a;
+        float t1 = (-b - root) / denominator;
+        float t2 = (-b + root) / denominator;
+        return t1 is >= 0f and <= 1f || t2 is >= 0f and <= 1f;
     }
-    #endregion
 
-
-
-    #region Distance Between Shapes
-    /// <summary>
-    /// Calculates the minimum distance between two rectangles.
-    /// Returns 0 if the rectangles overlap.
-    /// </summary>
-    /// <param name="a">First rectangle.</param>
-    /// <param name="b">Second rectangle.</param>
-    /// <returns>The minimum distance between the rectangles, or 0 if they overlap.</returns>
+    /// <summary>Calculates the minimum distance between two rectangles.</summary>
     public static float DistanceRectRect(Rect2 a, Rect2 b)
     {
         if (RectRect(a, b))
@@ -502,105 +148,97 @@ public static class CollisionHelper
         return MathF.Sqrt(dx * dx + dy * dy);
     }
 
-    /// <summary>
-    /// Calculates the minimum distance between two circles.
-    /// Returns 0 if the circles overlap.
-    /// </summary>
-    /// <param name="centerA">Center of the first circle.</param>
-    /// <param name="radiusA">Radius of the first circle.</param>
-    /// <param name="centerB">Center of the second circle.</param>
-    /// <param name="radiusB">Radius of the second circle.</param>
-    /// <returns>The minimum distance between the circles, or 0 if they overlap.</returns>
+    /// <summary>Calculates the minimum distance between two circles.</summary>
     public static float DistanceCircleCircle(Vect2 centerA, float radiusA, Vect2 centerB, float radiusB)
-    {
-        float distance = Vect2.Distance(centerA, centerB);
-        float radiiSum = radiusA + radiusB;
-        return MathF.Max(0f, distance - radiiSum);
-    }
+        => MathF.Max(0f, Vect2.Distance(centerA, centerB) - (radiusA + radiusB));
 
-    /// <summary>
-    /// Calculates the minimum distance between a rectangle and a circle.
-    /// Returns 0 if they overlap.
-    /// </summary>
-    /// <param name="rect">The rectangle.</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns>The minimum distance between the rectangle and circle, or 0 if they overlap.</returns>
+    /// <summary>Calculates the minimum distance between a rectangle and circle.</summary>
     public static float DistanceRectCircle(Rect2 rect, Vect2 center, float radius)
     {
         Vect2 closest = ClosestPointRect(center, rect);
-        float distance = Vect2.Distance(center, closest);
-        return MathF.Max(0f, distance - radius);
+        return MathF.Max(0f, Vect2.Distance(center, closest) - radius);
     }
-    #endregion
 
-
-
-    #region Raycast
     /// <summary>
-    /// Casts a ray and returns the first hit against a rectangle.
+    /// Casts a ray against a rectangle.
     /// </summary>
-    /// <param name="origin">The origin of the ray.</param>
-    /// <param name="direction">The direction of the ray (must be normalized).</param>
-    /// <param name="rect">The rectangle to test against.</param>
-    /// <param name="hitPoint">The point where the ray hits the rectangle.</param>
-    /// <param name="distance">The distance from the origin to the hit point.</param>
-    /// <returns><see langword="true"/> if the ray hits the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <param name="origin">Ray origin.</param>
+    /// <param name="direction">Ray direction. Supply a normalized vector for distance in world units.</param>
+    /// <param name="rect">Rectangle to test.</param>
+    /// <param name="hitPoint">First hit point.</param>
+    /// <param name="distance">Ray parameter to the first hit.</param>
+    /// <returns><see langword="true"/> when the ray hits the rectangle.</returns>
     public static bool RaycastRect(Vect2 origin, Vect2 direction, Rect2 rect, out Vect2 hitPoint, out float distance)
     {
         hitPoint = Vect2.Zero;
         distance = float.MaxValue;
 
-        // Avoid division by zero
-        float dirX = MathF.Abs(direction.X) < MathHelper.Epsilon ? MathHelper.Epsilon : direction.X;
-        float dirY = MathF.Abs(direction.Y) < MathHelper.Epsilon ? MathHelper.Epsilon : direction.Y;
+        if (direction.LengthSquared() <= EpsilonSquared)
+        {
+            if (!PointRect(origin, rect))
+                return false;
 
-        Vect2 invDir = new(1f / dirX, 1f / dirY);
+            hitPoint = origin;
+            distance = 0f;
+            return true;
+        }
 
-        float t1 = (rect.Left - origin.X) * invDir.X;
-        float t2 = (rect.Right - origin.X) * invDir.X;
-        float t3 = (rect.Top - origin.Y) * invDir.Y;
-        float t4 = (rect.Bottom - origin.Y) * invDir.Y;
+        float tMin = float.NegativeInfinity;
+        float tMax = float.PositiveInfinity;
 
-        float tMin = MathF.Max(MathF.Min(t1, t2), MathF.Min(t3, t4));
-        float tMax = MathF.Min(MathF.Max(t1, t2), MathF.Max(t3, t4));
-
-        if (tMax < 0 || tMin > tMax)
+        if (!UpdateRaySlab(origin.X, direction.X, rect.Left, rect.Right, ref tMin, ref tMax) ||
+            !UpdateRaySlab(origin.Y, direction.Y, rect.Top, rect.Bottom, ref tMin, ref tMax) ||
+            tMax < 0f)
+        {
             return false;
+        }
 
-        distance = tMin > 0 ? tMin : 0;
+        distance = MathF.Max(0f, tMin);
         hitPoint = origin + direction * distance;
         return true;
     }
 
     /// <summary>
-    /// Casts a ray and returns the first hit against a circle.
+    /// Casts a ray against a circle.
     /// </summary>
-    /// <param name="origin">The origin of the ray.</param>
-    /// <param name="direction">The direction of the ray (must be normalized).</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <param name="hitPoint">The point where the ray hits the circle.</param>
-    /// <param name="distance">The distance from the origin to the hit point.</param>
-    /// <returns><see langword="true"/> if the ray hits the circle; otherwise, <see langword="false"/>.</returns>
+    /// <param name="origin">Ray origin.</param>
+    /// <param name="direction">Ray direction. Supply a normalized vector for distance in world units.</param>
+    /// <param name="center">Circle center.</param>
+    /// <param name="radius">Circle radius.</param>
+    /// <param name="hitPoint">First hit point.</param>
+    /// <param name="distance">Ray parameter to the first hit.</param>
+    /// <returns><see langword="true"/> when the ray hits the circle.</returns>
     public static bool RaycastCircle(Vect2 origin, Vect2 direction, Vect2 center, float radius, out Vect2 hitPoint, out float distance)
     {
         hitPoint = Vect2.Zero;
         distance = float.MaxValue;
 
-        Vect2 oc = origin - center;
+        if (PointCircle(origin, center, radius))
+        {
+            hitPoint = origin;
+            distance = 0f;
+            return true;
+        }
+
         float a = Vect2.Dot(direction, direction);
-        float b = 2f * Vect2.Dot(oc, direction);
-        float c = Vect2.Dot(oc, oc) - radius * radius;
-
-        float discriminant = b * b - 4f * a * c;
-
-        if (discriminant < 0)
+        if (a <= EpsilonSquared)
             return false;
 
-        float t = (-b - MathF.Sqrt(discriminant)) / (2f * a);
+        Vect2 oc = origin - center;
+        float b = 2f * Vect2.Dot(oc, direction);
+        float c = Vect2.Dot(oc, oc) - radius * radius;
+        float discriminant = b * b - 4f * a * c;
 
-        if (t < 0)
+        if (discriminant < 0f)
+            return false;
+
+        float root = MathF.Sqrt(MathF.Max(0f, discriminant));
+        float denominator = 2f * a;
+        float tNear = (-b - root) / denominator;
+        float tFar = (-b + root) / denominator;
+        float t = tNear >= 0f ? tNear : tFar;
+
+        if (t < 0f)
             return false;
 
         distance = t;
@@ -608,22 +246,16 @@ public static class CollisionHelper
         return true;
     }
 
-    /// <summary>
-    /// Casts a ray and returns the first hit against any collision shape.
-    /// </summary>
-    /// <param name="origin">The origin of the ray.</param>
-    /// <param name="direction">The direction of the ray (must be normalized).</param>
-    /// <param name="rects">The rectangles to test against.</param>
-    /// <param name="circles">The circles to test against (center, radius tuples).</param>
-    /// <param name="hitPoint">The point where the ray hits the shape.</param>
-    /// <param name="hitNormal">The normal at the hit point.</param>
-    /// <param name="distance">The distance from the origin to the hit point.</param>
-    /// <param name="hitObject">The object that was hit (either a <see cref="Rect2"/> or a <see cref="Vect2"/> center).</param>
-    /// <returns><see langword="true"/> if the ray hits any shape; otherwise, <see langword="false"/>.</returns>
-    public static bool RaycastAny(Vect2 origin, Vect2 direction,
+    /// <summary>Returns the closest ray hit across rectangles and circles.</summary>
+    public static bool RaycastAny(
+        Vect2 origin,
+        Vect2 direction,
         IEnumerable<Rect2> rects,
         IEnumerable<(Vect2 center, float radius)> circles,
-        out Vect2 hitPoint, out Vect2 hitNormal, out float distance, out object hitObject)
+        out Vect2 hitPoint,
+        out Vect2 hitNormal,
+        out float distance,
+        out object hitObject)
     {
         hitPoint = Vect2.Zero;
         hitNormal = Vect2.Zero;
@@ -631,63 +263,51 @@ public static class CollisionHelper
         hitObject = null;
         bool hit = false;
 
-        foreach (var rect in rects)
+        foreach (Rect2 rect in rects)
         {
-            if (RaycastRect(origin, direction, rect, out Vect2 point, out float dist))
-            {
-                if (dist < distance)
-                {
-                    distance = dist;
-                    hitPoint = point;
-                    hitObject = rect;
-                    hit = true;
-                    Vect2 center = rect.Center;
-                    hitNormal = (center - point).Normalized();
-                }
-            }
+            if (!RaycastRect(origin, direction, rect, out Vect2 point, out float dist) || dist >= distance)
+                continue;
+
+            distance = dist;
+            hitPoint = point;
+            hitObject = rect;
+            hitNormal = dist <= MathHelper.Epsilon && PointRect(origin, rect)
+                ? GetNormalFromInside(origin, rect)
+                : GetRectSurfaceNormal(point, rect);
+            hit = true;
         }
 
-        foreach (var (center, radius) in circles)
+        foreach ((Vect2 center, float radius) in circles)
         {
-            if (RaycastCircle(origin, direction, center, radius, out Vect2 point, out float dist))
-            {
-                if (dist < distance)
-                {
-                    distance = dist;
-                    hitPoint = point;
-                    hitObject = center;
-                    hit = true;
-                    hitNormal = (point - center).Normalized();
-                }
-            }
+            if (!RaycastCircle(origin, direction, center, radius, out Vect2 point, out float dist) || dist >= distance)
+                continue;
+
+            distance = dist;
+            hitPoint = point;
+            hitObject = center;
+            Vect2 normal = point - center;
+            hitNormal = normal.LengthSquared() <= EpsilonSquared
+                ? new Vect2(0f, -1f)
+                : normal.Normalized();
+            hit = true;
         }
 
         return hit;
     }
-    #endregion
 
-
-
-    #region Swept Collision
-    /// <summary>
-    /// Performs swept collision detection between a moving rectangle and a static rectangle.
-    /// Prevents tunneling for fast-moving objects.
-    /// </summary>
-    /// <param name="moving">The moving rectangle at its starting position.</param>
-    /// <param name="velocity">The movement vector for this frame.</param>
-    /// <param name="obstacle">The static rectangle to test against.</param>
-    /// <param name="timeOfImpact">The normalized time (0-1) along the velocity vector when the collision occurs.</param>
-    /// <param name="hitPoint">The point of impact.</param>
-    /// <param name="hitNormal">The normal at the point of impact.</param>
-    /// <returns><see langword="true"/> if a collision will occur during the movement; otherwise, <see langword="false"/>.</returns>
-    public static bool SweptRectRect(Rect2 moving, Vect2 velocity, Rect2 obstacle,
-        out float timeOfImpact, out Vect2 hitPoint, out Vect2 hitNormal)
+    /// <summary>Performs swept collision detection for a moving rectangle against a static rectangle.</summary>
+    public static bool SweptRectRect(
+        Rect2 moving,
+        Vect2 velocity,
+        Rect2 obstacle,
+        out float timeOfImpact,
+        out Vect2 hitPoint,
+        out Vect2 hitNormal)
     {
         timeOfImpact = 1f;
         hitPoint = Vect2.Zero;
         hitNormal = Vect2.Zero;
 
-        // Check if already overlapping
         if (RectRect(moving, obstacle))
         {
             timeOfImpact = 0f;
@@ -696,49 +316,39 @@ public static class CollisionHelper
             return true;
         }
 
-        // Expanded obstacle (Minkowski sum)
+        float velocityLength = velocity.Length();
+        if (velocityLength <= MathHelper.Epsilon)
+            return false;
+
         Rect2 expandedObstacle = obstacle.Inflate(moving.Width / 2f, moving.Height / 2f);
+        Vect2 direction = velocity / velocityLength;
 
-        Vect2 movingCenter = moving.Center;
-
-        // Raycast from moving center against expanded obstacle
-        if (RaycastRect(movingCenter, velocity.Normalized(), expandedObstacle, out Vect2 point, out float distance))
+        if (!RaycastRect(moving.Center, direction, expandedObstacle, out Vect2 point, out float distance) ||
+            distance > velocityLength)
         {
-            float velocityLength = velocity.Length();
-
-            if (distance <= velocityLength)
-            {
-                timeOfImpact = distance / velocityLength;
-                hitPoint = point;
-                hitNormal = GetSweptNormal(point, expandedObstacle);
-
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        timeOfImpact = distance / velocityLength;
+        hitPoint = point;
+        hitNormal = GetRectSurfaceNormal(point, expandedObstacle);
+        return true;
     }
 
-    /// <summary>
-    /// Performs swept collision detection between a moving circle and a static rectangle.
-    /// Prevents tunneling for fast-moving objects.
-    /// </summary>
-    /// <param name="center">The center of the moving circle.</param>
-    /// <param name="radius">The radius of the moving circle.</param>
-    /// <param name="velocity">The movement vector for this frame.</param>
-    /// <param name="obstacle">The static rectangle to test against.</param>
-    /// <param name="timeOfImpact">The normalized time (0-1) along the velocity vector when the collision occurs.</param>
-    /// <param name="hitPoint">The point of impact.</param>
-    /// <param name="hitNormal">The normal at the point of impact.</param>
-    /// <returns><see langword="true"/> if a collision will occur during the movement; otherwise, <see langword="false"/>.</returns>
-    public static bool SweptCircleRect(Vect2 center, float radius, Vect2 velocity, Rect2 obstacle,
-        out float timeOfImpact, out Vect2 hitPoint, out Vect2 hitNormal)
+    /// <summary>Performs swept collision detection for a moving circle against a static rectangle.</summary>
+    public static bool SweptCircleRect(
+        Vect2 center,
+        float radius,
+        Vect2 velocity,
+        Rect2 obstacle,
+        out float timeOfImpact,
+        out Vect2 hitPoint,
+        out Vect2 hitNormal)
     {
         timeOfImpact = 1f;
         hitPoint = Vect2.Zero;
         hitNormal = Vect2.Zero;
 
-        // Check if already overlapping
         if (RectCircle(obstacle, center, radius))
         {
             timeOfImpact = 0f;
@@ -747,101 +357,68 @@ public static class CollisionHelper
             return true;
         }
 
-        // Expand obstacle by circle radius
+        float velocityLength = velocity.Length();
+        if (velocityLength <= MathHelper.Epsilon)
+            return false;
+
         Rect2 expandedObstacle = obstacle.Inflate(radius);
+        Vect2 direction = velocity / velocityLength;
 
-        // Raycast from circle center against expanded obstacle
-        if (RaycastRect(center, velocity.Normalized(), expandedObstacle, out Vect2 point, out float distance))
+        if (!RaycastRect(center, direction, expandedObstacle, out Vect2 point, out float distance) ||
+            distance > velocityLength)
         {
-            float velocityLength = velocity.Length();
-
-            if (distance <= velocityLength)
-            {
-                timeOfImpact = distance / velocityLength;
-                hitPoint = point;
-                hitNormal = GetSweptNormal(point, expandedObstacle);
-
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        timeOfImpact = distance / velocityLength;
+        hitPoint = point;
+        hitNormal = GetRectSurfaceNormal(point, expandedObstacle);
+        return true;
     }
 
-    private static Vect2 GetSweptNormal(Vect2 point, Rect2 expandedObstacle)
-    {
-        if (MathF.Abs(point.X - expandedObstacle.Left) < MathHelper.Epsilon)
-            return new Vect2(-1, 0);
-        else if (MathF.Abs(point.X - expandedObstacle.Right) < MathHelper.Epsilon)
-            return new Vect2(1, 0);
-        else if (MathF.Abs(point.Y - expandedObstacle.Top) < MathHelper.Epsilon)
-            return new Vect2(0, -1);
-        else if (MathF.Abs(point.Y - expandedObstacle.Bottom) < MathHelper.Epsilon)
-            return new Vect2(0, 1);
-
-        return Vect2.Zero;
-    }
-
-    /// <summary>
-    /// Performs swept collision detection between a moving circle and a static circle.
-    /// Prevents tunneling for fast-moving objects.
-    /// </summary>
-    /// <param name="centerA">The center of the moving circle.</param>
-    /// <param name="radiusA">The radius of the moving circle.</param>
-    /// <param name="velocity">The movement vector for this frame.</param>
-    /// <param name="centerB">The center of the static circle.</param>
-    /// <param name="radiusB">The radius of the static circle.</param>
-    /// <param name="timeOfImpact">The normalized time (0-1) along the velocity vector when the collision occurs.</param>
-    /// <param name="hitPoint">The point of impact.</param>
-    /// <param name="hitNormal">The normal at the point of impact.</param>
-    /// <returns><see langword="true"/> if a collision will occur during the movement; otherwise, <see langword="false"/>.</returns>
-    public static bool SweptCircleCircle(Vect2 centerA, float radiusA, Vect2 velocity,
-        Vect2 centerB, float radiusB,
-        out float timeOfImpact, out Vect2 hitPoint, out Vect2 hitNormal)
+    /// <summary>Performs swept collision detection for a moving circle against a static circle.</summary>
+    public static bool SweptCircleCircle(
+        Vect2 centerA,
+        float radiusA,
+        Vect2 velocity,
+        Vect2 centerB,
+        float radiusB,
+        out float timeOfImpact,
+        out Vect2 hitPoint,
+        out Vect2 hitNormal)
     {
         timeOfImpact = 1f;
         hitPoint = Vect2.Zero;
         hitNormal = Vect2.Zero;
 
-        // Check if already overlapping
         if (CircleCircle(centerA, radiusA, centerB, radiusB))
         {
             timeOfImpact = 0f;
-            hitNormal = (centerA - centerB).Normalized();
+            hitNormal = GetCollisionNormal(centerA, centerB);
             hitPoint = centerA;
             return true;
         }
 
+        float velocityLength = velocity.Length();
+        if (velocityLength <= MathHelper.Epsilon)
+            return false;
+
+        Vect2 direction = velocity / velocityLength;
         float combinedRadius = radiusA + radiusB;
 
-        // Raycast from centerA against centerB with combined radius
-        if (RaycastCircle(centerA, velocity.Normalized(), centerB, combinedRadius, out Vect2 point, out float distance))
+        if (!RaycastCircle(centerA, direction, centerB, combinedRadius, out Vect2 point, out float distance) ||
+            distance > velocityLength)
         {
-            float velocityLength = velocity.Length();
-
-            if (distance <= velocityLength)
-            {
-                timeOfImpact = distance / velocityLength;
-                hitPoint = point;
-                hitNormal = (point - centerB).Normalized();
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        timeOfImpact = distance / velocityLength;
+        hitPoint = point;
+        hitNormal = (point - centerB).Normalized();
+        return true;
     }
-    #endregion
 
-
-
-    #region Collision Normals
-    /// <summary>
-    /// Gets the collision normal between two overlapping rectangles.
-    /// The normal points from the obstacle to the moving rectangle.
-    /// </summary>
-    /// <param name="moving">The moving rectangle.</param>
-    /// <param name="obstacle">The obstacle rectangle.</param>
-    /// <returns>The collision normal, or <see cref="Vect2.Zero"/> if no collision.</returns>
+    /// <summary>Gets the minimum-axis collision normal from an obstacle rectangle toward a moving rectangle.</summary>
     public static Vect2 GetCollisionNormal(Rect2 moving, Rect2 obstacle)
     {
         if (!RectRect(moving, obstacle))
@@ -851,141 +428,61 @@ public static class CollisionHelper
         float overlapY = MathF.Min(moving.Bottom - obstacle.Top, obstacle.Bottom - moving.Top);
 
         if (overlapX < overlapY)
-        {
-            return moving.Center.X < obstacle.Center.X ? new Vect2(-1, 0) : new Vect2(1, 0);
-        }
-        else
-        {
-            return moving.Center.Y < obstacle.Center.Y ? new Vect2(0, -1) : new Vect2(0, 1);
-        }
+            return moving.Center.X < obstacle.Center.X ? new Vect2(-1f, 0f) : new Vect2(1f, 0f);
+
+        return moving.Center.Y < obstacle.Center.Y ? new Vect2(0f, -1f) : new Vect2(0f, 1f);
     }
 
-    /// <summary>
-    /// Gets the collision normal between a circle and a rectangle.
-    /// The normal points from the rectangle to the circle.
-    /// </summary>
-    /// <param name="circleCenter">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <param name="rect">The rectangle.</param>
-    /// <returns>The collision normal, or <see cref="Vect2.Zero"/> if no collision.</returns>
+    /// <summary>Gets a collision normal from a rectangle toward an overlapping circle.</summary>
     public static Vect2 GetCollisionNormal(Vect2 circleCenter, float radius, Rect2 rect)
     {
         if (!RectCircle(rect, circleCenter, radius))
             return Vect2.Zero;
 
+        if (PointRect(circleCenter, rect))
+            return GetNormalFromInside(circleCenter, rect);
+
         Vect2 closest = ClosestPointRect(circleCenter, rect);
         Vect2 direction = circleCenter - closest;
-
-        if (direction.LengthSquared() == 0)
-            return new Vect2(0, -1); // Circle center is inside rectangle, push up
-
-        return direction.Normalized();
+        return direction.LengthSquared() <= EpsilonSquared ? new Vect2(0f, -1f) : direction.Normalized();
     }
 
-    /// <summary>
-    /// Gets the collision normal between two overlapping circles.
-    /// The normal points from circle B to circle A.
-    /// </summary>
-    /// <param name="centerA">The center of the first circle.</param>
-    /// <param name="centerB">The center of the second circle.</param>
-    /// <returns>The collision normal, or <see cref="Vect2.Zero"/> if no collision.</returns>
+    /// <summary>Gets a normal pointing from center B toward center A.</summary>
     public static Vect2 GetCollisionNormal(Vect2 centerA, Vect2 centerB)
     {
-        if (centerA == centerB)
-            return new Vect2(0, -1);
-
-        return (centerA - centerB).Normalized();
+        Vect2 direction = centerA - centerB;
+        return direction.LengthSquared() <= EpsilonSquared ? new Vect2(0f, -1f) : direction.Normalized();
     }
-    #endregion
 
-
-
-    #region Reflection
-    /// <summary>
-    /// Reflects a velocity vector off a surface normal.
-    /// </summary>
-    /// <param name="velocity">The incoming velocity vector.</param>
-    /// <param name="normal">The surface normal (must be normalized).</param>
-    /// <param name="bounciness">The bounciness factor (0 = no bounce, 1 = perfect bounce).</param>
-    /// <returns>The reflected velocity vector.</returns>
+    /// <summary>Reflects a velocity from a normalized surface normal and scales the result by bounciness.</summary>
     public static Vect2 Reflect(Vect2 velocity, Vect2 normal, float bounciness = 1f)
     {
         float dot = Vect2.Dot(velocity, normal);
-        Vect2 reflection = velocity - 2f * dot * normal;
-        return reflection * bounciness;
+        return (velocity - 2f * dot * normal) * bounciness;
     }
-    #endregion
 
-
-
-    #region Contains
-    /// <summary>
-    /// Checks if one rectangle fully contains another rectangle.
-    /// </summary>
-    /// <param name="outer">The outer rectangle.</param>
-    /// <param name="inner">The inner rectangle to test.</param>
-    /// <returns><see langword="true"/> if <paramref name="outer"/> fully contains <paramref name="inner"/>; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether one rectangle fully contains another.</summary>
     public static bool RectContainsRect(Rect2 outer, Rect2 inner)
         => inner.Left >= outer.Left && inner.Right <= outer.Right &&
            inner.Top >= outer.Top && inner.Bottom <= outer.Bottom;
 
-    /// <summary>
-    /// Checks if a rectangle fully contains a circle.
-    /// </summary>
-    /// <param name="rect">The rectangle.</param>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns><see langword="true"/> if the rectangle fully contains the circle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a rectangle fully contains a circle.</summary>
     public static bool RectContainsCircle(Rect2 rect, Vect2 center, float radius)
-    {
-        return center.X - radius >= rect.Left &&
-               center.X + radius <= rect.Right &&
-               center.Y - radius >= rect.Top &&
-               center.Y + radius <= rect.Bottom;
-    }
+        => center.X - radius >= rect.Left && center.X + radius <= rect.Right &&
+           center.Y - radius >= rect.Top && center.Y + radius <= rect.Bottom;
 
-    /// <summary>
-    /// Checks if a circle fully contains another circle.
-    /// </summary>
-    /// <param name="outerCenter">The center of the outer circle.</param>
-    /// <param name="outerRadius">The radius of the outer circle.</param>
-    /// <param name="innerCenter">The center of the inner circle.</param>
-    /// <param name="innerRadius">The radius of the inner circle.</param>
-    /// <returns><see langword="true"/> if the outer circle fully contains the inner circle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether one circle fully contains another.</summary>
     public static bool CircleContainsCircle(Vect2 outerCenter, float outerRadius, Vect2 innerCenter, float innerRadius)
-    {
-        float dist = Vect2.Distance(outerCenter, innerCenter);
-        return dist + innerRadius <= outerRadius;
-    }
+        => Vect2.Distance(outerCenter, innerCenter) + innerRadius <= outerRadius;
 
-    /// <summary>
-    /// Checks if a circle fully contains a rectangle.
-    /// </summary>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <param name="rect">The rectangle to test.</param>
-    /// <returns><see langword="true"/> if the circle fully contains the rectangle; otherwise, <see langword="false"/>.</returns>
+    /// <summary>Checks whether a circle fully contains a rectangle.</summary>
     public static bool CircleContainsRect(Vect2 center, float radius, Rect2 rect)
-    {
-        return PointCircle(rect.TopLeft, center, radius) &&
-               PointCircle(rect.TopRight, center, radius) &&
-               PointCircle(rect.BottomRight, center, radius) &&
-               PointCircle(rect.BottomLeft, center, radius);
-    }
-    #endregion
+        => PointCircle(rect.TopLeft, center, radius) &&
+           PointCircle(rect.TopRight, center, radius) &&
+           PointCircle(rect.BottomRight, center, radius) &&
+           PointCircle(rect.BottomLeft, center, radius);
 
-
-
-    #region Pushback / Resolution
-    /// <summary>
-    /// Calculates the push vector to move a rectangle out of another rectangle.
-    /// </summary>
-    /// <param name="moving">The rectangle that is moving (and overlapping).</param>
-    /// <param name="obstacle">The obstacle rectangle.</param>
-    /// <returns>A vector representing the minimum translation needed to resolve the overlap.</returns>
-    /// <remarks>
-    /// The push vector will push the moving rectangle out of the obstacle on the axis with the smallest overlap.
-    /// </remarks>
+    /// <summary>Returns the minimum translation that moves an overlapping rectangle out of an obstacle rectangle.</summary>
     public static Vect2 PushRectRect(Rect2 moving, Rect2 obstacle)
     {
         if (!RectRect(moving, obstacle))
@@ -996,48 +493,49 @@ public static class CollisionHelper
 
         if (overlapX < overlapY)
         {
-            float sign = (moving.Center.X < obstacle.Center.X) ? -1f : 1f;
-            return new Vect2(sign * overlapX, 0);
+            float sign = moving.Center.X < obstacle.Center.X ? -1f : 1f;
+            return new Vect2(sign * overlapX, 0f);
         }
-        else
-        {
-            float sign = (moving.Center.Y < obstacle.Center.Y) ? -1f : 1f;
-            return new Vect2(0, sign * overlapY);
-        }
+
+        float verticalSign = moving.Center.Y < obstacle.Center.Y ? -1f : 1f;
+        return new Vect2(0f, verticalSign * overlapY);
     }
 
-    /// <summary>
-    /// Calculates the push vector to move a circle out of a rectangle.
-    /// </summary>
-    /// <param name="circleCenter">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <param name="rect">The obstacle rectangle.</param>
-    /// <returns>A vector representing the minimum translation needed to resolve the overlap.</returns>
+    /// <summary>Returns the minimum translation that moves an overlapping circle out of a rectangle.</summary>
     public static Vect2 PushCircleRect(Vect2 circleCenter, float radius, Rect2 rect)
     {
         if (!RectCircle(rect, circleCenter, radius))
             return Vect2.Zero;
 
+        if (PointRect(circleCenter, rect))
+        {
+            float left = rect.Left - radius - circleCenter.X;
+            float right = rect.Right + radius - circleCenter.X;
+            float top = rect.Top - radius - circleCenter.Y;
+            float bottom = rect.Bottom + radius - circleCenter.Y;
+
+            float best = left;
+            if (MathF.Abs(right) < MathF.Abs(best)) best = right;
+            if (MathF.Abs(top) < MathF.Abs(best)) best = top;
+            if (MathF.Abs(bottom) < MathF.Abs(best)) best = bottom;
+
+            if (best == left || best == right)
+                return new Vect2(best, 0f);
+
+            return new Vect2(0f, best);
+        }
+
         Vect2 closest = ClosestPointRect(circleCenter, rect);
         Vect2 direction = circleCenter - closest;
+        float distance = direction.Length();
 
-        if (direction.LengthSquared() == 0)
-            return new Vect2(0, -1);
+        if (distance <= MathHelper.Epsilon)
+            return Vect2.Zero;
 
-        float distance = Vect2.Distance(circleCenter, closest);
-        float overlap = radius - distance;
-
-        return direction.Normalized() * overlap;
+        return direction / distance * (radius - distance);
     }
 
-    /// <summary>
-    /// Calculates the push vector to move a circle out of another circle.
-    /// </summary>
-    /// <param name="centerA">The center of the first circle.</param>
-    /// <param name="radiusA">The radius of the first circle.</param>
-    /// <param name="centerB">The center of the second circle.</param>
-    /// <param name="radiusB">The radius of the second circle.</param>
-    /// <returns>A vector representing the minimum translation needed to resolve the overlap.</returns>
+    /// <summary>Returns the minimum translation that moves circle A out of circle B.</summary>
     public static Vect2 PushCircleCircle(Vect2 centerA, float radiusA, Vect2 centerB, float radiusB)
     {
         if (!CircleCircle(centerA, radiusA, centerB, radiusB))
@@ -1045,141 +543,263 @@ public static class CollisionHelper
 
         Vect2 direction = centerA - centerB;
         float distance = direction.Length();
+        float combinedRadius = radiusA + radiusB;
 
-        if (distance == 0)
-            return new Vect2(0, radiusA + radiusB);
+        if (distance <= MathHelper.Epsilon)
+            return new Vect2(0f, combinedRadius);
 
-        float overlap = (radiusA + radiusB) - distance;
-        return direction.Normalized() * overlap;
+        return direction / distance * (combinedRadius - distance);
     }
-    #endregion
 
-
-
-    #region Move & Slide
-    /// <summary>
-    /// Moves a rectangle with collision resolution against a list of obstacles.
-    /// Uses axis separation (X first, then Y) for proper wall sliding.
-    /// </summary>
-    /// <param name="rect">The rectangle to move.</param>
-    /// <param name="velocity">The desired movement velocity.</param>
-    /// <param name="obstacles">The list of obstacle rectangles.</param>
-    /// <returns>The new position after resolving collisions.</returns>
-    /// <remarks>
-    /// This method moves on the X axis first and resolves any collisions, then moves on the Y axis.
-    /// This axis separation prevents corner sticking and allows proper wall sliding.
-    /// </remarks>
+    /// <summary>Moves a rectangle using X-then-Y axis separation against rectangle obstacles.</summary>
     public static Vect2 MoveAndSlideRect(Rect2 rect, Vect2 velocity, IEnumerable<Rect2> obstacles)
     {
         Vect2 position = rect.Position;
 
         position.X += velocity.X;
-        foreach (var obstacle in obstacles) // First pass: X axis
+        foreach (Rect2 obstacle in obstacles)
         {
             Rect2 xRect = new(position, rect.Size);
-            if (RectRect(xRect, obstacle))
-            {
-                if (velocity.X > 0)
-                    position.X = obstacle.Left - rect.Width;
-                else if (velocity.X < 0)
-                    position.X = obstacle.Right;
-            }
+            if (!RectRect(xRect, obstacle))
+                continue;
+
+            if (velocity.X > 0f)
+                position.X = obstacle.Left - rect.Width;
+            else if (velocity.X < 0f)
+                position.X = obstacle.Right;
         }
 
         position.Y += velocity.Y;
-        foreach (var obstacle in obstacles) // Second pass: Y axis
+        foreach (Rect2 obstacle in obstacles)
         {
             Rect2 yRect = new(position, rect.Size);
-            if (RectRect(yRect, obstacle))
-            {
-                if (velocity.Y > 0)
-                    position.Y = obstacle.Top - rect.Height;
-                else if (velocity.Y < 0)
-                    position.Y = obstacle.Bottom;
-            }
+            if (!RectRect(yRect, obstacle))
+                continue;
+
+            if (velocity.Y > 0f)
+                position.Y = obstacle.Top - rect.Height;
+            else if (velocity.Y < 0f)
+                position.Y = obstacle.Bottom;
         }
 
         return position;
     }
 
-    /// <summary>
-    /// Moves a circle with collision resolution against a list of obstacles.
-    /// Uses axis separation (X first, then Y) for proper wall sliding.
-    /// </summary>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <param name="velocity">The desired movement velocity.</param>
-    /// <param name="rects">The list of obstacle rectangles.</param>
-    /// <param name="circles">The list of obstacle circles (center, radius tuples).</param>
-    /// <returns>The new position after resolving collisions.</returns>
-    /// <remarks>
-    /// This method moves on the X axis first and resolves any collisions, then moves on the Y axis.
-    /// This axis separation prevents corner sticking and allows proper wall sliding.
-    /// </remarks>
-    public static Vect2 MoveAndSlideCircle(Vect2 center, float radius, Vect2 velocity,
-        IEnumerable<Rect2> rects, IEnumerable<(Vect2 center, float radius)> circles)
+    /// <summary>Moves a circle using X-then-Y axis separation against rectangle and circle obstacles.</summary>
+    public static Vect2 MoveAndSlideCircle(
+        Vect2 center,
+        float radius,
+        Vect2 velocity,
+        IEnumerable<Rect2> rects,
+        IEnumerable<(Vect2 center, float radius)> circles)
     {
         Vect2 position = center;
 
         position.X += velocity.X;
-        foreach (var rect in rects)
+        foreach (Rect2 rect in rects)
         {
-            if (RectCircle(rect, position, radius))
-            {
-                if (velocity.X > 0)
-                    position.X = rect.Left - radius;
-                else if (velocity.X < 0)
-                    position.X = rect.Right + radius;
-            }
+            if (!RectCircle(rect, position, radius))
+                continue;
+
+            if (velocity.X > 0f)
+                position.X = rect.Left - radius;
+            else if (velocity.X < 0f)
+                position.X = rect.Right + radius;
         }
-        foreach (var (circleCenter, circleRadius) in circles)
+
+        foreach ((Vect2 circleCenter, float circleRadius) in circles)
         {
-            if (CircleCircle(position, radius, circleCenter, circleRadius))
-            {
-                if (velocity.X > 0)
-                    position.X = circleCenter.X - (radius + circleRadius);
-                else if (velocity.X < 0)
-                    position.X = circleCenter.X + (radius + circleRadius);
-            }
+            if (!CircleCircle(position, radius, circleCenter, circleRadius))
+                continue;
+
+            if (velocity.X > 0f)
+                position.X = circleCenter.X - (radius + circleRadius);
+            else if (velocity.X < 0f)
+                position.X = circleCenter.X + (radius + circleRadius);
         }
 
         position.Y += velocity.Y;
-        foreach (var rect in rects)
+        foreach (Rect2 rect in rects)
         {
-            if (RectCircle(rect, position, radius))
-            {
-                if (velocity.Y > 0)
-                    position.Y = rect.Top - radius;
-                else if (velocity.Y < 0)
-                    position.Y = rect.Bottom + radius;
-            }
+            if (!RectCircle(rect, position, radius))
+                continue;
+
+            if (velocity.Y > 0f)
+                position.Y = rect.Top - radius;
+            else if (velocity.Y < 0f)
+                position.Y = rect.Bottom + radius;
         }
-        foreach (var (circleCenter, circleRadius) in circles)
+
+        foreach ((Vect2 circleCenter, float circleRadius) in circles)
         {
-            if (CircleCircle(position, radius, circleCenter, circleRadius))
-            {
-                if (velocity.Y > 0)
-                    position.Y = circleCenter.Y - (radius + circleRadius);
-                else if (velocity.Y < 0)
-                    position.Y = circleCenter.Y + (radius + circleRadius);
-            }
+            if (!CircleCircle(position, radius, circleCenter, circleRadius))
+                continue;
+
+            if (velocity.Y > 0f)
+                position.Y = circleCenter.Y - (radius + circleRadius);
+            else if (velocity.Y < 0f)
+                position.Y = circleCenter.Y + (radius + circleRadius);
         }
 
         return position;
     }
-    #endregion
 
-
-
-    #region Bounds Conversion
-    /// <summary>
-    /// Converts a circle to its bounding box (AABB).
-    /// Useful for broadphase collision detection.
-    /// </summary>
-    /// <param name="center">The center of the circle.</param>
-    /// <param name="radius">The radius of the circle.</param>
-    /// <returns>The bounding box of the circle.</returns>
+    /// <summary>Gets the axis-aligned bounding rectangle of a circle.</summary>
     public static Rect2 GetCircleBounds(Vect2 center, float radius)
         => new(center.X - radius, center.Y - radius, radius * 2f, radius * 2f);
-    #endregion
+
+    private static float Cross(Vect2 a, Vect2 b)
+        => a.X * b.Y - a.Y * b.X;
+
+    private static bool PointOnSegment(Vect2 point, Vect2 start, Vect2 end)
+    {
+        Vect2 segment = end - start;
+        Vect2 toPoint = point - start;
+
+        if (segment.LengthSquared() <= EpsilonSquared)
+            return Vect2.DistanceSquared(point, start) <= EpsilonSquared;
+
+        if (MathF.Abs(Cross(toPoint, segment)) > MathHelper.Epsilon)
+            return false;
+
+        float dot = Vect2.Dot(toPoint, segment);
+        return dot >= -MathHelper.Epsilon &&
+               dot <= Vect2.Dot(segment, segment) + MathHelper.Epsilon;
+    }
+
+    private static bool TrySegmentIntersection(
+        Vect2 a1,
+        Vect2 a2,
+        Vect2 b1,
+        Vect2 b2,
+        out float t,
+        out Vect2 intersection)
+    {
+        t = 0f;
+        intersection = Vect2.Zero;
+
+        Vect2 r = a2 - a1;
+        Vect2 s = b2 - b1;
+        float rLengthSquared = r.LengthSquared();
+        float sLengthSquared = s.LengthSquared();
+
+        if (rLengthSquared <= EpsilonSquared)
+        {
+            if (!PointOnSegment(a1, b1, b2))
+                return false;
+
+            intersection = a1;
+            return true;
+        }
+
+        if (sLengthSquared <= EpsilonSquared)
+        {
+            if (!PointOnSegment(b1, a1, a2))
+                return false;
+
+            t = Math.Clamp(Vect2.Dot(b1 - a1, r) / rLengthSquared, 0f, 1f);
+            intersection = a1 + r * t;
+            return true;
+        }
+
+        Vect2 qMinusP = b1 - a1;
+        float rCrossS = Cross(r, s);
+        float qCrossR = Cross(qMinusP, r);
+
+        if (MathF.Abs(rCrossS) <= MathHelper.Epsilon)
+        {
+            if (MathF.Abs(qCrossR) > MathHelper.Epsilon)
+                return false;
+
+            float t0 = Vect2.Dot(qMinusP, r) / rLengthSquared;
+            float t1 = t0 + Vect2.Dot(s, r) / rLengthSquared;
+            float overlapStart = MathF.Max(0f, MathF.Min(t0, t1));
+            float overlapEnd = MathF.Min(1f, MathF.Max(t0, t1));
+
+            if (overlapStart > overlapEnd + MathHelper.Epsilon)
+                return false;
+
+            t = Math.Clamp(overlapStart, 0f, 1f);
+            intersection = a1 + r * t;
+            return true;
+        }
+
+        float candidateT = Cross(qMinusP, s) / rCrossS;
+        float candidateU = Cross(qMinusP, r) / rCrossS;
+
+        if (candidateT < -MathHelper.Epsilon || candidateT > 1f + MathHelper.Epsilon ||
+            candidateU < -MathHelper.Epsilon || candidateU > 1f + MathHelper.Epsilon)
+        {
+            return false;
+        }
+
+        t = Math.Clamp(candidateT, 0f, 1f);
+        intersection = a1 + r * t;
+        return true;
+    }
+
+    private static void TestRectEdge(
+        Vect2 start,
+        Vect2 end,
+        Vect2 edgeStart,
+        Vect2 edgeEnd,
+        Vect2 normal,
+        ref bool hit,
+        ref float closestT,
+        ref Vect2 hitPoint,
+        ref Vect2 hitNormal)
+    {
+        if (!TrySegmentIntersection(start, end, edgeStart, edgeEnd, out float t, out Vect2 point) || t >= closestT)
+            return;
+
+        closestT = t;
+        hitPoint = point;
+        hitNormal = normal;
+        hit = true;
+    }
+
+    private static bool UpdateRaySlab(float origin, float direction, float min, float max, ref float tMin, ref float tMax)
+    {
+        if (MathF.Abs(direction) <= MathHelper.Epsilon)
+            return origin >= min && origin <= max;
+
+        float inverse = 1f / direction;
+        float near = (min - origin) * inverse;
+        float far = (max - origin) * inverse;
+
+        if (near > far)
+            (near, far) = (far, near);
+
+        tMin = MathF.Max(tMin, near);
+        tMax = MathF.Min(tMax, far);
+        return tMin <= tMax;
+    }
+
+    private static Vect2 GetNormalFromInside(Vect2 point, Rect2 rect)
+    {
+        float left = point.X - rect.Left;
+        float right = rect.Right - point.X;
+        float top = point.Y - rect.Top;
+        float bottom = rect.Bottom - point.Y;
+        float minimum = MathF.Min(MathF.Min(left, right), MathF.Min(top, bottom));
+
+        if (minimum == left) return new Vect2(-1f, 0f);
+        if (minimum == right) return new Vect2(1f, 0f);
+        if (minimum == top) return new Vect2(0f, -1f);
+        return new Vect2(0f, 1f);
+    }
+
+    private static Vect2 GetRectSurfaceNormal(Vect2 point, Rect2 rect)
+    {
+        float left = MathF.Abs(point.X - rect.Left);
+        float right = MathF.Abs(point.X - rect.Right);
+        float top = MathF.Abs(point.Y - rect.Top);
+        float bottom = MathF.Abs(point.Y - rect.Bottom);
+        float minimum = MathF.Min(MathF.Min(left, right), MathF.Min(top, bottom));
+
+        if (minimum == left) return new Vect2(-1f, 0f);
+        if (minimum == right) return new Vect2(1f, 0f);
+        if (minimum == top) return new Vect2(0f, -1f);
+        return new Vect2(0f, 1f);
+    }
 }

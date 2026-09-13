@@ -15,78 +15,56 @@ using System.Diagnostics.CodeAnalysis;
 namespace Void.Engine.Inputs.Keyboards;
 
 /// <summary>
-/// Represents a snapshot of the keyboard state with query methods for
-/// key states, lock states, and pressed key lists.
+/// Represents an immutable snapshot of the keyboard state.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="KeyboardState"/> structure provides a read-only snapshot of
-/// the keyboard at a specific moment in time. It is returned by
-/// <see cref="Keyboard.GetState"/> and should be used for all keyboard
-/// queries within a frame.
+/// A <see cref="KeyboardState"/> contains the key and keyboard lock states captured
+/// by <see cref="Keyboard.GetState"/>. Because it is a snapshot, later keyboard
+/// changes do not modify an existing value.
 /// </para>
 /// <para>
-/// <b>Usage Example:</b>
-/// <code>
-/// var state = Keyboard.GetState();
-/// 
-/// // Check individual keys
-/// if (state.IsKeyDown(KeyboardKey.W))
-///     MoveForward();
-/// 
-/// if (state.IsKeyUp(KeyboardKey.Escape))
-///     // Key is not pressed
-/// 
-/// // Get all pressed keys
-/// var pressedKeys = state.GetPressedKeys();
-/// 
-/// // Get pressed key count
-/// int count = state.GetPressedKeyCount();
-/// 
-/// // Check lock states
-/// if (state.CapsLock)
-///     // Caps Lock is on
-/// 
-/// // Indexer access
-/// if (state[KeyboardKey.Space] == KeyState.Down)
-///     Jump();
-/// </code>
+/// Supported keys can be queried through the indexer, <see cref="IsKeyDown"/>,
+/// or <see cref="IsKeyUp"/>. Unknown, unbound, and out-of-range
+/// <see cref="KeyboardKey"/> values are treated as <see cref="KeyState.Up"/>.
 /// </para>
 /// <para>
-/// <b>Thread Safety:</b>
-/// This structure is immutable and thread-safe. All fields are read-only.
+/// Pressed keys can be retrieved as a new array with <see cref="GetPressedKeys()"/>
+/// or copied into an existing array with <see cref="GetPressedKeys(KeyboardKey[])"/>.
 /// </para>
 /// </remarks>
-public struct KeyboardState
+public readonly struct KeyboardState
 {
-    // 101 keys fit in 2 ulongs (128 bits total)
-    // Keys 0-63 in _keysLow, Keys 64-100 in _keysHigh
-    private ulong _keysLow;
-    private ulong _keysHigh;
+    private readonly ulong _keysLow;
+    private readonly ulong _keysHigh;
     private readonly bool _capsLock;
     private readonly bool _numLock;
 
     /// <summary>
-    /// Gets a value indicating whether Caps Lock is active.
+    /// Gets whether Caps Lock was active when this snapshot was created.
     /// </summary>
-    public readonly bool CapsLock => _capsLock;
+    public bool CapsLock => _capsLock;
 
     /// <summary>
-    /// Gets a value indicating whether Num Lock is active.
+    /// Gets whether Num Lock was active when this snapshot was created.
     /// </summary>
-    public readonly bool NumLock => _numLock;
+    public bool NumLock => _numLock;
 
     /// <summary>
-    /// Gets the state of the specified key.
+    /// Gets the state of a keyboard key in this snapshot.
     /// </summary>
-    /// <param name="key">The key to query.</param>
-    /// <returns><see cref="KeyState.Down"/> if the key is pressed; otherwise, <see cref="KeyState.Up"/>.</returns>
+    /// <param name="key">The keyboard key to query.</param>
+    /// <returns>
+    /// <see cref="KeyState.Down"/> when the key is pressed; otherwise,
+    /// <see cref="KeyState.Up"/>. Unknown and out-of-range values return
+    /// <see cref="KeyState.Up"/>.
+    /// </returns>
     public KeyState this[KeyboardKey key]
     {
         get
         {
             int index = (int)key;
-            if (key == KeyboardKey.Unknown || index < 0 || index >= 101)
+            if (key == KeyboardKey.Unknown || index < 0 || index >= (int)KeyboardKey.KeyCount)
                 return KeyState.Up;
 
             bool isPressed;
@@ -99,23 +77,6 @@ public struct KeyboardState
         }
     }
 
-    internal KeyboardState(byte[] keyStates, bool capsLock, bool numLock)
-    {
-        _keysLow = 0;
-        _keysHigh = 0;
-        _capsLock = capsLock;
-        _numLock = numLock;
-
-        if (keyStates != null)
-        {
-            for (int i = 0; i < Math.Min(101, keyStates.Length); i++)
-            {
-                if (keyStates[i] == 1)
-                    SetKey(i, true);
-            }
-        }
-    }
-
     internal KeyboardState(ulong keysLow, ulong keysHigh, bool capsLock, bool numLock)
     {
         _keysLow = keysLow;
@@ -124,51 +85,29 @@ public struct KeyboardState
         _numLock = numLock;
     }
 
-    private void SetKey(int index, bool pressed)
-    {
-        if (index < 64)
-        {
-            if (pressed)
-                _keysLow |= (1UL << index);
-            else
-                _keysLow &= ~(1UL << index);
-        }
-        else
-        {
-            int bitIndex = index - 64;
-            if (pressed)
-                _keysHigh |= (1UL << bitIndex);
-            else
-                _keysHigh &= ~(1UL << bitIndex);
-        }
-    }
-
-    private bool IsKeyPressed(int index)
-    {
-        if (index < 64)
-            return (_keysLow & (1UL << index)) != 0;
-        else
-            return (_keysHigh & (1UL << (index - 64))) != 0;
-    }
-
     /// <summary>
-    /// Determines whether the specified key is currently pressed.
+    /// Determines whether a keyboard key is currently pressed in this snapshot.
     /// </summary>
-    /// <param name="key">The key to check.</param>
-    /// <returns><see langword="true"/> if the key is pressed; otherwise, <see langword="false"/>.</returns>
+    /// <param name="key">The keyboard key to query.</param>
+    /// <returns>
+    /// <see langword="true"/> when the key is down; otherwise, <see langword="false"/>.
+    /// </returns>
     public bool IsKeyDown(KeyboardKey key) => this[key] == KeyState.Down;
 
     /// <summary>
-    /// Determines whether the specified key is currently released.
+    /// Determines whether a keyboard key is currently up in this snapshot.
     /// </summary>
-    /// <param name="key">The key to check.</param>
-    /// <returns><see langword="true"/> if the key is released; otherwise, <see langword="false"/>.</returns>
+    /// <param name="key">The keyboard key to query.</param>
+    /// <returns>
+    /// <see langword="true"/> when the key is up, unknown, or out of range;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
     public bool IsKeyUp(KeyboardKey key) => this[key] == KeyState.Up;
 
     /// <summary>
-    /// Gets the number of pressed keys.
+    /// Gets the number of keys that are currently pressed in this snapshot.
     /// </summary>
-    /// <returns>The count of keys that are currently pressed.</returns>
+    /// <returns>The number of pressed keys.</returns>
     public int GetPressedKeyCount()
     {
         int count = 0;
@@ -191,12 +130,15 @@ public struct KeyboardState
     }
 
     /// <summary>
-    /// Gets an array of all pressed keys.
+    /// Gets all keys that are currently pressed in this snapshot.
     /// </summary>
-    /// <returns>An array of <see cref="KeyboardKey"/> values that are currently pressed.</returns>
+    /// <returns>
+    /// A new array containing each pressed <see cref="KeyboardKey"/> in numeric key order.
+    /// </returns>
     public KeyboardKey[] GetPressedKeys()
     {
         var pressed = new List<KeyboardKey>();
+        int keyCount = (int)KeyboardKey.KeyCount;
 
         for (int i = 0; i < 64; i++)
         {
@@ -204,7 +146,7 @@ public struct KeyboardState
                 pressed.Add((KeyboardKey)i);
         }
 
-        for (int i = 64; i < 101; i++)
+        for (int i = 64; i < keyCount; i++)
         {
             int bitIndex = i - 64;
             if ((_keysHigh & (1UL << bitIndex)) != 0)
@@ -215,16 +157,24 @@ public struct KeyboardState
     }
 
     /// <summary>
-    /// Fills the provided array with the currently pressed keys.
+    /// Copies the currently pressed keys into an existing array.
     /// </summary>
-    /// <param name="keys">The array to fill with pressed keys.</param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="keys"/> is null.</exception>
+    /// <remarks>
+    /// Keys are written in numeric key order until either every pressed key has
+    /// been copied or <paramref name="keys"/> is full. Elements after the last
+    /// written key are left unchanged.
+    /// </remarks>
+    /// <param name="keys">The destination array that receives the pressed keys.</param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="keys"/> is <see langword="null"/>.
+    /// </exception>
     public void GetPressedKeys(KeyboardKey[] keys)
     {
         if (keys == null)
             throw new ArgumentNullException(nameof(keys));
 
         int index = 0;
+        int keyCount = (int)KeyboardKey.KeyCount;
 
         for (int i = 0; i < 64 && index < keys.Length; i++)
         {
@@ -232,7 +182,7 @@ public struct KeyboardState
                 keys[index++] = (KeyboardKey)i;
         }
 
-        for (int i = 64; i < 101 && index < keys.Length; i++)
+        for (int i = 64; i < keyCount && index < keys.Length; i++)
         {
             int bitIndex = i - 64;
             if ((_keysHigh & (1UL << bitIndex)) != 0)
@@ -241,11 +191,16 @@ public struct KeyboardState
     }
 
     /// <summary>
-    /// Determines whether the current keyboard state is equal to the specified object.
+    /// Determines whether this snapshot contains the same key and lock states as another object.
     /// </summary>
+    /// <param name="obj">The object to compare with this snapshot.</param>
+    /// <returns>
+    /// <see langword="true"/> when <paramref name="obj"/> is an equivalent
+    /// <see cref="KeyboardState"/>; otherwise, <see langword="false"/>.
+    /// </returns>
     public override bool Equals([NotNullWhen(true)] object obj)
     {
-        if (!(obj is KeyboardState other))
+        if (obj is not KeyboardState other)
             return false;
 
         return _keysLow == other._keysLow &&
@@ -255,8 +210,9 @@ public struct KeyboardState
     }
 
     /// <summary>
-    /// Returns the hash code for the current keyboard state.
+    /// Returns a hash code for this keyboard snapshot.
     /// </summary>
+    /// <returns>A hash code derived from the key and lock states.</returns>
     public override int GetHashCode()
     {
         int hash = 17;
@@ -268,12 +224,18 @@ public struct KeyboardState
     }
 
     /// <summary>
-    /// Determines whether two keyboard states are equal.
+    /// Determines whether two keyboard snapshots contain the same key and lock states.
     /// </summary>
+    /// <param name="a">The first keyboard snapshot.</param>
+    /// <param name="b">The second keyboard snapshot.</param>
+    /// <returns><see langword="true"/> when the snapshots are equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator ==(in KeyboardState a, in KeyboardState b) => a.Equals(b);
 
     /// <summary>
-    /// Determines whether two keyboard states are not equal.
+    /// Determines whether two keyboard snapshots contain different key or lock states.
     /// </summary>
+    /// <param name="a">The first keyboard snapshot.</param>
+    /// <param name="b">The second keyboard snapshot.</param>
+    /// <returns><see langword="true"/> when the snapshots are not equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(in KeyboardState a, in KeyboardState b) => !a.Equals(b);
 }

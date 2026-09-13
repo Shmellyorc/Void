@@ -180,6 +180,6 @@ public sealed class Animator<TEnum> where TEnum : Enum
         var rect = anim.Sources[frame];
 
         // Draw the sprite using the batcher
-        batch.Draw(_texture, position, rect, Color.White, 0f, Vect2.One, Vect2.Zero, effects, depth);
+        batch.Draw(_texture, position, rect, Color.White, Vect2.One, 0f, Vect2.Zero, effects, depth);
     }
 }

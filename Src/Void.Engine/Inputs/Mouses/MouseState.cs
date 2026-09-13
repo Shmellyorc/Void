@@ -1,115 +1,121 @@
 // ============================================================================
 //  MouseState.cs
 // ============================================================================
-//  Represents a snapshot of the mouse state including button states,
-//  position, and scroll wheel delta.
+//  Represents an immutable snapshot of mouse buttons, position, and wheel input.
 //
 //  Copyright (c) 2025 Void Engine
 //  Licensed under the MIT License.
 // ============================================================================
 
 using System.Diagnostics.CodeAnalysis;
+
 using Void.Engine.Inputs.Gamepads;
 
 namespace Void.Engine.Inputs.Mouses;
 
 /// <summary>
-/// Represents a snapshot of the mouse state including button states,
-/// position, and scroll wheel delta.
+/// Represents an immutable snapshot of mouse input.
 /// </summary>
 /// <remarks>
 /// <para>
-/// The <see cref="MouseState"/> structure provides a read-only snapshot of
-/// the mouse at a specific moment in time. It is returned by
-/// <see cref="Mouse.GetState"/> and should be used for all mouse queries
-/// within a frame.
+/// A <see cref="MouseState"/> stores the mouse button states, window-relative
+/// cursor position, and scroll-wheel delta captured by <see cref="Mouse.GetState"/>.
+/// The wheel value represents movement accumulated since the previous mouse snapshot.
+/// Retaining a state value does not cause it to change when later mouse input is read.
 /// </para>
 /// <para>
-/// Usage Example: state = Mouse.GetState().
-/// Check button states with IsButtonPressed() and IsButtonReleased().
-/// Get position with Position, X, or Y.
-/// Get scroll wheel delta with ScrollWheel (positive = up/forward, negative = down/backward).
+/// <b>Usage Example:</b>
+/// <code>
+/// var state = Mouse.GetState();
+///
+/// if (state.IsButtonPressed(MouseButton.Left))
+///     SelectAt(state.Position);
+///
+/// if (state.IsButtonReleased(MouseButton.Right))
+///     CloseContextMenu();
+///
+/// if (state.ScrollWheel > 0)
+///     ZoomIn();
+/// </code>
 /// </para>
 /// <para>
-/// Button States:
-/// <list type="bullet">
-///   <item><description><see cref="ButtonState.Pressed"/> - The button is currently pressed</description></item>
-///   <item><description><see cref="ButtonState.Released"/> - The button is not pressed</description></item>
-/// </list>
-/// </para>
-/// <para>
-/// Scroll Wheel:
-/// The scroll wheel delta represents the number of notches scrolled since
-/// the previous frame. Positive values indicate scrolling up/forward,
-/// negative values indicate scrolling down/backward.
-/// </para>
-/// <para>
-/// Thread Safety:
-/// This structure is immutable and thread-safe. All fields are read-only.
+/// Unsupported button values, including <see cref="MouseButton.None"/>, are treated
+/// as released.
 /// </para>
 /// </remarks>
-public struct MouseState
+public readonly struct MouseState : IEquatable<MouseState>
 {
     private readonly bool _leftButton;
     private readonly bool _rightButton;
     private readonly bool _middleButton;
-    private readonly bool _xButton1;
-    private readonly bool _xButton2;
+    private readonly bool _extra1;
+    private readonly bool _extra2;
     private readonly int _x;
     private readonly int _y;
     private readonly Vect2 _position;
     private readonly int _scrollWheel;
 
     /// <summary>
-    /// Gets the X-coordinate of the mouse position in screen coordinates.
+    /// Gets the window-relative X-coordinate of the cursor.
     /// </summary>
-    public readonly int X => _x;
+    public int X => _x;
 
     /// <summary>
-    /// Gets the Y-coordinate of the mouse position in screen coordinates.
+    /// Gets the window-relative Y-coordinate of the cursor.
     /// </summary>
-    public readonly int Y => _y;
+    public int Y => _y;
 
     /// <summary>
-    /// Gets the mouse position as a <see cref="Vect2"/> in screen coordinates.
+    /// Gets the window-relative cursor position.
     /// </summary>
-    public readonly Vect2 Position => _position;
+    public Vect2 Position => _position;
 
     /// <summary>
-    /// Gets the scroll wheel delta since the previous frame.
+    /// Gets the scroll-wheel delta captured for this snapshot.
     /// </summary>
-    public readonly int ScrollWheel => _scrollWheel;
+    /// <remarks>
+    /// A positive value represents upward or forward scrolling and a negative
+    /// value represents downward or backward scrolling. A value of zero means
+    /// no wheel movement was captured.
+    /// </remarks>
+    public int ScrollWheel => _scrollWheel;
 
     /// <summary>
-    /// Gets a value indicating whether the left mouse button is pressed.
+    /// Gets whether the left mouse button is currently pressed.
     /// </summary>
-    public readonly bool LeftButton => _leftButton;
+    public bool LeftButton => _leftButton;
 
     /// <summary>
-    /// Gets a value indicating whether the right mouse button is pressed.
+    /// Gets whether the right mouse button is currently pressed.
     /// </summary>
-    public readonly bool RightButton => _rightButton;
+    public bool RightButton => _rightButton;
 
     /// <summary>
-    /// Gets a value indicating whether the middle mouse button is pressed.
+    /// Gets whether the middle mouse button is currently pressed.
     /// </summary>
-    public readonly bool MiddleButton => _middleButton;
+    public bool MiddleButton => _middleButton;
 
     /// <summary>
-    /// Gets a value indicating whether the first extended button is pressed.
+    /// Gets whether the first extra mouse button is currently pressed.
     /// </summary>
-    public readonly bool XButton1 => _xButton1;
+    public bool Extra1 => _extra1;
 
     /// <summary>
-    /// Gets a value indicating whether the second extended button is pressed.
+    /// Gets whether the second extra mouse button is currently pressed.
     /// </summary>
-    public readonly bool XButton2 => _xButton2;
+    public bool Extra2 => _extra2;
 
     /// <summary>
-    /// Gets the state of the specified mouse button.
+    /// Gets the current state of a mouse button.
     /// </summary>
     /// <param name="button">The mouse button to query.</param>
-    /// <returns><see cref="ButtonState.Pressed"/> if the button is pressed; otherwise, <see cref="ButtonState.Released"/>.</returns>
+    /// <returns>
+    /// <see cref="ButtonState.Pressed"/> when <paramref name="button"/> is pressed;
+    /// otherwise, <see cref="ButtonState.Released"/>.
+    /// </returns>
+    /// <remarks>
+    /// Unknown or unsupported button values are treated as released.
+    /// </remarks>
     public ButtonState this[MouseButton button]
     {
         get
@@ -119,8 +125,8 @@ public struct MouseState
                 MouseButton.Left => _leftButton ? ButtonState.Pressed : ButtonState.Released,
                 MouseButton.Right => _rightButton ? ButtonState.Pressed : ButtonState.Released,
                 MouseButton.Middle => _middleButton ? ButtonState.Pressed : ButtonState.Released,
-                MouseButton.XButton1 => _xButton1 ? ButtonState.Pressed : ButtonState.Released,
-                MouseButton.XButton2 => _xButton2 ? ButtonState.Pressed : ButtonState.Released,
+                MouseButton.Extra1 => _extra1 ? ButtonState.Pressed : ButtonState.Released,
+                MouseButton.Extra2 => _extra2 ? ButtonState.Pressed : ButtonState.Released,
                 _ => ButtonState.Released
             };
         }
@@ -131,8 +137,8 @@ public struct MouseState
         _leftButton = buttons.Length > 0 && buttons[0];
         _rightButton = buttons.Length > 1 && buttons[1];
         _middleButton = buttons.Length > 2 && buttons[2];
-        _xButton1 = buttons.Length > 3 && buttons[3];
-        _xButton2 = buttons.Length > 4 && buttons[4];
+        _extra1 = buttons.Length > 3 && buttons[3];
+        _extra2 = buttons.Length > 4 && buttons[4];
         _x = x;
         _y = y;
         _position = new Vect2(x, y);
@@ -140,41 +146,63 @@ public struct MouseState
     }
 
     /// <summary>
-    /// Determines whether the specified mouse button is currently pressed.
+    /// Determines whether a mouse button is currently pressed.
     /// </summary>
-    /// <param name="button">The mouse button to check.</param>
-    /// <returns><see langword="true"/> if the button is pressed; otherwise, <see langword="false"/>.</returns>
-    public bool IsButtonPressed(MouseButton button) => this[button] == ButtonState.Pressed;
+    /// <param name="button">The mouse button to query.</param>
+    /// <returns>
+    /// <see langword="true"/> when <paramref name="button"/> is pressed;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsButtonPressed(MouseButton button)
+        => this[button] == ButtonState.Pressed;
 
     /// <summary>
-    /// Determines whether the specified mouse button is currently released.
+    /// Determines whether a mouse button is currently released.
     /// </summary>
-    /// <param name="button">The mouse button to check.</param>
-    /// <returns><see langword="true"/> if the button is released; otherwise, <see langword="false"/>.</returns>
-    public bool IsButtonReleased(MouseButton button) => this[button] == ButtonState.Released;
+    /// <param name="button">The mouse button to query.</param>
+    /// <returns>
+    /// <see langword="true"/> when <paramref name="button"/> is released or unsupported;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool IsButtonReleased(MouseButton button)
+        => this[button] == ButtonState.Released;
 
     /// <summary>
-    /// Determines whether the current mouse state is equal to the specified object.
+    /// Determines whether this state contains the same mouse input as another state.
     /// </summary>
-    public override bool Equals([NotNullWhen(true)] object obj)
+    /// <param name="other">The mouse state to compare with this state.</param>
+    /// <returns>
+    /// <see langword="true"/> when the states contain the same input values;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    public bool Equals(MouseState other)
     {
-        if (!(obj is MouseState other))
-            return false;
-
         return
             _leftButton == other._leftButton &&
             _rightButton == other._rightButton &&
             _middleButton == other._middleButton &&
-            _xButton1 == other._xButton1 &&
-            _xButton2 == other._xButton2 &&
+            _extra1 == other._extra1 &&
+            _extra2 == other._extra2 &&
             _x == other._x &&
             _y == other._y &&
             _scrollWheel == other._scrollWheel;
     }
 
     /// <summary>
-    /// Returns the hash code for the current mouse state.
+    /// Determines whether this state contains the same mouse input as another object.
     /// </summary>
+    /// <param name="obj">The object to compare with this state.</param>
+    /// <returns>
+    /// <see langword="true"/> when <paramref name="obj"/> is an equal
+    /// <see cref="MouseState"/>; otherwise, <see langword="false"/>.
+    /// </returns>
+    public override bool Equals([NotNullWhen(true)] object obj)
+        => obj is MouseState other && Equals(other);
+
+    /// <summary>
+    /// Returns a hash code for this mouse state.
+    /// </summary>
+    /// <returns>A hash code derived from the button, position, and scroll-wheel state.</returns>
     public override int GetHashCode()
     {
         int hash = 17;
@@ -182,8 +210,8 @@ public struct MouseState
         hash = hash * 31 + _leftButton.GetHashCode();
         hash = hash * 31 + _rightButton.GetHashCode();
         hash = hash * 31 + _middleButton.GetHashCode();
-        hash = hash * 31 + _xButton1.GetHashCode();
-        hash = hash * 31 + _xButton2.GetHashCode();
+        hash = hash * 31 + _extra1.GetHashCode();
+        hash = hash * 31 + _extra2.GetHashCode();
         hash = hash * 31 + _x.GetHashCode();
         hash = hash * 31 + _y.GetHashCode();
         hash = hash * 31 + _scrollWheel.GetHashCode();
@@ -192,12 +220,18 @@ public struct MouseState
     }
 
     /// <summary>
-    /// Determines whether two mouse states are equal.
+    /// Determines whether two mouse states contain the same input values.
     /// </summary>
+    /// <param name="a">The first state to compare.</param>
+    /// <param name="b">The second state to compare.</param>
+    /// <returns><see langword="true"/> when the states are equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator ==(in MouseState a, in MouseState b) => a.Equals(b);
 
     /// <summary>
-    /// Determines whether two mouse states are not equal.
+    /// Determines whether two mouse states contain different input values.
     /// </summary>
+    /// <param name="a">The first state to compare.</param>
+    /// <param name="b">The second state to compare.</param>
+    /// <returns><see langword="true"/> when the states are not equal; otherwise, <see langword="false"/>.</returns>
     public static bool operator !=(in MouseState a, in MouseState b) => !a.Equals(b);
 }
