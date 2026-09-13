@@ -1,117 +1,187 @@
-# Void Engine
+# VOID Engine
 
-A lightweight, extensible 2D game framework for .NET.
+A lightweight, modular, extensible 2D game framework for .NET.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine)
 [![.NET](https://img.shields.io/badge/.NET-10.0-blue)](https://dotnet.microsoft.com/)
 
----
+## What is VOID?
 
-## Philosophy
+**VOID Engine** provides the systems most 2D games need without trying to become a giant all-in-one engine.
 
-**Extend, don't modify.**
+VOID is built around a simple idea:
 
-Most game engines try to do everything. They have physics, networking, UI, animation, and everything else you can think of. The problem is your game is unique. Your physics needs are different. Your UI is different. Yet these engines force you to use their way of doing things. You fight the engine instead of making your game.
+> **Give developers solid defaults without assuming those defaults are right for every game.**
 
-At the other extreme, frameworks like MonoGame give you almost nothing. You end up rebuilding things every game needs: saving, audio management, pathfinding. These are solved problems. Why rebuild them?
+Use the built-in systems as they are, extend them, replace them, or ignore the ones you do not need.
 
-**Void sits in the middle.** It gives you the essentials and gets out of your way.
+VOID deliberately stays focused on framework-level systems. Features such as full physics and full UI frameworks are left to your game or the libraries you choose.
 
----
-
-## Features
-
-| System | What It Does |
-|--------|--------------|
-| **Rendering** | Batched sprite and primitive rendering, texture atlasing, shaders, post-processing |
-| **Assets** | Mount-based virtual file system, encrypted pack loading, LRU eviction |
-| **Input** | Keyboard, mouse, gamepad with SDL mapping, action system |
-| **Audio** | Sound pooling, priority-based voice stealing, category volumes |
-| **Saving** | AES-GCM encrypted saves with manifest verification |
-| **Pathfinding** | A*, Dijkstra, BFS, flow fields |
-| **Coroutines** | Tweens, sequencing, delays, 33 easing functions |
-| **Logging** | Async logging with console and file sinks |
-| **Math** | Vectors, rectangles, colors, easing, random |
-| **LDtk** | Full level editor support with entities, tilesets, and custom fields |
-| **Modding** | Mount-based virtual file system for mod support |
-
----
-
-## Quick Install
+## Install
 
 ```bash
 dotnet add package Void.Engine
 ```
 
-### Project Template
+Or install the project template:
 
 ```bash
 dotnet new install Void.Templates
 ```
 
----
-
-## Quick Start
-
-### 1. Install the template
-
-```bash
-dotnet new install Void.Templates
-```
-
-### 2. Create a new game
+Then create and run a game:
 
 ```bash
 dotnet new voidgame -n MyGame
 cd MyGame
-```
-
-Or use the current folder:
-
-```bash
-mkdir MyGame
-cd MyGame
-dotnet new voidgame
-```
-
-### 3. Run your game
-
-```bash
 dotnet run
 ```
 
-A window will appear. That's it.
+## Features
 
-### Customizing Your Game
+| System | What It Does |
+| --- | --- |
+| **Rendering** | Batched sprite and primitive rendering, texture atlasing, shaders, render targets, post-processing |
+| **Renderer API** | Public renderer-neutral contracts with a pluggable backend architecture |
+| **Platform** | SDL3 windowing, displays, fullscreen modes, events, keyboard, mouse, and gamepads |
+| **Assets** | Mount-based virtual file system, custom asset types, pack loading, LRU eviction |
+| **Audio** | OpenAL playback, sound pooling, priority-based voice stealing, category volumes |
+| **Saving** | AES-GCM encrypted saves with manifest verification |
+| **Pathfinding** | A*, Dijkstra, BFS, and flow fields |
+| **Coroutines** | Tweens, sequencing, delays, waits, and easing |
+| **Logging** | Async logging with console and file sinks |
+| **Math** | Vectors, matrices, rectangles, colors, easing, and random helpers |
+| **Tooling** | Project templates and authenticated encrypted asset packing tools |
+| **LDtk** | LDtk level and asset integration |
 
-When creating a new game, you can specify:
+## Philosophy
 
-```bash
-dotnet new voidgame -n MyGame --appCompany MyStudio --appTitle "My Game"
+### Extend, don't modify.
+
+Large engines often try to solve every possible problem.
+
+That can be useful, but it can also leave developers working around systems that do not fit their game.
+
+At the other extreme, very low-level frameworks provide freedom but leave you rebuilding common infrastructure yourself.
+
+**VOID sits in the middle.**
+
+It provides useful defaults while exposing the places where different games may reasonably need different solutions.
+
+The built-in implementation is not assumed to be the only implementation.
+
+**No engine fork required. No fighting hidden internals. No one-size-fits-all workflow.**
+
+VOID also aims to keep the normal path simple. Advanced systems should exist underneath the framework without making basic tasks complicated.
+
+Performance-sensitive code is written with allocation behavior, thread safety, and hot-path cost in mind.
+
+## VOID 2.0 Rendering Architecture
+
+VOID 2.0 no longer depends on SFML.
+
+The built-in renderer uses **Silk.NET.OpenGL**, while **SDL3-CS** handles the platform layer and **Silk.NET.OpenAL** handles audio.
+
+The OpenGL renderer is a default implementation, not the definition of VOID's rendering system.
+
+Custom renderer backends can be selected through `GameSettings`:
+
+```csharp
+var settings = GameSettings.Instance
+    .SetRenderer(() => new MyRenderer())
+    .Build();
 ```
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `-n, --name` | The project name | Current folder name |
-| `--appCompany` | The company name (used for AppData folders) | `MyCompany` |
-| `--appTitle` | The display title of the game window | `My Game` |
-| `--TargetFrameworkOverride` | Overrides the target framework | `net10.0` |
+Renderer plugins can implement VOID's public graphics contracts for APIs such as:
 
-### What You Get
+- Vulkan
+- Direct3D
+- Metal
+- OpenGL
+- custom renderers
 
-The template generates a complete, runnable game project with:
+VOID exposes native window handles through `IRendererContext` when a backend requires them.
 
-- `Program.cs` — Entry point with game settings
-- `MyGameGame.cs` — Main game class with `OnEnter`, `OnUpdate`, `OnDraw`, `OnExit`
-- `Content/` — Folder for your assets
-- Pre-configured `.csproj` with `Void.Engine` reference
+Higher-level game and engine code remains renderer-neutral.
 
----
+[Read the Custom Renderer documentation](https://github.com/Shmellyorc/Void/wiki/Custom-Renderers)
 
-## Manual Setup (Optional)
+## Extensibility
 
-If you prefer to set up manually instead of using the template:
+VOID provides extension points where alternate implementations make sense.
+
+| Extension Point | Purpose |
+| --- | --- |
+| `IAsset` | Define custom asset types |
+| `IMount` | Add custom asset sources |
+| `IAtlasPacker` | Replace the texture packing algorithm |
+| `ILogSink` | Add custom logging destinations |
+| `IRendererBackend` | Provide another graphics backend |
+| `IGraphicsDevice` | Implement renderer-specific GPU behavior |
+| `IBatcher` | Add custom batching strategies |
+| `IRenderTarget` | Provide custom render surfaces |
+| `BaseCamera` | Build specialized camera behavior |
+| `ContentTypeWriterReader<T>` | Support custom save-data types |
+
+Examples:
+
+```csharp
+GameSettings.Instance.SetAtlasPacker(typeof(MyAtlasPacker));
+
+AssetManager.Instance.AddMountToStart(new CloudMount());
+
+AssetManager.Instance.RegisterAssetType<MyAsset>(
+    new[] { ".myext" },
+    (id, data, tag) => new MyAsset(id, data, tag)
+);
+
+Logger.Instance.AddSink(new DatabaseSink());
+```
+
+The defaults are there when you want them.
+
+The extension points are there when you do not.
+
+## Asset Packer
+
+VOID includes an API and command-line tool for packaging assets into authenticated, encrypted archives.
+
+Features include:
+
+- AES-GCM authenticated encryption
+- adaptive compression
+- per-file integrity verification
+- configurable chunked encryption
+- streaming reads
+- incremental updates
+- concurrent asset loading support
+
+Install the CLI:
+
+```bash
+dotnet tool install --global Void.Packer.CLI
+```
+
+Build a pack:
+
+```bash
+void-packer build -c Content/ -o Packs/
+```
+
+Verify it:
+
+```bash
+void-packer verify --pack GameAssets.pack
+```
+
+The pack system is intended to make casual extraction and unauthorized reuse more difficult while maintaining practical runtime access.
+
+> No client-side asset format can make shipped assets impossible for a determined attacker to recover.
+
+## Quick Start Without the Template
+
+Create a normal console project and add VOID:
 
 ```bash
 dotnet new console -n MyGame
@@ -119,7 +189,7 @@ cd MyGame
 dotnet add package Void.Engine
 ```
 
-Then create `MyGame.cs`:
+Create a game class:
 
 ```csharp
 using Void.Engine;
@@ -135,7 +205,7 @@ public class MyGame : Game
 }
 ```
 
-And `Program.cs`:
+Configure and run it:
 
 ```csharp
 using Void.Engine;
@@ -150,122 +220,48 @@ using var game = new MyGame(settings);
 game.Run();
 ```
 
----
-
 ## Demos
 
-- **FlappyBirb**: A Flappy Bird clone
-- **Scavengers**: A rogue-lite zombie survival clone
+### FlappyBirb
 
----
+A small Flappy Bird-style example demonstrating the basic VOID workflow.
 
-## Asset Packer
+### Scavengers
 
-Void includes a CLI tool and API for packing assets into encrypted, tamper-proof archives.
-
-### CLI Tool
-
-```bash
-# Build a pack
-void-packer build -c Content/ -o Packs/
-
-# Extract a pack
-void-packer extract --pack GameAssets.pack --output Extracted/
-
-# Verify pack integrity
-void-packer verify --pack GameAssets.pack
-
-# List files in a pack
-void-packer list --pack GameAssets.pack --detailed
-
-# Update a pack (fast incremental updates)
-void-packer update --pack GameAssets.pack --add Content/newfile.png --remove oldfile.txt
-```
-
-### Security Features
-
-- AES-GCM 256-bit encryption
-- Separate encryption for header and data sections
-- Per-file CRC32 integrity verification
-- Adaptive compression
-- Chunked encryption with per-chunk authentication
-- Stream-based reading from disk (no full pack loaded into memory)
-- Thread-safe for concurrent asset loading
-
-### API Usage
-
-```csharp
-// Load a pack in your game
-var pack = AssetManager.Instance.LoadPack("GameAssets.pack");
-AssetManager.Instance.AddMountToStart(pack);
-
-// Load multiple packs with priority control
-var graphicsPack = AssetManager.Instance.LoadPack("Graphics.pack");
-var audioPack = AssetManager.Instance.LoadPack("Audio.pack");
-AssetManager.Instance.AddMountToStart(graphicsPack);
-AssetManager.Instance.AddMountToStart(audioPack);
-
-// Graceful error handling
-if (!Packer.TryLoadPack("Mod.pack", out var reader, out var error))
-{
-    Console.WriteLine($"Failed to load mod: {error}");
-    return;
-}
-```
-
----
-
-## Extensibility
-
-Void was built to be extended, not just used.
-
-Every major system is built around interfaces and base classes that you can replace, customize, or ignore entirely.
-
-**What you can extend:**
-
-| Interface | Purpose |
-|-----------|---------|
-| `IAsset` | Define new asset types |
-| `IMount` | Add custom asset sources |
-| `IAtlasPacker` | Plug in your own texture packing algorithm |
-| `ILogSink` | Send logs anywhere |
-| `IBatcher` | Custom rendering logic |
-| `IRenderTarget` | Custom render surfaces |
-| `ContentTypeWriterReader` | Any save data type |
-
-**How it works:**
-
-```csharp
-GameSettings.Instance.SetAtlasPacker(typeof(MyAtlasPacker));
-AssetManager.Instance.AddMountToStart(new CloudMount());
-Logger.Instance.AddSink(new DatabaseSink());
-```
-
-No engine code modification. No forking the repo. No fighting the framework.
-
----
+A larger rogue-lite zombie survival example demonstrating more of the framework working together.
 
 ## Supported Platforms
 
 | Platform | Status |
-|----------|--------|
-| Windows | ✅ Full support |
-| macOS | ✅ Full support |
-| Linux | ✅ Full support |
+| --- | --- |
+| Windows | Supported |
+| macOS | Supported |
+| Linux | Supported |
 
----
+VOID uses SDL3 for its platform layer. The built-in graphics backend uses OpenGL.
 
 ## Requirements
 
 - .NET 10
-- SFML.Net 3.0
 
----
+Runtime graphics, platform, input, and audio dependencies are provided through the engine package.
+
+## Documentation
+
+- [VOID Wiki](https://github.com/Shmellyorc/Void/wiki)
+- [Getting Started](https://github.com/Shmellyorc/Void/wiki/Getting-Started)
+- [Migrating to VOID 2.0](https://github.com/Shmellyorc/Void/wiki/Migrating-to-2.0)
+- [Custom Renderers](https://github.com/Shmellyorc/Void/wiki/Custom-Renderers)
+- [GitHub Repository](https://github.com/Shmellyorc/Void)
 
 ## License
 
-MIT. Use it for anything. No royalties. No fees.
+MIT.
+
+Use VOID for personal, commercial, open-source, or closed-source projects.
+
+**No royalties. No engine fees.**
 
 ---
 
-**Void Engine: Made by developers who care about your work.**
+**VOID Engine: the foundation is yours. Build the rest your way.**
