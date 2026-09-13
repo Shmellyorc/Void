@@ -95,11 +95,6 @@ public sealed class Shader : IAsset, IShader
     }
 
     /// <summary>
-    /// Releases shader resources if the asset was not disposed explicitly.
-    /// </summary>
-    ~Shader() => Dispose();
-
-    /// <summary>
     /// Parses the shader source and creates the renderer-neutral runtime program.
     /// </summary>
     /// <remarks>
@@ -140,7 +135,6 @@ public sealed class Shader : IAsset, IShader
     public void Dispose()
     {
         Unload();
-        GC.SuppressFinalize(this);
     }
 
     /// <summary>

@@ -161,11 +161,6 @@ public sealed class Texture : IAsset, IEquatable<Texture>
     }
 
     /// <summary>
-    /// Releases texture resources if the instance was not disposed explicitly.
-    /// </summary>
-    ~Texture() => Dispose();
-
-    /// <summary>
     /// Ensures a normal file-backed texture has decoded pixel data available for use.
     /// </summary>
     /// <remarks>
@@ -211,7 +206,6 @@ public sealed class Texture : IAsset, IEquatable<Texture>
         ReleaseGraphicsTexture();
         _decodedPixels = null;
         IsValid = false;
-        GC.SuppressFinalize(this);
     }
 
     internal bool TryCopyPixelRegion(Rect2 sourceRect, out byte[] pixels, out int width, out int height)

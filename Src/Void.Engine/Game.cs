@@ -252,11 +252,6 @@ public class Game : IDisposable
     }
 
     /// <summary>
-    /// Releases game resources if the instance was not disposed explicitly.
-    /// </summary>
-    ~Game() => Dispose();
-
-    /// <summary>
     /// Runs the game loop until the window closes.
     /// </summary>
     /// <remarks>
@@ -281,6 +276,11 @@ public class Game : IDisposable
         {
             _window.DispatchEvents();
 
+            // A native close request can mark the window closed while events are
+            // being dispatched. Do not run another update/render cycle after that.
+            if (!_window.IsOpen)
+                break;
+
             double currentTime = _clock.Elapsed.TotalSeconds;
             float rawDelta = (float)(currentTime - _previousTimeSeconds);
             _previousTimeSeconds = currentTime;
@@ -289,13 +289,18 @@ public class Game : IDisposable
 
             if (_timing.IsFixedTimeStep)
             {
-                while (_timing.Accumulator >= _timing.TargetElapsed)
+                while (_timing.Accumulator >= _timing.TargetElapsed && _window.IsOpen)
                 {
                     InputAction.Update();
                     CoroutineManager.Instance.Update(_timing.TargetElapsed);
                     OnUpdate(_timing);
                     _timing.ConsumeFixedUpdate();
                 }
+
+                // Quit() may be requested from game code during a fixed update.
+                // Avoid presenting another frame once the window is closed.
+                if (!_window.IsOpen)
+                    break;
 
                 _window.BeginRender(_settings.ClearColor);
                 OnDraw(_timing);
@@ -306,6 +311,11 @@ public class Game : IDisposable
                 InputAction.Update();
                 CoroutineManager.Instance.Update(_timing.DeltaTime);
                 OnUpdate(_timing);
+
+                // Quit() may be requested from game code during the update.
+                // Avoid presenting another frame once the window is closed.
+                if (!_window.IsOpen)
+                    break;
 
                 _window.BeginRender(_settings.ClearColor);
                 OnDraw(_timing);
@@ -398,7 +408,6 @@ public class Game : IDisposable
 
         AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
 
-        GC.SuppressFinalize(this);
         _isDisposed = true;
 
         Logger.Instance.Dispose();
