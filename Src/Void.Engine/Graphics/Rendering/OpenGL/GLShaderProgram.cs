@@ -7,7 +7,6 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System.Numerics;
 using System.Text;
 using Silk.NET.OpenGL;
 
@@ -26,7 +25,7 @@ internal sealed class GLShaderProgram : IGraphicsShaderProgram
         Vect3,
         Vect4,
         Color,
-        Matrix4x4
+        Matrix
     }
 
     private sealed class UniformValueCache
@@ -38,7 +37,7 @@ internal sealed class GLShaderProgram : IGraphicsShaderProgram
         public float W;
         public int IntValue;
         public uint ColorValue;
-        public Matrix4x4 MatrixValue;
+        public Matrix MatrixValue;
     }
 
     private readonly GL _gl;
@@ -238,20 +237,20 @@ internal sealed class GLShaderProgram : IGraphicsShaderProgram
         cache.ColorValue = packed;
     }
 
-    public unsafe void SetUniform(string name, Matrix4x4 value)
+    public unsafe void SetUniform(string name, Matrix value)
     {
         int location = GetUniformLocation(name);
         if (location < 0)
             return;
 
         UniformValueCache cache = GetUniformValueCache(location);
-        if (cache.Kind == UniformValueKind.Matrix4x4 && cache.MatrixValue == value)
+        if (cache.Kind == UniformValueKind.Matrix && cache.MatrixValue == value)
             return;
 
         Use();
         _gl.UniformMatrix4(location, 1, false, (float*)&value);
 
-        cache.Kind = UniformValueKind.Matrix4x4;
+        cache.Kind = UniformValueKind.Matrix;
         cache.MatrixValue = value;
     }
 

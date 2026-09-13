@@ -45,12 +45,12 @@ public class PostProcessor : IDisposable
 
     /// <summary>Applies the configured shader to a source render target.</summary>
     /// <param name="sourceTarget">Target whose texture will be processed.</param>
-    /// <param name="camera">Optional camera passed to the internal sprite batch.</param>
+    /// <param name="camera">Optional <see cref="BaseCamera"/> passed to the internal sprite batch.</param>
     /// <remarks>
     /// The method returns without drawing when the processor is disposed, the shader
     /// is invalid, the source target is null, or the source target does not provide a texture.
     /// </remarks>
-    public void Apply(IRenderTarget sourceTarget, Camera camera = null)
+    public void Apply(IRenderTarget sourceTarget, BaseCamera camera = null)
     {
         if (_disposed || _shader == null || !_shader.IsValid)
             return;

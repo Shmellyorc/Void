@@ -60,9 +60,9 @@ public interface IBatcher : IDisposable
     /// <summary>Begins a new batch.</summary>
     /// <param name="sort">Sort mode, or null to use the implementation's configured default.</param>
     /// <param name="blendMode">Blend mode, or null to use the implementation's configured default.</param>
-    /// <param name="camera">Optional camera for view state.</param>
+    /// <param name="camera">Optional <see cref="BaseCamera"/> implementation used for view state.</param>
     /// <param name="renderTarget">Optional target for this batch.</param>
-    void Begin(SortMode? sort = null, IBlendMode blendMode = null, Camera camera = null, IRenderTarget renderTarget = null);
+    void Begin(SortMode? sort = null, IBlendMode blendMode = null, BaseCamera camera = null, IRenderTarget renderTarget = null);
 
     /// <summary>Flushes queued commands and ends the active batch.</summary>
     void End();

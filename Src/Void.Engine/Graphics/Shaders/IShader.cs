@@ -70,10 +70,12 @@ public interface IShader
     /// </remarks>
     void SetUniform(string name, Texture texture) { }
 
-    /// <summary>Sets a 4x4 matrix uniform value.</summary>
+    /// <summary>
+    /// Sets a VOID-owned 4x4 matrix uniform value.
+    /// </summary>
     /// <param name="name">The shader uniform name.</param>
     /// <param name="matrix">The matrix to assign.</param>
-    void SetUniform(string name, Matrix4x4 matrix);
+    void SetUniform(string name, Matrix matrix);
 
     /// <summary>
     /// Marks a sampler uniform as using the texture associated with the current draw command.

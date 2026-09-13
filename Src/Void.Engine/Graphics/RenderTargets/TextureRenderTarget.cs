@@ -70,7 +70,7 @@ internal sealed class TextureRenderTarget : IRenderTarget
         buffer.Draw(this, vertexStart, vertexCount, states);
     }
 
-    public void SetView(Camera camera)
+    public void SetView(BaseCamera camera)
     {
         ThrowIfDisposed();
         // Camera transforms are carried in BatchRenderState.ViewProjection.

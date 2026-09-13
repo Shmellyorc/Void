@@ -11,6 +11,8 @@
 //  - Transition back to gameplay
 // ============================================================================
 
+using Void.Engine.Cameras;
+
 namespace Scavengers.Scenes;
 
 /// <summary>

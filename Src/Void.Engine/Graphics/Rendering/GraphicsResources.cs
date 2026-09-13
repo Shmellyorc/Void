@@ -7,7 +7,6 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System.Numerics;
 using Void.Engine.Graphics;
 
 namespace Void.Engine.Graphics.Rendering;
@@ -108,10 +107,12 @@ public interface IGraphicsShaderProgram : IGraphicsResource
     /// <param name="value">The value to assign.</param>
     void SetUniform(string name, Color value);
 
-    /// <summary>Sets a 4x4 matrix uniform.</summary>
+    /// <summary>
+    /// Sets a VOID-owned 4x4 matrix uniform.
+    /// </summary>
     /// <param name="name">The shader uniform name.</param>
     /// <param name="value">The value to assign.</param>
-    void SetUniform(string name, Matrix4x4 value);
+    void SetUniform(string name, Matrix value);
 
     /// <summary>Binds or clears a renderer-owned texture for a named shader input.</summary>
     /// <param name="name">The shader texture or sampler name.</param>

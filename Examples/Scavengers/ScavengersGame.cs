@@ -16,6 +16,9 @@
 //  game-owned scene/entity architecture.
 // ============================================================================
 
+using Void.Engine.Cameras;
+using Void.Engine.Logs;
+
 namespace Scavengers;
 
 /// <summary>
@@ -110,6 +113,11 @@ public sealed class ScavengersGame(GameSettings settings) : Game(settings)
         // Create the scene manager and add the main gameplay scene
         _sceneManager = new SceneManager();
         _sceneManager.Add(new SceneGame());
+
+
+
+        
+
 
         base.OnEnter();
     }

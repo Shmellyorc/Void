@@ -7,7 +7,6 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System.Numerics;
 using Void.Engine.Graphics.Rendering;
 
 namespace Void.Engine.Graphics;
@@ -30,8 +29,10 @@ public sealed class BatchRenderState
     /// <summary>Gets or sets the shader used for the submission.</summary>
     public IShader Shader { get; set; }
 
-    /// <summary>Gets or sets the world-to-clip transform used by the built-in 2D pipeline.</summary>
-    public Matrix4x4 ViewProjection { get; set; } = Matrix4x4.Identity;
+    /// <summary>
+    /// Gets or sets the VOID-owned world-to-clip transform used by the built-in 2D pipeline.
+    /// </summary>
+    public Matrix ViewProjection { get; set; } = Matrix.Identity;
 
     // Font remains distinct from game Texture so DrawText(Font ...) stays fully
     // extensible for custom font implementations.

@@ -95,12 +95,12 @@ public interface IRenderTarget
     /// <summary>
     /// Notifies the render target that the active camera has changed.
     /// </summary>
-    /// <param name="camera">The camera selected for rendering.</param>
+    /// <param name="camera">The <see cref="BaseCamera"/> selected for rendering.</param>
     /// <remarks>
     /// VOID's built-in target does not store a separate camera view because its
     /// view-projection matrix is supplied through <see cref="BatchRenderState"/>.
     /// </remarks>
-    void SetView(Camera camera);
+    void SetView(BaseCamera camera);
 
     /// <summary>
     /// Gets the texture containing this target's rendered color output, when available.

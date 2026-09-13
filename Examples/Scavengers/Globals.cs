@@ -10,6 +10,8 @@
 //  - Create reusable coroutines for common effects
 // ============================================================================
 
+using Void.Engine.Cameras;
+
 namespace Scavengers;
 
 /// <summary>

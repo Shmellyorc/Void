@@ -7,7 +7,6 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System.Numerics;
 using System.Text;
 using Void.Engine.Graphics.Rendering;
 using Void.Engine.Graphics.Shaders;
@@ -194,11 +193,11 @@ public sealed class Shader : IAsset, IShader
     public void SetUniform(string name, Texture texture) => EnsureProgram().SetUniform(name, texture);
 
     /// <summary>
-    /// Sets a 4x4 matrix uniform value.
+    /// Sets a VOID-owned 4x4 matrix uniform value.
     /// </summary>
     /// <param name="name">The uniform name.</param>
     /// <param name="matrix">The matrix to assign.</param>
-    public void SetUniform(string name, Matrix4x4 matrix) => EnsureProgram().SetUniform(name, matrix);
+    public void SetUniform(string name, Matrix matrix) => EnsureProgram().SetUniform(name, matrix);
 
     /// <summary>
     /// Marks a sampler uniform to use the texture supplied by the current draw operation.

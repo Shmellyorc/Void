@@ -40,7 +40,7 @@ public sealed class ShaderProgram : IDisposable
     private readonly Dictionary<string, Vect3> _vect3Uniforms = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Vect4> _vect4Uniforms = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Color> _colorUniforms = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, Matrix4x4> _matrixUniforms = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Matrix> _matrixUniforms = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Texture> _textureUniforms = new(StringComparer.Ordinal);
     private readonly HashSet<string> _currentTextureUniforms = new(StringComparer.Ordinal);
 
@@ -204,7 +204,7 @@ public sealed class ShaderProgram : IDisposable
     /// <exception cref="ArgumentException">Thrown when <paramref name="name"/> is empty or whitespace.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="name"/> is null.</exception>
     /// <exception cref="ObjectDisposedException">Thrown when this program has been disposed.</exception>
-    public void SetUniform(string name, Matrix4x4 value)
+    public void SetUniform(string name, Matrix value)
     {
         PrepareUniformName(name);
         ClearUniform(name);
@@ -332,7 +332,7 @@ public sealed class ShaderProgram : IDisposable
     // Applies VOID's conventional per-draw 2D state before returning the backend program.
     internal bool TryPrepareForDraw(
         IGraphicsTexture drawTexture,
-        Matrix4x4 viewProjection,
+        Matrix viewProjection,
         out IGraphicsShaderProgram program)
     {
         if (!TryGetGraphicsProgram(out program))
@@ -419,7 +419,7 @@ public sealed class ShaderProgram : IDisposable
             program.SetUniform(name, value);
         foreach ((string name, Color value) in _colorUniforms)
             program.SetUniform(name, value);
-        foreach ((string name, Matrix4x4 value) in _matrixUniforms)
+        foreach ((string name, Matrix value) in _matrixUniforms)
             program.SetUniform(name, value);
         foreach ((string name, Texture texture) in _textureUniforms)
             ApplyTextureUniform(program, name, texture);

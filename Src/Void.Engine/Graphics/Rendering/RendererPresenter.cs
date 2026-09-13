@@ -84,12 +84,12 @@ internal sealed class RendererPresenter : IDisposable
         _device.Draw(command);
     }
 
-    private static Matrix4x4 CreatePixelProjection(int width, int height)
+    private static Matrix CreatePixelProjection(int width, int height)
     {
         float scaleX = 2f / width;
         float scaleY = -2f / height;
 
-        return new Matrix4x4(
+        return new Matrix(
             scaleX, 0f, 0f, 0f,
             0f, scaleY, 0f, 0f,
             0f, 0f, 1f, 0f,

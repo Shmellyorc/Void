@@ -18,6 +18,8 @@
 //  - Animate UI elements with tweens
 // ============================================================================
 
+using Void.Engine.Logs;
+
 namespace Scavengers.Scenes;
 
 /// <summary>

@@ -42,7 +42,7 @@ public abstract class BaseBatcher : IBatcher
     internal int _capacity;
     internal SortMode _sortMode;
     internal IBlendMode _blendMode;
-    internal Camera _currentCamera;
+    internal BaseCamera _currentCamera;
     internal BatchRenderState _renderStates;
     internal BatchStats _stats;
     internal RenderVertex[] _vertexData;
@@ -79,7 +79,7 @@ public abstract class BaseBatcher : IBatcher
     protected IBlendMode CurrentBlendMode => _blendMode;
 
     /// <summary>Gets the camera selected for the active batch, if any.</summary>
-    protected Camera CurrentCamera => _currentCamera;
+    protected BaseCamera CurrentCamera => _currentCamera;
 
     /// <summary>Gets the renderer-neutral state used for draw submission.</summary>
     protected BatchRenderState RenderStates => _renderStates;
@@ -203,6 +203,20 @@ public abstract class BaseBatcher : IBatcher
     public IRenderTarget GetRenderTarget()
         => _renderTarget;
 
+    private static Matrix CreateDefaultViewProjection()
+    {
+        Vect2 viewport = GameSettings.Instance.Viewport;
+
+        if (viewport.X <= 0f || viewport.Y <= 0f)
+            return Matrix.Identity;
+
+        return Matrix.CreateOrthographicOffCenter(
+            0f,
+            viewport.X,
+            0f,
+            viewport.Y);
+    }
+
     /// <summary>
     /// Copies the selected shader into <see cref="RenderStates"/>.
     /// </summary>
@@ -245,7 +259,7 @@ public abstract class BaseBatcher : IBatcher
     public virtual void Begin(
         SortMode? sortMode = null,
         IBlendMode blendMode = null,
-        Camera camera = null,
+        BaseCamera camera = null,
         IRenderTarget renderTarget = null)
     {
         if (_isDisposed)
@@ -269,8 +283,8 @@ public abstract class BaseBatcher : IBatcher
 
         _renderStates.BlendMode = _blendMode;
         _renderStates.ViewProjection =
-            camera?.ViewProjectionMatrix
-            ?? Camera.CreateDefaultViewProjection();
+            camera?.ViewProjection
+            ?? CreateDefaultViewProjection();
 
         if (camera != null)
             _renderTarget.SetView(camera);

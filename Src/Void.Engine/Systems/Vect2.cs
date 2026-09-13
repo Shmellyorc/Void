@@ -203,20 +203,20 @@ public struct Vect2 : IEquatable<Vect2>
 
     #region Transform
     /// <summary>
-    /// Transforms the vector from screen space to world space using the specified camera.
+    /// Transforms the vector from logical viewport space to world space using the specified camera.
     /// </summary>
-    /// <param name="camera">The camera to use for the transformation.</param>
+    /// <param name="camera">The <see cref="BaseCamera"/> to use for the transformation.</param>
     /// <returns>The vector transformed to world space.</returns>
-    public readonly Vect2 Transform(in Camera camera)
+    public readonly Vect2 Transform(in BaseCamera camera)
         => Transform(this, camera);
 
     /// <summary>
-    /// Transforms a vector from screen space to world space using the specified camera.
+    /// Transforms a vector from logical viewport space to world space using the specified camera.
     /// </summary>
-    /// <param name="mouse">The screen-space vector to transform.</param>
-    /// <param name="camera">The camera to use for the transformation.</param>
+    /// <param name="mouse">The logical viewport-space vector to transform.</param>
+    /// <param name="camera">The <see cref="BaseCamera"/> to use for the transformation.</param>
     /// <returns>The vector transformed to world space.</returns>
-    public static Vect2 Transform(in Vect2 mouse, in Camera camera)
+    public static Vect2 Transform(in Vect2 mouse, in BaseCamera camera)
         => camera.ScreenToWorld(mouse);
     #endregion
 
@@ -347,7 +347,6 @@ public struct Vect2 : IEquatable<Vect2>
     public static Vect2 Max(in Vect2 a, in Vect2 b)
         => new(MathF.Max(a.X, b.X), MathF.Max(a.Y, b.Y));
     #endregion
-
 
 
     #region Clamp

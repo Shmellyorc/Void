@@ -11,6 +11,8 @@
 //  - Remove and add scenes during transitions
 // ============================================================================
 
+using Void.Engine.Cameras;
+
 namespace Scavengers.Scenes;
 
 /// <summary>
