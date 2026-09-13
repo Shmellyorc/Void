@@ -53,7 +53,7 @@ public class LDtkSetting(object value)
     /// <param name="name">The original LDtk field name.</param>
     /// <returns><see langword="true"/> when the setting exists; otherwise, <see langword="false"/>.</returns>
     public static bool Contains(IReadOnlyDictionary<uint, LDtkSetting> settings, string name)
-        => settings.ContainsKey(HashHelper.Cache32(name));
+        => name.IsNotEmpty() && settings.ContainsKey(HashHelper.Cache32(name));
 
     /// <summary>
     /// Gets a boolean setting by field name.
@@ -62,12 +62,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetBoolSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not bool)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(bool)}'.");
 
-        return result.ValueAs<bool>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(bool)}'.");
     }
 
     /// <summary>
@@ -75,16 +77,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetBoolSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out bool setting)
     {
-        try
-        {
-            setting = GetBoolSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not bool value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -94,12 +99,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetIntSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not int)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(int)}'.");
 
-        return result.ValueAs<int>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(int)}'.");
     }
 
     /// <summary>
@@ -107,16 +114,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetIntSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out int setting)
     {
-        try
-        {
-            setting = GetIntSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not int value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -126,12 +136,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetFloatSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not float)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(float)}'.");
 
-        return result.ValueAs<float>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(float)}'.");
     }
 
     /// <summary>
@@ -139,16 +151,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetFloatSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out float setting)
     {
-        try
-        {
-            setting = GetFloatSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not float value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -158,12 +173,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetPointSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not Vect2)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(Vect2)}'.");
 
-        return result.ValueAs<Vect2>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(Vect2)}'.");
     }
 
     /// <summary>
@@ -171,16 +188,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetPointSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out Vect2 setting)
     {
-        try
-        {
-            setting = GetPointSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not Vect2 value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -190,12 +210,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetColorSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not Color)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(Color)}'.");
 
-        return result.ValueAs<Color>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(Color)}'.");
     }
 
     /// <summary>
@@ -203,16 +225,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetColorSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out Color setting)
     {
-        try
-        {
-            setting = GetColorSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not Color value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -222,12 +247,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetStringSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not string)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(string)}'.");
 
-        return result.ValueAs<string>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(string)}'.");
     }
 
     /// <summary>
@@ -235,16 +262,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetStringSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out string setting)
     {
-        try
-        {
-            setting = GetStringSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not string value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -254,12 +284,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetFilePathSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not string)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(string)}'.");
 
-        return result.ValueAs<string>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(string)}'.");
     }
 
     /// <summary>
@@ -267,16 +299,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetFilePathSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out string setting)
     {
-        try
-        {
-            setting = GetFilePathSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not string value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -286,12 +321,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetTileSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not LDtkTile)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(LDtkTile)}'.");
 
-        return result.ValueAs<LDtkTile>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(LDtkTile)}'.");
     }
 
     /// <summary>
@@ -299,16 +336,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetTileSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out LDtkTile setting)
     {
-        try
-        {
-            setting = GetTileSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not LDtkTile value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -318,12 +358,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetEntityRefSetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not LDtkEntityRef)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(LDtkEntityRef)}'.");
 
-        return result.ValueAs<LDtkEntityRef>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(LDtkEntityRef)}'.");
     }
 
     /// <summary>
@@ -331,16 +373,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetEntityRefSetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out LDtkEntityRef setting)
     {
-        try
-        {
-            setting = GetEntityRefSetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not LDtkEntityRef value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -351,8 +396,13 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetEnumSetting<TEnum>(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
+
         if (result.Value is not string)
             throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(TEnum)}'.");
 
@@ -366,16 +416,22 @@ public class LDtkSetting(object value)
     public static bool TryGetEnumSetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out TEnum setting)
         where TEnum : Enum
     {
-        try
-        {
-            setting = GetEnumSetting<TEnum>(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default;
+        setting = default;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not string value)
+            return false;
+
+        if (!Enum.TryParse(typeof(TEnum), value, true, out var parsed))
+            return false;
+
+        setting = (TEnum)parsed;
+        return true;
     }
 
     /// <summary>
@@ -385,12 +441,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetBoolArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<bool>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<bool>)}'.");
 
-        return result.ValueAs<List<bool>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<bool>)}'.");
     }
 
     /// <summary>
@@ -398,16 +456,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetBoolArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<bool> setting)
     {
-        try
-        {
-            setting = GetBoolArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<bool> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -417,12 +478,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetIntArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<int>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<int>)}'.");
 
-        return result.ValueAs<List<int>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<int>)}'.");
     }
 
     /// <summary>
@@ -430,16 +493,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetIntArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<int> setting)
     {
-        try
-        {
-            setting = GetIntArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<int> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -449,12 +515,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetFloatArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<float>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<float>)}'.");
 
-        return result.ValueAs<List<float>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<float>)}'.");
     }
 
     /// <summary>
@@ -462,16 +530,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetFloatArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<float> setting)
     {
-        try
-        {
-            setting = GetFloatArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<float> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -481,12 +552,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetPointArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<Vect2>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<Vect2>)}'.");
 
-        return result.ValueAs<List<Vect2>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<Vect2>)}'.");
     }
 
     /// <summary>
@@ -494,16 +567,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetPointArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<Vect2> setting)
     {
-        try
-        {
-            setting = GetPointArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<Vect2> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -513,12 +589,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetColorArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<Color>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<Color>)}'.");
 
-        return result.ValueAs<List<Color>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<Color>)}'.");
     }
 
     /// <summary>
@@ -526,16 +604,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetColorArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<Color> setting)
     {
-        try
-        {
-            setting = GetColorArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<Color> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -545,12 +626,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetStringArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<string>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<string>)}'.");
 
-        return result.ValueAs<List<string>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<string>)}'.");
     }
 
     /// <summary>
@@ -558,16 +641,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetStringArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<string> setting)
     {
-        try
-        {
-            setting = GetStringArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<string> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -577,12 +663,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetFilePathArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<string>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<string>)}'.");
 
-        return result.ValueAs<List<string>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<string>)}'.");
     }
 
     /// <summary>
@@ -590,16 +678,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetFilePathArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<string> setting)
     {
-        try
-        {
-            setting = GetFilePathArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<string> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -609,12 +700,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetTileArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<LDtkTile>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<LDtkTile>)}'.");
 
-        return result.ValueAs<List<LDtkTile>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<LDtkTile>)}'.");
     }
 
     /// <summary>
@@ -622,16 +715,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetTileArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<LDtkTile> setting)
     {
-        try
-        {
-            setting = GetTileArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<LDtkTile> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -641,12 +737,14 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetEntityRefArraySetting(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<LDtkEntityRef>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<LDtkEntityRef>)}'.");
 
-        return result.ValueAs<List<LDtkEntityRef>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<LDtkEntityRef>)}'.");
     }
 
     /// <summary>
@@ -654,16 +752,19 @@ public class LDtkSetting(object value)
     /// </summary>
     public static bool TryGetEntityRefArraySetting(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<LDtkEntityRef> setting)
     {
-        try
-        {
-            setting = GetEntityRefArraySetting(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
+        setting = default!;
+
+        if (name.IsEmpty())
             return false;
-        }
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<LDtkEntityRef> value)
+            return false;
+
+        setting = value;
+        return true;
     }
 
     /// <summary>
@@ -677,12 +778,34 @@ public class LDtkSetting(object value)
     {
         if (name.IsEmpty())
             throw new ArgumentNullException(nameof(name));
+
+        if (TryGetEnumArraySetting<TEnum>(settings, name, out var setting))
+            return setting;
+
         if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
             throw new KeyNotFoundException($"Unable to find setting with the name '{name}'.");
-        if (result.Value is not List<string>)
-            throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<TEnum>)}'.");
 
-        var items = result.ValueAs<List<string>>();
+        throw new InvalidCastException($"Setting '{name}' is '{result.Value.GetType()}', expected '{typeof(List<TEnum>)}'.");
+    }
+
+    /// <summary>
+    /// Attempts to get and parse an enum-array setting by field name.
+    /// </summary>
+    /// <typeparam name="TEnum">The enum type to parse.</typeparam>
+    public static bool TryGetEnumArraySetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<TEnum> setting)
+        where TEnum : Enum
+    {
+        setting = default!;
+
+        if (name.IsEmpty())
+            return false;
+
+        if (!settings.TryGetValue(HashHelper.Cache32(name), out var result))
+            return false;
+
+        if (result.Value is not List<string> items)
+            return false;
+
         var enumResult = new List<TEnum>(items.Count);
 
         for (int i = 0; i < items.Count; i++)
@@ -694,26 +817,8 @@ public class LDtkSetting(object value)
             enumResult.Add((TEnum)@enum);
         }
 
-        return enumResult;
-    }
-
-    /// <summary>
-    /// Attempts to get and parse an enum-array setting by field name.
-    /// </summary>
-    /// <typeparam name="TEnum">The enum type to parse.</typeparam>
-    public static bool TryGetEnumArraySetting<TEnum>(IReadOnlyDictionary<uint, LDtkSetting> settings, string name, out IReadOnlyList<TEnum> setting)
-        where TEnum : Enum
-    {
-        try
-        {
-            setting = GetEnumArraySetting<TEnum>(settings, name);
-            return true;
-        }
-        catch
-        {
-            setting = default!;
-            return false;
-        }
+        setting = enumResult;
+        return true;
     }
 }
 
