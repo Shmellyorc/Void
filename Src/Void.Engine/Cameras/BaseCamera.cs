@@ -18,9 +18,9 @@ namespace Void.Engine.Cameras;
 /// VOID caches both that matrix and its inverse until <see cref="Invalidate"/> is called.
 /// </para>
 /// <para>
-/// Derived cameras may override <see cref="Update(FrameTime)"/> for follow behavior,
-/// shake, smoothing, or other time-based camera logic without coupling those features
-/// to the base camera itself.
+/// Cameras attached to a batcher are updated automatically once per rendered frame.
+/// Derived cameras may override <see cref="OnUpdate(FrameTime)"/> for follow behavior,
+/// shake, smoothing, or other time-based camera logic.
 /// </para>
 /// </remarks>
 public abstract class BaseCamera
@@ -29,6 +29,7 @@ public abstract class BaseCamera
     private Matrix _inverseViewProjection = Matrix.Identity;
     private bool _dirty = true;
     private bool _hasInverse = true;
+    private ulong _lastUpdateFrame = ulong.MaxValue;
 
     /// <summary>
     /// Gets the current view-projection matrix.
@@ -95,21 +96,34 @@ public abstract class BaseCamera
     }
 
     /// <summary>
+    /// Updates this camera for the current rendered frame.
+    /// </summary>
+    /// <remarks>
+    /// This is called automatically by VOID when the camera is attached to a batcher.
+    /// Multiple batchers may reference the same camera, but the camera updates only once
+    /// for each rendered frame.
+    /// </remarks>
+    internal void Update()
+    {
+        var game = Game.Instance;
+
+        if (_lastUpdateFrame == game.RenderFrameId)
+            return;
+
+        _lastUpdateFrame = game.RenderFrameId;
+        OnUpdate(game.FrameTime);
+    }
+
+    /// <summary>
     /// Updates time-based camera behavior.
     /// </summary>
-    /// <param name="frameTime">Timing information for the current update.</param>
+    /// <param name="frameTime">Timing information for the current rendered frame.</param>
     /// <remarks>
-    /// <para>
-    /// The base implementation does nothing. Derived cameras may override this method
-    /// for following, shake, smoothing, transitions, or other camera-specific behavior.
-    /// </para>
-    /// <para>
-    /// Camera instances are owned by game or scene code, so VOID does not automatically
-    /// call this method for arbitrary cameras. Call it from the update path that owns the
-    /// camera when the camera implements time-based behavior.
-    /// </para>
+    /// Override this method for following, shake, smoothing, transitions, or other
+    /// camera-specific behavior. VOID invokes it automatically when the camera is used
+    /// by a batcher.
     /// </remarks>
-    public virtual void Update(FrameTime frameTime)
+    protected virtual void OnUpdate(FrameTime frameTime)
     {
     }
 

@@ -7,8 +7,6 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
-using System.Diagnostics;
-
 using Void.Engine.Inputs.InputActions;
 
 namespace Void.Engine;
@@ -56,11 +54,11 @@ public class Game : IDisposable
     private readonly GameSettings _settings;
     private readonly Window _window;
     private readonly FrameTime _timing;
-    private readonly Stopwatch _clock;
-    private double _previousTimeSeconds;
+    private ulong _renderFrameId;
     private bool _isDisposed;
 
     internal int _scrollWheel;
+    internal ulong RenderFrameId => _renderFrameId;
 
     /// <summary>
     /// Gets the first game instance created in the current process.
@@ -216,7 +214,6 @@ public class Game : IDisposable
         // create any renderer-owned resources through VOID's graphics contracts.
         LoadDefaultFont();
 
-        _clock = new Stopwatch();
         _timing = new FrameTime();
 
         Logger.Instance.Info("VOID setting up Application folders...");
@@ -269,8 +266,7 @@ public class Game : IDisposable
     {
         OnEnter();
 
-        _clock.Restart();
-        _previousTimeSeconds = 0d;
+        _timing.Start();
 
         while (_window.IsOpen)
         {
@@ -281,18 +277,16 @@ public class Game : IDisposable
             if (!_window.IsOpen)
                 break;
 
-            double currentTime = _clock.Elapsed.TotalSeconds;
-            float rawDelta = (float)(currentTime - _previousTimeSeconds);
-            _previousTimeSeconds = currentTime;
-
-            _timing.Update(rawDelta);
+            _timing.BeginFrame();
 
             if (_timing.IsFixedTimeStep)
             {
                 while (_timing.Accumulator >= _timing.TargetElapsed && _window.IsOpen)
                 {
+                    _timing.BeginFixedUpdate();
+
                     InputAction.Update();
-                    CoroutineManager.Instance.Update(_timing.TargetElapsed);
+                    CoroutineManager.Instance.Update(_timing);
                     OnUpdate(_timing);
                     _timing.ConsumeFixedUpdate();
                 }
@@ -302,6 +296,9 @@ public class Game : IDisposable
                 if (!_window.IsOpen)
                     break;
 
+                _timing.BeginRender();
+
+                _renderFrameId++;
                 _window.BeginRender(_settings.ClearColor);
                 OnDraw(_timing);
                 _window.EndRender();
@@ -309,7 +306,7 @@ public class Game : IDisposable
             else
             {
                 InputAction.Update();
-                CoroutineManager.Instance.Update(_timing.DeltaTime);
+                CoroutineManager.Instance.Update(_timing);
                 OnUpdate(_timing);
 
                 // Quit() may be requested from game code during the update.
@@ -317,6 +314,9 @@ public class Game : IDisposable
                 if (!_window.IsOpen)
                     break;
 
+                _timing.BeginRender();
+
+                _renderFrameId++;
                 _window.BeginRender(_settings.ClearColor);
                 OnDraw(_timing);
                 _window.EndRender();

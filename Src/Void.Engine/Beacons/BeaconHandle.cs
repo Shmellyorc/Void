@@ -19,24 +19,31 @@ namespace Void.Engine.Beacons;
 /// </remarks>
 public readonly struct BeaconHandle
 {
+    private readonly object[] _data;
+
     /// <summary>
     /// Gets the topic that was published.
     /// </summary>
     public string Topic { get; }
 
     /// <summary>
-    /// Gets the published payload items.
+    /// Gets a read-only view of the published payload items.
     /// </summary>
     /// <remarks>
-    /// Index zero contains the first item supplied when the beacon was
-    /// published. The returned array is the payload array used by the handle.
+    /// Index zero contains the first item supplied when the beacon was published.
+    /// The payload cannot be replaced or reordered through this handle.
     /// </remarks>
-    public object[] Data { get; }
+    public ReadOnlySpan<object> Data => _data ?? Array.Empty<object>();
+
+    /// <summary>
+    /// Gets the number of payload items carried by this beacon.
+    /// </summary>
+    public int Count => _data?.Length ?? 0;
 
     internal BeaconHandle(string topic, object[] data)
     {
         Topic = topic;
-        Data = data;
+        _data = data ?? Array.Empty<object>();
     }
 
     /// <summary>
@@ -50,12 +57,14 @@ public readonly struct BeaconHandle
     /// </returns>
     public TData Get<TData>(int index)
     {
-        if (index < 0 || index >= Data.Length)
-            return default;
-        if (Data[index] is not TData)
+        var data = _data;
+
+        if (data == null || (uint)index >= (uint)data.Length)
             return default;
 
-        return (TData)Data[index];
+        return data[index] is TData typed
+            ? typed
+            : default;
     }
 
     /// <summary>
@@ -73,13 +82,15 @@ public readonly struct BeaconHandle
     /// </returns>
     public bool TryGet<TData>(int index, out TData data)
     {
-        if (index < 0 || index >= Data.Length)
+        var payload = _data;
+
+        if (payload == null || (uint)index >= (uint)payload.Length)
         {
             data = default;
             return false;
         }
 
-        if (Data[index] is not TData typed)
+        if (payload[index] is not TData typed)
         {
             data = default;
             return false;

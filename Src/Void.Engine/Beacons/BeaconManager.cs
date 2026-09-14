@@ -22,8 +22,13 @@ namespace Void.Engine.Beacons;
 /// thread that calls <see cref="Publish(string, object[])"/>.
 /// </para>
 /// <para>
-/// Multiple callbacks can subscribe to the same topic. A subscription should
-/// be removed when its owner no longer needs to receive notifications.
+/// Multiple callbacks can subscribe to the same topic. Subscribers are stored as
+/// a multicast <see cref="Action{T}"/>, allowing publishing to invoke the complete
+/// subscriber chain directly without manually iterating subscribers.
+/// </para>
+/// <para>
+/// Subscription changes are synchronized with each other. Publishing remains a
+/// lock-free lookup and invokes the subscriber snapshot returned by that lookup.
 /// </para>
 /// <code>
 /// void OnPlayerMoved(BeaconHandle beacon)
@@ -43,6 +48,7 @@ public sealed class BeaconManager
         new Lazy<BeaconManager>(() => new BeaconManager());
 
     private readonly ConcurrentDictionary<ulong, Action<BeaconHandle>> _topics = [];
+    private readonly object _subscriptionLock = new();
 
     /// <summary>
     /// Gets the shared beacon manager.
@@ -71,12 +77,15 @@ public sealed class BeaconManager
         if (handle == null)
             throw new ArgumentNullException(nameof(handle), "handle is null");
 
-        var hash = HashHelper.Cache64(topic);
-        _topics.AddOrUpdate(
-            hash,
-            handle,
-            (k, existing) => (Action<BeaconHandle>)Delegate.Combine(existing, handle)
-        );
+        ulong hash = HashHelper.Cache64(topic);
+
+        lock (_subscriptionLock)
+        {
+            if (_topics.TryGetValue(hash, out var existing))
+                _topics[hash] = existing + handle;
+            else
+                _topics[hash] = handle;
+        }
     }
 
     /// <summary>
@@ -106,17 +115,21 @@ public sealed class BeaconManager
         if (handle == null)
             throw new ArgumentNullException(nameof(handle), "handle is null");
 
-        var hash = HashHelper.Cache64(topic);
-        if (!_topics.TryGetValue(hash, out var handles))
-            return false;
+        ulong hash = HashHelper.Cache64(topic);
 
-        var newHandler = (Action<BeaconHandle>)Delegate.Remove(handles, handle);
+        lock (_subscriptionLock)
+        {
+            if (!_topics.TryGetValue(hash, out var handles))
+                return false;
 
-        if (newHandler == null)
-            return _topics.TryRemove(hash, out _);
+            var remaining = handles - handle;
 
-        _topics[hash] = newHandler;
-        return true;
+            if (remaining == null)
+                return _topics.TryRemove(hash, out _);
+
+            _topics[hash] = remaining;
+            return true;
+        }
     }
 
     /// <summary>
@@ -134,7 +147,8 @@ public sealed class BeaconManager
     /// <param name="data">The payload items delivered to subscribers.</param>
     /// <remarks>
     /// If the topic has no subscribers, the call returns without creating a
-    /// <see cref="BeaconHandle"/>. Subscriber callbacks are invoked synchronously.
+    /// <see cref="BeaconHandle"/>. Subscriber callbacks are invoked synchronously
+    /// through the topic's multicast <see cref="Action{T}"/>.
     /// </remarks>
     /// <exception cref="ArgumentNullException">
     /// <paramref name="topic"/> is null or empty.
@@ -144,17 +158,14 @@ public sealed class BeaconManager
         if (topic.IsEmpty())
             throw new ArgumentNullException(nameof(topic), "topic is null or empty");
 
-        var hash = HashHelper.Cache64(topic);
+        ulong hash = HashHelper.Cache64(topic);
 
         if (!_topics.TryGetValue(hash, out var handles))
             return;
 
-        BeaconHandle handle;
-
-        if (data.IsEmpty())
-            handle = new BeaconHandle(topic, Array.Empty<object>());
-        else
-            handle = new BeaconHandle(topic, data);
+        var handle = new BeaconHandle(
+            topic,
+            data.IsEmpty() ? Array.Empty<object>() : data);
 
         handles.Invoke(handle);
     }
@@ -170,5 +181,9 @@ public sealed class BeaconManager
     /// <summary>
     /// Removes all beacon subscriptions.
     /// </summary>
-    public void Clear() => _topics.Clear();
+    public void Clear()
+    {
+        lock (_subscriptionLock)
+            _topics.Clear();
+    }
 }

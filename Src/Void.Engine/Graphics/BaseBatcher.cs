@@ -252,7 +252,7 @@ public abstract class BaseBatcher : IBatcher
     /// </summary>
     /// <param name="sortMode">Sort mode, or null to use <see cref="GameSettings.DefaultSortMode"/>.</param>
     /// <param name="blendMode">Blend mode, or null to use the configured default.</param>
-    /// <param name="camera">Optional camera used for view state and the view-projection matrix.</param>
+    /// <param name="camera">Optional camera used for view state and the view-projection matrix. Attached cameras update automatically once per rendered frame.</param>
     /// <param name="renderTarget">Optional target to select for this and later submissions.</param>
     /// <exception cref="ObjectDisposedException">Thrown when the batcher has been disposed.</exception>
     /// <exception cref="InvalidOperationException">Thrown when a batch is already active.</exception>
@@ -280,6 +280,8 @@ public abstract class BaseBatcher : IBatcher
             ?? GameSettings.Instance.DefaultBlendMode
             ?? BlendMode.Alpha;
         _currentCamera = camera;
+
+        camera?.Update();
 
         _renderStates.BlendMode = _blendMode;
         _renderStates.ViewProjection =
