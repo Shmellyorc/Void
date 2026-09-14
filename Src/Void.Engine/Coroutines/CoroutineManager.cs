@@ -69,6 +69,7 @@ public sealed class CoroutineManager
 
     private readonly List<CoroutineState> _running = [];
     private bool _isUpdating;
+    private bool _isCleaning;
 
     /// <summary>
     /// Gets the shared coroutine manager used by the engine.
@@ -163,7 +164,7 @@ public sealed class CoroutineManager
 
         StopState(state);
 
-        if (!_isUpdating)
+        if (!_isUpdating && !_isCleaning)
             RemoveStopped();
 
         return true;
@@ -201,7 +202,7 @@ public sealed class CoroutineManager
                 StopState(_running[i]);
         }
 
-        if (!_isUpdating)
+        if (!_isUpdating && !_isCleaning)
             RemoveStopped();
     }
 
@@ -302,11 +303,23 @@ public sealed class CoroutineManager
 
             int index = state.Stack.Count - 1;
             IEnumerator routine = state.Stack[index];
+            bool hasNext = routine.MoveNext();
 
-            if (!routine.MoveNext())
+            // MoveNext may stop this coroutine, or StopAll may be called from
+            // inside it. Cleanup is deferred until the manager finishes updating,
+            // so do not mutate or inspect the active chain after a stop request.
+            if (state.IsStopped)
+                return false;
+
+            if (!hasNext)
             {
-                DisposeRoutine(routine);
+                // Remove the completed routine before disposing it. Iterator
+                // disposal can run finally blocks that start or stop coroutines.
                 state.Stack.RemoveAt(index);
+                DisposeRoutine(routine);
+
+                if (state.IsStopped)
+                    return false;
 
                 if (state.Stack.Count == 0)
                     return false;
@@ -316,10 +329,12 @@ public sealed class CoroutineManager
                 continue;
             }
 
+            object current = routine.Current;
+
+            // Custom IEnumerator implementations may execute code from Current.
+            // Honor a stop request before processing the yielded value.
             if (state.IsStopped)
                 return false;
-
-            object current = routine.Current;
 
             if (current is IEnumerator child)
             {
@@ -366,9 +381,16 @@ public sealed class CoroutineManager
         if (state.IsStopped)
             return;
 
+        // Do not dispose or clear the chain here. Stop may be called from inside
+        // MoveNext or Current while that IEnumerator is actively executing.
+        // Cleanup happens after the update finishes, or immediately when the
+        // manager is not updating.
         state.IsStopped = true;
         state.Delay = 0f;
+    }
 
+    private static void CleanupState(CoroutineState state)
+    {
         for (int i = state.Stack.Count - 1; i >= 0; i--)
             DisposeRoutine(state.Stack[i]);
 
@@ -395,10 +417,40 @@ public sealed class CoroutineManager
 
     private void RemoveStopped()
     {
+        if (_isCleaning)
+            return;
+
+        _isCleaning = true;
+
+        try
+        {
+            while (true)
+            {
+                int index = FindStoppedStateIndex();
+                if (index < 0)
+                    break;
+
+                // Remove first so Dispose/finally code can safely call back into
+                // the manager without finding the state currently being cleaned.
+                CoroutineState state = _running[index];
+                _running.RemoveAt(index);
+                CleanupState(state);
+            }
+        }
+        finally
+        {
+            _isCleaning = false;
+        }
+    }
+
+    private int FindStoppedStateIndex()
+    {
         for (int i = _running.Count - 1; i >= 0; i--)
         {
             if (_running[i].IsStopped)
-                _running.RemoveAt(i);
+                return i;
         }
+
+        return -1;
     }
 }

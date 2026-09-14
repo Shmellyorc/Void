@@ -18,154 +18,64 @@
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
     <PackageTags>game-engine;2d;game-framework;game-development;dotnet;csharp;sdl3;silk-net;opengl;rendering;pluggable-renderer;renderer-api;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
-    <Version>2.0.1</Version>
+    <Version>2.1.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageReleaseNotes>
-    [2.0.1] 2026.9.13 - VOID Engine 2.0 represents a major architectural milestone.
+    VOID Engine 2.1.0
 
-    VOID is no longer built around SFML. The engine now owns its platform,
-    rendering, input, audio, camera, and graphics abstractions, providing a
-    cleaner foundation for VOID itself and a significantly stronger extension
-    surface for developers building custom rendering backends.
+    Camera
+    - Cameras attached to a batcher now update automatically during rendering.
+    - Added protected BaseCamera.OnUpdate(FrameTime) for custom camera behavior.
+    - Cameras update at most once per rendered frame even when shared by multiple batchers.
+    - Removed the need for game code to manually update attached cameras.
+    - Camera timing now uses the rendered-frame timing context.
 
-    Major architecture update:
-    * Completely removed the SFML.Net dependency from VOID Engine
-    * Added SDL3-CS as the platform layer for windows, displays, events, keyboard, mouse, gamepads, fullscreen, and graphics-context creation
-    * Added the built-in OpenGL renderer using Silk.NET.OpenGL
-    * Added renderer-neutral public APIs for Vulkan, Direct3D, Metal, OpenGL, and custom third-party renderer implementations
-    * Added native platform handle access through IRendererContext for renderer plugins
-    * Added native handle support for Windows, X11/XWayland, Wayland, and Cocoa where supported
-    * Reworked textures, shaders, GPU buffers, render targets, pipelines, samplers, command submission, and graphics resources around renderer-neutral contracts
-    * Replaced SFML audio with Silk.NET.OpenAL and NAudio.SoundFile decoding
-    * Added multi-monitor display management and runtime display selection
-    * Added Linux backend selection for Auto, X11, Wayland, and X11ThenWayland
-    * Preserved VOID's high-level game, asset, batching, font, sound, and rendering workflows while replacing the underlying platform architecture
+    Frame Timing
+    - Reworked FrameTime to own and manage VOID's game-loop timing state.
+    - Fixed timestep updates now receive the configured fixed update interval.
+    - Rendering receives the actual elapsed frame time even when fixed timestep mode is enabled.
+    - Variable timestep mode continues to use actual elapsed frame time for both update and rendering.
+    - DeltaTime remains time-scale aware.
+    - ElapsedTime and UnscaledDeltaTime expose the current unscaled timing phase.
+    - TotalTime, accumulator, interpolation alpha, FPS, and slow-frame tracking remain available through FrameTime.
+    - Engine update systems continue to receive FrameTime rather than standalone delta values.
 
-    Pluggable rendering:
-    * Added IRendererBackend, IGraphicsDevice, IRendererContext, and renderer-neutral graphics resource contracts
-    * Added public renderer capabilities and native-window integration for external renderer plugins
-    * Made IRenderTarget usable by third-party renderer implementations
-    * Removed internal renderer dependencies from public render-target and batching paths
-    * Added renderer-neutral shader lifecycle and extension contracts
-    * Added validation for vertex layouts, render commands, graphics-device ownership, and custom renderer resources
-    * Added an external renderer smoke test covering the complete GameSettings.SetRenderer(...) plugin path
+    Coroutines
+    - Replaced the previous coroutine implementation with a VOID-native IEnumerator coroutine runner.
+    - Added nested coroutine chaining through yield return IEnumerator.
+    - Nested child routines can chain to arbitrary practical depth.
+    - Parent routines resume after their child routine completes.
+    - Root coroutine handles remain valid while nested children are executing.
+    - Stopping a root coroutine now stops and cleans up its entire active child chain.
+    - Coroutine cleanup disposes nested routines from the deepest child back to the root.
+    - Starting and stopping coroutines during a coroutine update is supported safely.
+    - CoroutineManager now uses FrameTime for timing.
+    - Numeric float, double, and int yields continue to represent scaled-time delays.
+    - CoroutineHandle remains an immutable readonly struct.
+    - Coroutine Count reports active root coroutines only.
 
-    Renderer and batching improvements:
-    * Converted SpriteBatcher to indexed rendering using four vertices per sprite
-    * Added reusable UInt32 index buffers
-    * Reduced redundant OpenGL state changes through shared state caching
-    * Cached shaders, textures, VAOs, buffers, viewport state, render targets, blend state, clear state, and uniform values
-    * Improved streaming and full-buffer GPU uploads
-    * Removed redundant CPU-side vertex copies
-    * Reduced repeated camera and atlas work inside rendering hot paths
-    * Corrected CPU batch timing statistics and reserved GPUTime for future real GPU timing support
-    * Fixed transformed sprite scaling, rotated-sprite camera culling, triangle statistics, and primitive strip/fan batching
-    * Corrected half-texel handling for pixel-space texture coordinates
+    Beacons
+    - BeaconHandle payload data is now exposed as a read-only view.
+    - BeaconHandle is safe when default initialized.
+    - Added Count for payload item count.
+    - Improved Get and TryGet payload handling.
+    - Beacon subscription mutation is now synchronized while keeping publishing on the existing fast multicast Action&lt;BeaconHandle&gt; path.
+    - Publishing remains synchronous and does not manually iterate subscribers.
 
-    Texture atlas improvements:
-    * Fixed Skyline free-space reuse that could produce overlapping atlas regions
-    * Hardened Skyline and Guillotine packing and defragmentation
-    * Made atlas defragmentation transactional
-    * Added validation for invalid, overlapping, fractional, and out-of-bounds packer results
-    * Improved support and validation for custom IAtlasPacker implementations
-    * Kept CPU atlas data, metadata, and GPU uploads synchronized during defragmentation
-    * Improved LRU eviction and recovery behavior
-    * Added accurate pixel-area atlas metrics
-    * Reduced unnecessary atlas LRU updates for frequently reused regions
+    Beacon Extensions
+    - Added BeaconManager.PublishDelay for delayed string and enum topic publishing.
+    - Delayed publishing uses the normal VOID coroutine system and scaled game time.
+    - PublishDelay returns a CoroutineHandle so a pending publish can be stopped.
+    - Added BeaconHandle typed payload extensions for one through five payload values.
+    - Added Get, GetOr, TryGet, Has, IsTopic, HasData, and IsEmpty convenience helpers.
+    - Multi-value payload helpers use direct positional access without payload scanning or enumeration.
 
-    Shader and graphics improvements:
-    * Reserved texture unit zero for the primary draw texture
-    * Prevented custom shader samplers from colliding with the primary texture
-    * Switched texture handling to renderer-reported hardware limits
-    * Added stable OpenGL sampler-unit management
-    * Cleared stale texture bindings when shader uniforms or resources change
-    * Corrected untextured draw handling
-    * Expanded renderer-neutral shader and graphics documentation
-
-    Camera system:
-    * Added the extensible BaseCamera abstraction
-    * Added VOID's own 4x4 Matrix implementation for renderer and camera transforms
-    * Removed System.Numerics.Matrix4x4 from the camera/rendering path
-    * Added camera rotation
-    * Added matrix-based WorldToScreen and ScreenToWorld conversion
-    * Added rotated-camera bounds and conservative view culling
-    * Updated batching, render targets, post-processing, and shaders to work with BaseCamera
-    * Preserved the existing zero-rotation camera behavior
-    * Preserved independent cameras for world and UI rendering
-    * Added support for developer-defined custom camera implementations
-
-    Text and font rendering:
-    * Fixed wrapped-text horizontal and vertical alignment
-    * Restored wrapped-text vertical overflow limits
-    * Made tab measurement and rendering use matching spacing
-    * Ignored carriage returns consistently
-    * Fixed positioned-text camera-edge culling
-    * Fixed direct-font rendering when half-texel offset is enabled
-    * Refreshed font and text rendering internals for the new renderer architecture
-
-    Input improvements:
-    * Migrated keyboard, mouse, and gamepad input to SDL3
-    * Restored InputAction updates in the main game loop
-    * Improved InputAction default-state and invalid-name handling
-    * Added TryGetAction overloads
-    * Made KeyboardState and MouseState immutable snapshots
-    * Fixed mouse focus and scroll-wheel snapshot behavior
-    * Added IEquatable support to MouseState
-    * Renamed XButton1/XButton2 to Extra1/Extra2
-
-    Pathfinding improvements:
-    * Fixed directed connection cleanup
-    * Fixed flow-field traversal across directed connections
-    * Reused available point IDs after removals
-    * Corrected one-way segment handling
-    * Guarded against zero-length pathfinding edges
-    * Added validation for invalid point-weight scales
-    * Made pathfinding disposal idempotent
-    * Ensured failed path queries consistently return empty lists
-
-    Core correctness improvements:
-    * Hardened FastRandom range and bounds handling
-    * Fixed Vect2 scalar-left operators and equality/hash consistency
-    * Corrected FrameTime total-time accumulation in fixed timestep mode
-    * Aligned DisplayMode equality and hashing with Vect2 precision behavior
-    * Improved Matrix inversion and equality behavior
-    * Removed unused SoundInstance playback-state fields
-    * Preserved SoundInstance stop-state reporting without redundant state tracking
-    * Reworked LDtk setting TryGet helpers to use non-throwing lookup and type-check paths instead of exception-driven control flow
-    * Preserved strict Get setting validation and detailed missing-field, invalid-type, and enum parsing errors
-    * Made LDtk setting existence checks safely return false for empty field names
-
-    Logging improvements:
-    * Hardened fatal and critical logging behavior
-    * Added Critical and CriticalWithCategory crash APIs
-    * Fixed duplicate exception output
-    * Fixed FileSink daily rotation, size rollover, retention, and UTF-8 size tracking
-    * Improved logger flushing and shutdown ordering
-    * Prevented disabled log messages from being unnecessarily formatted
-    * Integrated logger flushing and disposal into engine shutdown
-
-    Documentation and tooling:
-    * Extensively refreshed XML documentation across the public engine API
-    * Documented renderer backend lifecycle, resource ownership, capabilities, and extension contracts
-    * Documented custom renderer and custom atlas-packer requirements
-    * Refreshed camera, math, window, graphics, input, logging, shader, and rendering documentation
-    * Updated runnable examples for the VOID 2.0 architecture
-    * Updated package metadata and README documentation for VOID Engine, Packer, CLI, and Templates
-    * Removed stale SFML references throughout the project
-
-    Breaking changes:
-    * SFML.Net and SFML-specific public types are no longer part of VOID Engine
-    * Rendering integrations written against the previous SFML architecture must migrate to the new renderer-neutral contracts
-    * Custom renderer plugins should use IRendererBackend, IGraphicsDevice, and IRendererContext
-    * Platform-specific renderer integrations should request native handles through IRendererContext instead of depending directly on VOID's SDL implementation
-    * Graphics resources, shaders, textures, render targets, and GPU integrations may require migration to the new public graphics APIs
-    * Camera extensions should now target BaseCamera and VOID's Matrix type
-    * MouseButton.XButton1 and MouseButton.XButton2 have been renamed to Extra1 and Extra2
-
-    VOID 2.0 establishes the new foundation for the engine:
-    renderer-neutral, platform-independent, extensible, and fully owned by VOID.
+    Game Loop
+    - Updated the game loop to distinguish fixed-update timing from rendered-frame timing.
+    - Added render-frame tracking used by automatic camera updates.
+    - Preserved graceful shutdown checks so updates and rendering do not continue after the window closes.
     </PackageReleaseNotes>
   </PropertyGroup>
 
