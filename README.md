@@ -25,7 +25,7 @@ VOID deliberately stays focused on framework-level systems. Features such as ful
 
 | Package                                                           | Version | NuGet                                                                                                      |
 | ----------------------------------------------------------------- | ------: | ---------------------------------------------------------------------------------------------------------- |
-| [Void.Engine](https://www.nuget.org/packages/Void.Engine)         |   2.0.1 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine)         |
+| [Void.Engine](https://www.nuget.org/packages/Void.Engine)         |   2.1.0 | [![NuGet](https://img.shields.io/nuget/v/Void.Engine)](https://www.nuget.org/packages/Void.Engine)         |
 | [Void.Packer](https://www.nuget.org/packages/Void.Packer)         |   1.0.1 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer)](https://www.nuget.org/packages/Void.Packer)         |
 | [Void.Packer.CLI](https://www.nuget.org/packages/Void.Packer.CLI) |   1.0.1 | [![NuGet](https://img.shields.io/nuget/v/Void.Packer.CLI)](https://www.nuget.org/packages/Void.Packer.CLI) |
 | [Void.Templates](https://www.nuget.org/packages/Void.Templates)   |   1.0.1 | [![NuGet](https://img.shields.io/nuget/v/Void.Templates)](https://www.nuget.org/packages/Void.Templates)   |
