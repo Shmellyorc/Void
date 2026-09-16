@@ -20,6 +20,7 @@
 //  See LICENSE file in the project root for full license information.
 // ============================================================================
 
+using Void.Engine.Cameras;
 using Void.Engine.Graphics.RenderTargets;
 using Void.Engine.Graphics.Shaders;
 
