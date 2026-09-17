@@ -68,9 +68,15 @@ namespace Void.Engine.Inputs.InputActions;
 /// </remarks>
 public static class InputAction
 {
-    private static readonly Dictionary<string, ActionBinding> _actions = new(StringComparer.OrdinalIgnoreCase);
-    private static Dictionary<string, bool> _currentStates = new(StringComparer.OrdinalIgnoreCase);
-    private static Dictionary<string, bool> _previousStates = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<string, ActionBinding> _actions =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static Dictionary<string, bool> _currentStates =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    private static Dictionary<string, bool> _previousStates =
+        new(StringComparer.OrdinalIgnoreCase);
+
     private static InputActionState _state;
 
     /// <summary>
@@ -79,7 +85,8 @@ public static class InputAction
     /// <remarks>
     /// The returned collection reflects the actions currently registered with the manager.
     /// </remarks>
-    public static IReadOnlyCollection<ActionBinding> Actions => _actions.Values;
+    public static IReadOnlyCollection<ActionBinding> Actions
+        => _actions.Values;
 
     /// <summary>
     /// Gets an existing action or creates a new action with the specified name.
@@ -98,9 +105,13 @@ public static class InputAction
             throw new ArgumentNullException(nameof(name));
 
         if (name.IsEmpty())
-            throw new ArgumentException("Action name cannot be empty or whitespace.", nameof(name));
+        {
+            throw new ArgumentException(
+                "Action name cannot be empty or whitespace.",
+                nameof(name));
+        }
 
-        if (_actions.TryGetValue(name, out var existing))
+        if (_actions.TryGetValue(name, out ActionBinding existing))
             return existing;
 
         var action = new ActionBinding(name);
@@ -133,7 +144,9 @@ public static class InputAction
     /// empty, whitespace, or no action is registered with that name.
     /// </returns>
     public static ActionBinding GetAction(string name)
-        => TryGetAction(name, out var action) ? action : null;
+        => TryGetAction(name, out ActionBinding action)
+            ? action
+            : null;
 
     /// <summary>
     /// Gets the action registered for the specified enum value.
@@ -144,7 +157,9 @@ public static class InputAction
     /// <see langword="null"/> or no action is registered for it.
     /// </returns>
     public static ActionBinding GetAction(Enum name)
-        => TryGetAction(name, out var action) ? action : null;
+        => TryGetAction(name, out ActionBinding action)
+            ? action
+            : null;
 
     /// <summary>
     /// Attempts to get the action registered with the specified name.
@@ -157,7 +172,9 @@ public static class InputAction
     /// <returns>
     /// <see langword="true"/> when the action exists; otherwise, <see langword="false"/>.
     /// </returns>
-    public static bool TryGetAction(string name, out ActionBinding action)
+    public static bool TryGetAction(
+        string name,
+        out ActionBinding action)
     {
         if (name.IsEmpty())
         {
@@ -179,7 +196,9 @@ public static class InputAction
     /// <returns>
     /// <see langword="true"/> when the action exists; otherwise, <see langword="false"/>.
     /// </returns>
-    public static bool TryGetAction(Enum name, out ActionBinding action)
+    public static bool TryGetAction(
+        Enum name,
+        out ActionBinding action)
     {
         if (name is null)
         {
@@ -187,7 +206,9 @@ public static class InputAction
             return false;
         }
 
-        return TryGetAction(name.ToEnumString(), out action);
+        return TryGetAction(
+            name.ToEnumString(),
+            out action);
     }
 
     /// <summary>
@@ -198,7 +219,8 @@ public static class InputAction
     /// <see langword="true"/> if the action exists; otherwise, <see langword="false"/>.
     /// Null, empty, or whitespace names return <see langword="false"/>.
     /// </returns>
-    public static bool HasAction(string name) => TryGetAction(name, out _);
+    public static bool HasAction(string name)
+        => TryGetAction(name, out _);
 
     /// <summary>
     /// Determines whether an action is registered for the specified enum value.
@@ -208,7 +230,8 @@ public static class InputAction
     /// <see langword="true"/> if the action exists; otherwise, <see langword="false"/>.
     /// A <see langword="null"/> value returns <see langword="false"/>.
     /// </returns>
-    public static bool HasAction(Enum name) => TryGetAction(name, out _);
+    public static bool HasAction(Enum name)
+        => TryGetAction(name, out _);
 
     /// <summary>
     /// Removes the action registered with the specified name.
@@ -237,7 +260,8 @@ public static class InputAction
     /// A <see langword="null"/> value is ignored and returns <see langword="false"/>.
     /// </returns>
     public static bool RemoveAction(Enum name)
-        => name is not null && RemoveAction(name.ToEnumString());
+        => name is not null &&
+           RemoveAction(name.ToEnumString());
 
     /// <summary>
     /// Removes all registered actions and resets the current action state snapshot.
@@ -255,20 +279,47 @@ public static class InputAction
 
     internal static void Update()
     {
-        var mouse = Mouse.GetState();
-        var keyboard = Keyboard.GetState();
-        var gamepad = Gamepad.GetState();
+        if (_actions.Count == 0)
+        {
+            if (_currentStates.Count != 0)
+                _currentStates.Clear();
 
-        var temp = _previousStates;
+            if (_previousStates.Count != 0)
+                _previousStates.Clear();
+
+            _state = default;
+            return;
+        }
+
+        MouseState mouse = Mouse.GetState();
+        KeyboardState keyboard = Keyboard.GetState();
+        GamepadState gamepad = Gamepad.GetState();
+
+        Dictionary<string, bool> temp =
+            _previousStates;
+
         _previousStates = _currentStates;
         _currentStates = temp;
 
         _currentStates.Clear();
 
-        foreach (var (name, action) in _actions)
-            _currentStates[name] = action.Evaluate(mouse, keyboard, gamepad);
+        foreach ((string name, ActionBinding action) in _actions)
+        {
+            _currentStates[name] =
+                action.Evaluate(
+                    mouse,
+                    keyboard,
+                    gamepad);
+        }
 
-        _state = new InputActionState(_currentStates, _previousStates);
+        if (!_state.Matches(
+                _currentStates,
+                _previousStates))
+        {
+            _state = new InputActionState(
+                _currentStates,
+                _previousStates);
+        }
     }
 
     /// <summary>
@@ -279,6 +330,7 @@ public static class InputAction
     /// advance action transitions. Before the first action-system update, or after
     /// <see cref="Clear"/>, the default snapshot treats every action as released.
     /// </remarks>
-    /// <returns>The current <see cref="InputActionState"/> snapshot.</returns>
-    public static InputActionState GetState() => _state;
+    /// <returns>The current input action snapshot.</returns>
+    public static InputActionState GetState()
+        => _state;
 }

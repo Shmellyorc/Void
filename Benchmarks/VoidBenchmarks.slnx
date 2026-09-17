@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="../Src/Void.Engine/Void.Engine.csproj" />
+  <Project Path="../Src/Void.Packer/Void.Packer.csproj" />
+  <Project Path="Bench.MonoGame/Bench.MonoGame.csproj" />
+  <Project Path="Bench.Shared/Bench.Shared.csproj" />
+  <Project Path="Bench.Void/Bench.Void.csproj" />
+</Solution>
