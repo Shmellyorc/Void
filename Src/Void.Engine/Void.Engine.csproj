@@ -18,64 +18,33 @@
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
     <PackageTags>game-engine;2d;game-framework;game-development;dotnet;csharp;sdl3;silk-net;opengl;rendering;pluggable-renderer;renderer-api;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
-    <Version>2.1.0</Version>
+    <Version>2.1.1</Version>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageReleaseNotes>
-    VOID Engine 2.1.0
+    VOID Engine 2.1.1
 
-    Camera
-    - Cameras attached to a batcher now update automatically during rendering.
-    - Added protected BaseCamera.OnUpdate(FrameTime) for custom camera behavior.
-    - Cameras update at most once per rendered frame even when shared by multiple batchers.
-    - Removed the need for game code to manually update attached cameras.
-    - Camera timing now uses the rendered-frame timing context.
+    Rendering
+    - Added renderer-neutral scissor clipping support for batch rendering.
+    - Added BaseBatcher.SetScissor(Rect2) and ClearScissor().
+    - Scissor changes automatically flush queued geometry before changing clipping state.
+    - Scissor rectangles use VOID logical viewport coordinates and scale correctly to active render targets.
+    - Scissor clipping works correctly with supersampling and custom render targets.
+    - Added scissor state to renderer-neutral RenderCommand submissions for custom renderer support.
+    - Added OpenGL scissor support with top-left VOID coordinates converted correctly to OpenGL coordinates.
+    - Scissor rectangles are clamped to the active render target.
+    - Render target clears are protected from stale scissor state.
+    - Scissor state is automatically cleared when a batch ends.
+    - SpriteBatcher and PrimitiveBatcher inherit scissor support without renderer-specific changes.
 
-    Frame Timing
-    - Reworked FrameTime to own and manage VOID's game-loop timing state.
-    - Fixed timestep updates now receive the configured fixed update interval.
-    - Rendering receives the actual elapsed frame time even when fixed timestep mode is enabled.
-    - Variable timestep mode continues to use actual elapsed frame time for both update and rendering.
-    - DeltaTime remains time-scale aware.
-    - ElapsedTime and UnscaledDeltaTime expose the current unscaled timing phase.
-    - TotalTime, accumulator, interpolation alpha, FPS, and slow-frame tracking remain available through FrameTime.
-    - Engine update systems continue to receive FrameTime rather than standalone delta values.
-
-    Coroutines
-    - Replaced the previous coroutine implementation with a VOID-native IEnumerator coroutine runner.
-    - Added nested coroutine chaining through yield return IEnumerator.
-    - Nested child routines can chain to arbitrary practical depth.
-    - Parent routines resume after their child routine completes.
-    - Root coroutine handles remain valid while nested children are executing.
-    - Stopping a root coroutine now stops and cleans up its entire active child chain.
-    - Coroutine cleanup disposes nested routines from the deepest child back to the root.
-    - Starting and stopping coroutines during a coroutine update is supported safely.
-    - CoroutineManager now uses FrameTime for timing.
-    - Numeric float, double, and int yields continue to represent scaled-time delays.
-    - CoroutineHandle remains an immutable readonly struct.
-    - Coroutine Count reports active root coroutines only.
-
-    Beacons
-    - BeaconHandle payload data is now exposed as a read-only view.
-    - BeaconHandle is safe when default initialized.
-    - Added Count for payload item count.
-    - Improved Get and TryGet payload handling.
-    - Beacon subscription mutation is now synchronized while keeping publishing on the existing fast multicast Action&lt;BeaconHandle&gt; path.
-    - Publishing remains synchronous and does not manually iterate subscribers.
-
-    Beacon Extensions
-    - Added BeaconManager.PublishDelay for delayed string and enum topic publishing.
-    - Delayed publishing uses the normal VOID coroutine system and scaled game time.
-    - PublishDelay returns a CoroutineHandle so a pending publish can be stopped.
-    - Added BeaconHandle typed payload extensions for one through five payload values.
-    - Added Get, GetOr, TryGet, Has, IsTopic, HasData, and IsEmpty convenience helpers.
-    - Multi-value payload helpers use direct positional access without payload scanning or enumeration.
-
-    Game Loop
-    - Updated the game loop to distinguish fixed-update timing from rendered-frame timing.
-    - Added render-frame tracking used by automatic camera updates.
-    - Preserved graceful shutdown checks so updates and rendering do not continue after the window closes.
+    Input Actions
+    - Removed unnecessary per-frame InputActionState dictionary allocations.
+    - Input action snapshots are now reused when current and previous logical action states have not changed.
+    - Added a fast path when no input actions are registered.
+    - Default InputActionState remains allocation-free and treats missing actions as released.
+    - Preserved stable retained snapshots across subsequent input updates.
+    - Preserved JustPressed, Pressed, JustReleased, and Up transition behavior.
     </PackageReleaseNotes>
   </PropertyGroup>
 
