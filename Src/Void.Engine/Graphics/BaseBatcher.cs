@@ -75,7 +75,7 @@ public abstract class BaseBatcher : IBatcher
     /// <summary>Gets the sort mode selected for the active batch.</summary>
     protected SortMode CurrentSortMode => _sortMode;
 
-    /// <summary>Gets the blend mode selected for the active batch.</summary>
+     /// <summary>Gets the blend mode selected for the active batch.</summary>
     protected IBlendMode CurrentBlendMode => _blendMode;
 
     /// <summary>Gets the camera selected for the active batch, if any.</summary>
@@ -257,7 +257,9 @@ public abstract class BaseBatcher : IBatcher
     /// <summary>
     /// Copies the selected shader into <see cref="RenderStates"/>.
     /// </summary>
-    /// <remarks>Derived batchers may override this to prepare additional shader state.</remarks>
+    /// <remarks>
+    /// Derived batchers may override this to prepare additional shader state.
+    /// </remarks>
     protected virtual void ApplyShader()
     {
         _renderStates.Shader = _currentShader;
@@ -347,7 +349,7 @@ public abstract class BaseBatcher : IBatcher
             throw new ObjectDisposedException(Name);
 
         if (!_isDrawing)
-        {
+         {
             throw new InvalidOperationException(
                 $"{Name}.End called without a batching Begin.");
         }
@@ -356,6 +358,7 @@ public abstract class BaseBatcher : IBatcher
 
         _isDrawing = false;
         _renderStates.Shader = null;
+        _renderStates.ScissorRectangle = null;
 
         OnEnd();
     }
@@ -368,7 +371,6 @@ public abstract class BaseBatcher : IBatcher
     {
         if (_cmdCount == 0)
             return;
-
         long startTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 
         if (_sortMode is not SortMode.Immediate and not SortMode.Deferred)
@@ -405,7 +407,6 @@ public abstract class BaseBatcher : IBatcher
         _stats.Vertices = totalVertices;
         _stats.Triangles = GetTriangleCount(totalVertices);
         _stats.Commands = _cmdCount;
-
         _cmdCount = 0;
 
         OnFlush();
