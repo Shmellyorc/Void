@@ -203,6 +203,43 @@ public abstract class BaseBatcher : IBatcher
     public IRenderTarget GetRenderTarget()
         => _renderTarget;
 
+    /// <summary>
+    /// Sets the rectangular scissor region used by subsequent draws.
+    /// </summary>
+    /// <param name="rectangle">The clip rectangle in logical viewport coordinates.</param>
+    /// <remarks>
+    /// Changing the scissor region during an active batch flushes queued geometry first
+    /// so previously queued draws retain the scissor state they were submitted with.
+    /// </remarks>
+    public void SetScissor(Rect2 rectangle)
+    {
+        if (_renderStates.ScissorRectangle is Rect2 current && current == rectangle)
+            return;
+
+        if (_isDrawing && _cmdCount > 0)
+            Flush();
+
+        _renderStates.ScissorRectangle = rectangle;
+    }
+
+    /// <summary>
+    /// Disables scissor clipping for subsequent draws.
+    /// </summary>
+    /// <remarks>
+    /// Clearing the scissor region during an active batch flushes queued geometry first
+    /// so previously queued draws retain the scissor state they were submitted with.
+    /// </remarks>
+    public void ClearScissor()
+    {
+        if (!_renderStates.ScissorRectangle.HasValue)
+            return;
+
+        if (_isDrawing && _cmdCount > 0)
+            Flush();
+
+        _renderStates.ScissorRectangle = null;
+    }
+
     private static Matrix CreateDefaultViewProjection()
     {
         Vect2 viewport = GameSettings.Instance.Viewport;

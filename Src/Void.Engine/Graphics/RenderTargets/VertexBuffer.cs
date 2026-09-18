@@ -220,9 +220,30 @@ internal sealed class VertexBuffer : IVertexBuffer, IGraphicsBufferSource
             shader,
             indexBuffer,
             checked((int)indexStart),
-            checked((int)indexCount));
+            checked((int)indexCount),
+            CreateTargetScissor(states.ScissorRectangle, target));
 
         device.Draw(command);
+    }
+
+    private static Rect2? CreateTargetScissor(Rect2? scissorRectangle, IRenderTarget target)
+    {
+        if (!scissorRectangle.HasValue)
+            return null;
+
+        Vect2 viewport = GameSettings.Instance.Viewport;
+        if (viewport.X <= 0f || viewport.Y <= 0f)
+            return scissorRectangle;
+
+        Rect2 rectangle = scissorRectangle.Value;
+        float scaleX = target.Width / viewport.X;
+        float scaleY = target.Height / viewport.Y;
+
+        return new Rect2(
+            rectangle.X * scaleX,
+            rectangle.Y * scaleY,
+            rectangle.Width * scaleX,
+            rectangle.Height * scaleY);
     }
 
     private void EnsureGraphicsBuffer(IGraphicsDevice activeDevice)

@@ -168,6 +168,12 @@ public readonly struct RenderCommand
     public int IndexCount { get; }
 
     /// <summary>
+    /// Gets the optional scissor rectangle in render-target pixels using VOID's
+    /// top-left coordinate convention.
+    /// </summary>
+    public Rect2? ScissorRectangle { get; }
+
+    /// <summary>
     /// Gets whether this command contains both an index buffer and a positive index count.
     /// </summary>
     public bool IsIndexed => IndexBuffer != null && IndexCount > 0;
@@ -185,6 +191,10 @@ public readonly struct RenderCommand
     /// <param name="indexBuffer">Optional index buffer. Required when <paramref name="indexCount"/> is positive.</param>
     /// <param name="indexStart">The non-negative first index.</param>
     /// <param name="indexCount">The non-negative number of indices. A positive value requires <paramref name="indexBuffer"/>.</param>
+    /// <param name="scissorRectangle">
+    /// Optional scissor rectangle in render-target pixels using a top-left origin.
+    /// A null value disables scissor clipping for the draw.
+    /// </param>
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="vertexBuffer"/> is null, or when <paramref name="indexCount"/>
     /// is positive and <paramref name="indexBuffer"/> is null.
@@ -203,7 +213,8 @@ public readonly struct RenderCommand
         IGraphicsShaderProgram shader = null,
         IGraphicsBuffer indexBuffer = null,
         int indexStart = 0,
-        int indexCount = 0)
+        int indexCount = 0,
+        Rect2? scissorRectangle = null)
     {
         VertexBuffer = vertexBuffer ?? throw new ArgumentNullException(nameof(vertexBuffer));
 
@@ -231,5 +242,6 @@ public readonly struct RenderCommand
         IndexBuffer = indexBuffer;
         IndexStart = indexStart;
         IndexCount = indexCount;
+        ScissorRectangle = scissorRectangle;
     }
 }

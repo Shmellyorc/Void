@@ -34,6 +34,15 @@ public sealed class BatchRenderState
     /// </summary>
     public Matrix ViewProjection { get; set; } = Matrix.Identity;
 
+    /// <summary>
+    /// Gets or sets the optional scissor rectangle in logical viewport coordinates.
+    /// </summary>
+    /// <remarks>
+    /// The rectangle uses VOID's top-left coordinate convention. A null value disables
+    /// scissor clipping for the submission.
+    /// </remarks>
+    public Rect2? ScissorRectangle { get; set; }
+
     // Font remains distinct from game Texture so DrawText(Font ...) stays fully
     // extensible for custom font implementations.
     internal Font Font { get; set; }

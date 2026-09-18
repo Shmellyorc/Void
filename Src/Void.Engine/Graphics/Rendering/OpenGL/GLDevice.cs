@@ -34,6 +34,13 @@ internal sealed class GLDevice : IGraphicsDevice
     private BlendEquation _colorEquation;
     private BlendEquation _alphaEquation;
 
+    private bool? _scissorEnabled;
+    private bool _hasScissorBox;
+    private int _scissorX;
+    private int _scissorY;
+    private uint _scissorWidth;
+    private uint _scissorHeight;
+
     private bool _disposed;
 
     public RendererCapabilities Capabilities { get; private set; }
@@ -82,6 +89,8 @@ internal sealed class GLDevice : IGraphicsDevice
     public void Clear(Color color)
     {
         ThrowIfDisposed();
+
+        DisableScissor();
 
         if (!_hasClearColor || !SameColor(_clearColor, color))
         {
@@ -195,6 +204,7 @@ internal sealed class GLDevice : IGraphicsDevice
 
         shader.Use();
         ApplyBlendMode(command.BlendMode);
+        ApplyScissor(command.ScissorRectangle);
 
         if (command.Texture != null)
         {
@@ -234,7 +244,6 @@ internal sealed class GLDevice : IGraphicsDevice
                 command.VertexStart,
                 checked((uint)command.VertexCount));
         }
-
     }
 
     public void WaitIdle()
@@ -321,6 +330,70 @@ internal sealed class GLDevice : IGraphicsDevice
             _alphaEquation = alphaEquation;
             _hasBlendEquation = true;
         }
+    }
+
+    private void ApplyScissor(Rect2? scissorRectangle)
+    {
+        if (!scissorRectangle.HasValue)
+        {
+            DisableScissor();
+            return;
+        }
+
+        int targetWidth = _activeRenderTarget?.Description.Width ?? _backbufferWidth;
+        int targetHeight = _activeRenderTarget?.Description.Height ?? _backbufferHeight;
+
+        if (targetWidth <= 0 || targetHeight <= 0)
+        {
+            DisableScissor();
+            return;
+        }
+
+        Rect2 rectangle = scissorRectangle.Value;
+
+        float minX = MathF.Min(rectangle.Left, rectangle.Right);
+        float maxX = MathF.Max(rectangle.Left, rectangle.Right);
+        float minY = MathF.Min(rectangle.Top, rectangle.Bottom);
+        float maxY = MathF.Max(rectangle.Top, rectangle.Bottom);
+
+        int left = Math.Clamp((int)MathF.Floor(minX), 0, targetWidth);
+        int right = Math.Clamp((int)MathF.Ceiling(maxX), 0, targetWidth);
+        int top = Math.Clamp((int)MathF.Floor(minY), 0, targetHeight);
+        int bottom = Math.Clamp((int)MathF.Ceiling(maxY), 0, targetHeight);
+
+        uint width = checked((uint)Math.Max(0, right - left));
+        uint height = checked((uint)Math.Max(0, bottom - top));
+        int glY = targetHeight - bottom;
+
+        if (_scissorEnabled != true)
+        {
+            _gl.Enable(EnableCap.ScissorTest);
+            _scissorEnabled = true;
+        }
+
+        if (!_hasScissorBox ||
+            _scissorX != left ||
+            _scissorY != glY ||
+            _scissorWidth != width ||
+            _scissorHeight != height)
+        {
+            _gl.Scissor(left, glY, width, height);
+
+            _scissorX = left;
+            _scissorY = glY;
+            _scissorWidth = width;
+            _scissorHeight = height;
+            _hasScissorBox = true;
+        }
+    }
+
+    private void DisableScissor()
+    {
+        if (_scissorEnabled == false)
+            return;
+
+        _gl.Disable(EnableCap.ScissorTest);
+        _scissorEnabled = false;
     }
 
     private void RestoreActiveRenderTarget()
