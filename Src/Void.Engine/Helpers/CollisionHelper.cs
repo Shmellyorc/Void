@@ -585,7 +585,7 @@ public static class CollisionHelper
         return position;
     }
 
-    /// <summary>Moves a circle using X-then-Y axis separation against rectangle and circle obstacles.</summary>
+    /// <summary>Moves a circle and resolves penetration against rectangle and circle obstacles.</summary>
     public static Vect2 MoveAndSlideCircle(
         Vect2 center,
         float radius,
@@ -593,52 +593,40 @@ public static class CollisionHelper
         IEnumerable<Rect2> rects,
         IEnumerable<(Vect2 center, float radius)> circles)
     {
-        Vect2 position = center;
+        Vect2 position = center + velocity;
 
-        position.X += velocity.X;
-        foreach (Rect2 rect in rects)
+        // A few passes handle adjoining obstacles/corners where resolving
+        // one collision can place the circle into another.
+        for (int i = 0; i < 4; i++)
         {
-            if (!RectCircle(rect, position, radius))
-                continue;
+            bool resolved = false;
 
-            if (velocity.X > 0f)
-                position.X = rect.Left - radius;
-            else if (velocity.X < 0f)
-                position.X = rect.Right + radius;
-        }
+            foreach (Rect2 rect in rects)
+            {
+                if (!RectCirclePenetrating(rect, position, radius))
+                    continue;
 
-        foreach ((Vect2 circleCenter, float circleRadius) in circles)
-        {
-            if (!CircleCircle(position, radius, circleCenter, circleRadius))
-                continue;
+                position += PushCircleRect(position, radius, rect);
+                resolved = true;
+            }
 
-            if (velocity.X > 0f)
-                position.X = circleCenter.X - (radius + circleRadius);
-            else if (velocity.X < 0f)
-                position.X = circleCenter.X + (radius + circleRadius);
-        }
+            foreach ((Vect2 circleCenter, float circleRadius) in circles)
+            {
+                if (!CircleCirclePenetrating(position, radius, circleCenter, circleRadius))
+                    continue;
 
-        position.Y += velocity.Y;
-        foreach (Rect2 rect in rects)
-        {
-            if (!RectCircle(rect, position, radius))
-                continue;
+                position += PushCircleCircle(
+                    position,
+                    radius,
+                    circleCenter,
+                    circleRadius
+                );
 
-            if (velocity.Y > 0f)
-                position.Y = rect.Top - radius;
-            else if (velocity.Y < 0f)
-                position.Y = rect.Bottom + radius;
-        }
+                resolved = true;
+            }
 
-        foreach ((Vect2 circleCenter, float circleRadius) in circles)
-        {
-            if (!CircleCircle(position, radius, circleCenter, circleRadius))
-                continue;
-
-            if (velocity.Y > 0f)
-                position.Y = circleCenter.Y - (radius + circleRadius);
-            else if (velocity.Y < 0f)
-                position.Y = circleCenter.Y + (radius + circleRadius);
+            if (!resolved)
+                break;
         }
 
         return position;
@@ -647,9 +635,6 @@ public static class CollisionHelper
     /// <summary>Gets the axis-aligned bounding rectangle of a circle.</summary>
     public static Rect2 GetCircleBounds(Vect2 center, float radius)
         => new(center.X - radius, center.Y - radius, radius * 2f, radius * 2f);
-
-    private static float Cross(Vect2 a, Vect2 b)
-        => a.X * b.Y - a.Y * b.X;
 
     private static bool PointOnSegment(Vect2 point, Vect2 start, Vect2 end)
     {
@@ -802,4 +787,25 @@ public static class CollisionHelper
         if (minimum == top) return new Vect2(0f, -1f);
         return new Vect2(0f, 1f);
     }
+
+    private static bool RectCirclePenetrating(Rect2 rect, Vect2 center, float radius)
+    {
+        Vect2 closest = ClosestPointRect(center, rect);
+
+        return Vect2.DistanceSquared(center, closest) < radius * radius;
+    }
+
+    private static bool CircleCirclePenetrating(
+        Vect2 centerA,
+        float radiusA,
+        Vect2 centerB,
+        float radiusB)
+    {
+        float radius = radiusA + radiusB;
+
+        return Vect2.DistanceSquared(centerA, centerB) < radius * radius;
+    }
+
+    private static float Cross(Vect2 a, Vect2 b)
+        => a.X * b.Y - a.Y * b.X;
 }

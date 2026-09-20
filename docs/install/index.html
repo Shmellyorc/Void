@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Install VOID - Create Your First VOID Project</title>
+  <meta name="description" content="Install the official VOID .NET project template, create a new VOID game, and run it in three simple steps.">
+  <meta name="theme-color" content="#08070b"><link rel="canonical" href="https://shmellyorc.github.io/Void/install/">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/css/site.css?v=6">
+  <meta property="og:type" content="article"><meta property="og:title" content="Install VOID"><meta property="og:description" content="Start with the official project template and a known-good VOID setup."><meta property="og:url" content="https://shmellyorc.github.io/Void/install/"><meta property="og:image" content="https://shmellyorc.github.io/Void/assets/images/social-card.png"><meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="site-nav"></div>
+<script src="../assets/js/nav.js?v=6"></script>
+<main id="main">
+  <section class="page-hero"><div class="container"><p class="section-kicker">Install VOID</p><h1>From zero to a<br>working VOID project.</h1><p>The official template is the recommended way to start. It creates the expected project structure and references so you begin with a known-good setup instead of rebuilding it by hand.</p></div></section>
+  <section class="section"><div class="narrow">
+    <div class="note" style="margin-bottom:42px"><strong>Requirement:</strong> .NET 10. Runtime graphics, platform, input, and audio dependencies are restored through <code>Void.Engine</code>.</div>
+    <div class="install-steps">
+      <div class="install-step"><h2>Install the official template</h2><p>Install <code>Void.Templates</code> from NuGet.</p><div class="code-block"><div class="code-head"><span>terminal</span><button class="copy-button" data-copy="install-template">Copy</button></div><pre id="install-template"><code>dotnet new install Void.Templates</code></pre></div></div>
+      <div class="install-step"><h2>Create your game</h2><p>Create a new project in a new folder.</p><div class="code-block"><div class="code-head"><span>terminal</span><button class="copy-button" data-copy="create-game">Copy</button></div><pre id="create-game"><code>dotnet new voidgame -n MyGame
+cd MyGame</code></pre></div></div>
+      <div class="install-step"><h2>Run it</h2><p>Restore happens through the normal .NET workflow.</p><div class="code-block"><div class="code-head"><span>terminal</span><button class="copy-button" data-copy="run-game">Copy</button></div><pre id="run-game"><code>dotnet run</code></pre></div></div>
+    </div>
+    <div class="rule"></div>
+    <div class="prose"><h2>Why the template?</h2><p>The template creates a complete runnable project with <code>Program.cs</code>, your main <code>Game</code> subclass, a <code>Content/</code> folder, and a preconfigured project reference to <code>Void.Engine</code>. It is the easiest way to avoid missing project setup or dependencies.</p><h2>Prefer the current folder?</h2></div>
+    <div class="code-block"><div class="code-head"><span>terminal</span><button class="copy-button" data-copy="current-folder">Copy</button></div><pre id="current-folder"><code>mkdir MyGame
+cd MyGame
+dotnet new voidgame
+dotnet run</code></pre></div>
+    <div class="prose"><h2>Custom template options</h2><p>Set the company name or window title while creating the project.</p></div>
+    <div class="code-block"><div class="code-head"><span>terminal</span><button class="copy-button" data-copy="custom-options">Copy</button></div><pre id="custom-options"><code>dotnet new voidgame \
+  -n MyGame \
+  --appCompany MyStudio \
+  --appTitle "My Game"</code></pre></div>
+    <div class="hero-actions"><a class="button button-secondary" href="https://github.com/Shmellyorc/Void/wiki/Getting-Started">Continue to Getting Started</a></div>
+  </div></section>
+</main>
+<footer class="site-footer"><div class="container footer-grid"><div><img class="footer-brand" src="../assets/images/void-logo.png" alt="VOID"><div>Open-source .NET game framework. MIT licensed.</div></div><div class="footer-links"><a href="https://github.com/Shmellyorc/Void">GitHub</a><a href="https://github.com/Shmellyorc/Void/wiki">Documentation</a><a href="https://github.com/Shmellyorc/Void/blob/master/LICENSE">License</a></div></div></footer>
+<script src="../assets/js/site.js?v=6"></script>
+</body></html>

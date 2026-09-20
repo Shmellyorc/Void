@@ -1,0 +1,68 @@
+<svg width="900" height="900" viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Subtle purple VOID portal">
+  <defs>
+    <radialGradient id="core" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#100B18" stop-opacity="0"/>
+      <stop offset="43%" stop-color="#21152F" stop-opacity="0.38"/>
+      <stop offset="72%" stop-color="#6D3EB7" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#6D3EB7" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="void" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#050408"/>
+      <stop offset="68%" stop-color="#08060C"/>
+      <stop offset="100%" stop-color="#171021"/>
+    </radialGradient>
+    <linearGradient id="ringA" x1="160" y1="160" x2="740" y2="740">
+      <stop stop-color="#44236F" stop-opacity="0.08"/>
+      <stop offset="0.38" stop-color="#9B69E8" stop-opacity="0.78"/>
+      <stop offset="0.72" stop-color="#59308B" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#B185F1" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="ringB" x1="710" y1="160" x2="200" y2="760">
+      <stop stop-color="#7A48C4" stop-opacity="0.16"/>
+      <stop offset="0.44" stop-color="#C09BFF" stop-opacity="0.58"/>
+      <stop offset="0.76" stop-color="#5D328E" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="#7A48C4" stop-opacity="0.2"/>
+    </linearGradient>
+    <filter id="blur24" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+    <filter id="blur10" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    .ring-slow { transform-origin: 450px 450px; animation: spin 58s linear infinite; }
+    .ring-reverse { transform-origin: 450px 450px; animation: spin-reverse 82s linear infinite; }
+    .ring-drift { transform-origin: 450px 450px; animation: spin 116s linear infinite; }
+    .pulse { transform-origin: 450px 450px; animation: pulse 9s ease-in-out infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin-reverse { to { transform: rotate(-360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: .55; transform: scale(.985); } 50% { opacity: .82; transform: scale(1.015); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ring-slow, .ring-reverse, .ring-drift, .pulse { animation: none; }
+    }
+  </style>
+
+  <circle cx="450" cy="450" r="395" fill="url(#core)" class="pulse" opacity="0.8"/>
+  <circle cx="450" cy="450" r="300" fill="#5E3291" opacity="0.10" filter="url(#blur24)"/>
+  <circle cx="450" cy="450" r="240" fill="url(#void)"/>
+
+  <g class="ring-drift" opacity="0.42" filter="url(#blur10)">
+    <circle cx="450" cy="450" r="324" stroke="url(#ringA)" stroke-width="27" stroke-linecap="round" stroke-dasharray="420 180 110 250"/>
+  </g>
+  <g class="ring-slow" filter="url(#glow)">
+    <circle cx="450" cy="450" r="289" stroke="url(#ringA)" stroke-width="4" stroke-linecap="round" stroke-dasharray="350 74 210 128" opacity="0.72"/>
+    <circle cx="450" cy="450" r="270" stroke="#AE83EC" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="94 32 14 58" opacity="0.26"/>
+  </g>
+  <g class="ring-reverse">
+    <circle cx="450" cy="450" r="253" stroke="url(#ringB)" stroke-width="7" stroke-linecap="round" stroke-dasharray="188 82 31 160" opacity="0.52"/>
+    <circle cx="450" cy="450" r="316" stroke="#8755CC" stroke-width="1.2" stroke-dasharray="10 30" opacity="0.18"/>
+  </g>
+  <circle cx="450" cy="450" r="224" stroke="#B68AEA" stroke-width="1" opacity="0.11"/>
+  <circle cx="450" cy="450" r="205" fill="#050408" opacity="0.96"/>
+</svg>

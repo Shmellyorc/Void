@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VOID Design Philosophy - A Foundation, Not a Cage</title>
+  <meta name="description" content="VOID is built around transparency, useful defaults, replaceable systems, and a simple idea: a framework should be a foundation, not a cage.">
+  <meta name="theme-color" content="#08070b"><link rel="canonical" href="https://shmellyorc.github.io/Void/philosophy/">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="../assets/css/site.css?v=6">
+  <meta property="og:type" content="article"><meta property="og:title" content="VOID Design Philosophy - A foundation, not a cage."><meta property="og:description" content="Useful defaults without surrendering control of your architecture."><meta property="og:url" content="https://shmellyorc.github.io/Void/philosophy/"><meta property="og:image" content="https://shmellyorc.github.io/Void/assets/images/social-card.png"><meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="site-nav"></div>
+<script src="../assets/js/nav.js?v=6"></script>
+<main id="main">
+  <section class="page-hero"><div class="container"><p class="section-kicker">Design philosophy</p><h1>A foundation,<br>not a cage.</h1><p>VOID should remove work without removing choices. The normal path stays simple, while the deeper architecture remains available when your project needs control.</p></div></section>
+  <section class="section"><div class="narrow prose">
+    <h2>Useful defaults, not mandatory defaults.</h2><p>Very low-level frameworks give you freedom, but often leave you rebuilding the same infrastructure. Large engines can solve more out of the box, but may also pull a project toward one workflow. VOID sits in the middle: provide the useful framework-level pieces, then expose the places where another solution may make sense.</p>
+    <h2>Extend, don't fight.</h2><p>The built-in implementation is not assumed to be the only implementation. Renderer backends, asset sources, atlas packing, log sinks, cameras, render targets, custom assets, and other systems expose extension points so projects can grow without requiring an engine fork.</p>
+    <h2>Transparency matters.</h2><p>A framework should be understandable. VOID aims to keep normal game code straightforward while avoiding hidden machinery that becomes impossible to work around later.</p>
+    <h2>Start simple. Go deep when you need to.</h2><p>You should not need to understand swap chains, native window handles, or backend contracts to draw your first sprite. Those systems belong underneath the easy path, not in front of it.</p>
+    <h2>Focused by design.</h2><p>VOID deliberately stays focused on framework-level systems. It does not need to absorb every possible game-development feature. Full physics, UI frameworks, and specialized game systems can come from your game or the libraries you choose.</p>
+    <h2>Your game owns the decisions.</h2><p><strong>Use what works. Replace what doesn't.</strong> The defaults are there to save time, not to claim ownership of the project built on top of them.</p>
+  </div></section>
+  <section class="section final-cta"><div class="container"><p class="section-kicker">See it in practice</p><h2 class="section-title">The renderer follows the same rule.</h2><p class="section-lead">OpenGL is included, but the public rendering architecture does not lock the rest of the framework to OpenGL.</p><div class="hero-actions"><a class="button button-primary" href="../rendering/">Explore Rendering</a><a class="button button-secondary" href="../install/">Install VOID</a></div></div></section>
+</main>
+<footer class="site-footer"><div class="container footer-grid"><div><img class="footer-brand" src="../assets/images/void-logo.png" alt="VOID"><div>Open-source .NET game framework. MIT licensed.</div></div><div class="footer-links"><a href="https://github.com/Shmellyorc/Void">GitHub</a><a href="https://github.com/Shmellyorc/Void/wiki">Documentation</a><a href="https://github.com/Shmellyorc/Void/blob/master/LICENSE">License</a></div></div></footer>
+<script src="../assets/js/site.js?v=6"></script>
+</body></html>

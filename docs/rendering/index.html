@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VOID Rendering - Pluggable Graphics Backends for .NET</title>
+  <meta name="description" content="VOID includes a Silk.NET.OpenGL renderer while keeping higher-level game systems renderer-neutral through public pluggable graphics contracts.">
+  <meta name="theme-color" content="#08070b">
+  <link rel="canonical" href="https://shmellyorc.github.io/Void/rendering/">
+  <link rel="icon" href="../assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/site.css?v=6">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="VOID Rendering - OpenGL included. OpenGL not required.">
+  <meta property="og:description" content="A pluggable renderer architecture for .NET game development.">
+  <meta property="og:url" content="https://shmellyorc.github.io/Void/rendering/">
+  <meta property="og:image" content="https://shmellyorc.github.io/Void/assets/images/social-card.png">
+  <meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<div id="site-nav"></div>
+<script src="../assets/js/nav.js?v=6"></script>
+
+<main id="main">
+  <section class="page-hero">
+    <div class="container">
+      <p class="section-kicker">Rendering</p>
+      <h1>OpenGL included.<br>OpenGL not required.</h1>
+      <p>The built-in backend uses Silk.NET.OpenGL. VOID's higher-level rendering systems are designed around public renderer-neutral contracts so another backend can replace it without redefining the rest of the framework.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="prose" style="max-width:820px;">
+        <h2>One default. More than one possible backend.</h2>
+        <p>VOID 2.x uses SDL3 for the platform layer, Silk.NET.OpenGL for the built-in renderer, and Silk.NET.OpenAL for audio. The OpenGL implementation is the default renderer, not the definition of the renderer API.</p>
+        <p>Backend authors can implement the public graphics contracts for APIs such as Vulkan, Direct3D, Metal, WebGPU, OpenGL, or another renderer.</p>
+
+        <h2>Higher-level systems stay neutral.</h2>
+        <p>Sprite batching, primitives, textures, render targets, cameras, shaders, and other game-facing systems should not need to become API-specific just because the backend changes.</p>
+      </div>
+
+      <figure class="renderer-diagram renderer-diagram-large image-frame">
+        <img
+          src="../assets/images/renderer-architecture.webp"
+          alt="VOID Engine renderer architecture showing the API-agnostic rendering layer, renderer abstraction, pluggable graphics backends, SDL3, and OpenAL."
+          loading="lazy"
+        >
+      </figure>
+    </div>
+  </section>
+
+  <section class="section band">
+    <div class="container">
+      <p class="section-kicker">Public contracts</p>
+      <h2 class="section-title">The backend boundary is explicit.</h2>
+
+      <div class="three-up">
+        <article class="card">
+          <h3><code>IRendererBackend</code></h3>
+          <p>Backend-level renderer integration and lifecycle.</p>
+        </article>
+
+        <article class="card">
+          <h3><code>IGraphicsDevice</code></h3>
+          <p>Renderer-specific GPU behavior behind a public device contract.</p>
+        </article>
+
+        <article class="card">
+          <h3><code>IRendererContext</code></h3>
+          <p>Renderer context data, including native platform handles when a backend requires them.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="narrow prose">
+      <h2>Why it matters.</h2>
+      <p>A project can begin with the built-in OpenGL backend and still have an architectural path to another graphics API later. That can matter for different platforms, specialized rendering requirements, or future web-oriented backends.</p>
+
+      <div class="note">
+        <strong>The goal is not to make every developer write a renderer.</strong>
+        The built-in renderer exists so normal projects can simply use VOID. The pluggable boundary is there for the projects that need something else.
+      </div>
+
+      <div class="hero-actions">
+        <a class="button button-secondary" href="https://github.com/Shmellyorc/Void/wiki/Custom-Renderers">Custom Renderer Documentation</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section final-cta">
+    <div class="container">
+      <p class="section-kicker">Use the default first</p>
+      <h2 class="section-title">Start building. Change the backend only if you need to.</h2>
+
+      <div class="hero-actions">
+        <a class="button button-primary" href="../install/">Install VOID</a>
+        <a class="button button-secondary" href="https://github.com/Shmellyorc/Void/wiki">View Documentation</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div>
+      <img class="footer-brand" src="../assets/images/void-logo.png" alt="VOID">
+      <div>Open-source .NET game framework. MIT licensed.</div>
+    </div>
+
+    <div class="footer-links">
+      <a href="https://github.com/Shmellyorc/Void">GitHub</a>
+      <a href="https://github.com/Shmellyorc/Void/wiki">Documentation</a>
+      <a href="https://github.com/Shmellyorc/Void/blob/master/LICENSE">License</a>
+    </div>
+  </div>
+</footer>
+
+<script src="../assets/js/site.js?v=6"></script>
+</body>
+</html>
