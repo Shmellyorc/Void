@@ -56,7 +56,7 @@ public sealed class LDtkIntGridInstance : ILDtkInstance
         Position = position;
     }
 
-    internal static List<ILDtkInstance> Process(JsonElement e, Vect2 gridSize)
+    internal static List<ILDtkInstance> Process(JsonElement e, Vect2 gridSize, int tileSize)
     {
         var result = new List<ILDtkInstance>(e.GetArrayLength());
         var index = 0;
@@ -64,7 +64,7 @@ public sealed class LDtkIntGridInstance : ILDtkInstance
         foreach (var t in e.EnumerateArray())
         {
             var location = new Vect2(index % (int)gridSize.X, index / (int)gridSize.X);
-            var position = gridSize * location;
+            var position = location * tileSize;
 
             result.Add(new LDtkIntGridInstance(t.GetInt32(), location, position));
 

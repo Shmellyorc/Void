@@ -171,7 +171,7 @@ public sealed class MapLayer
 
             List<ILDtkInstance> instResult = type switch
             {
-                LDtkLayerType.IntGrid => LDtkIntGridInstance.Process(t.GetProperty("intGridCsv"), gridSize),
+                LDtkLayerType.IntGrid => LDtkIntGridInstance.Process(t.GetProperty("intGridCsv"), gridSize, tileSize),
                 LDtkLayerType.Entities => LDtkEntityInstance.Process(t.GetProperty("entityInstances")),
                 LDtkLayerType.Tiles => LDtkTileInstance.Process(t.GetProperty("gridTiles"), tileSize),
                 LDtkLayerType.AutoLayer => LDtkTileInstance.Process(t.GetProperty("autoLayerTiles"), tileSize),
