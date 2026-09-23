@@ -18,33 +18,47 @@
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
     <PackageTags>game-engine;2d;game-framework;game-development;dotnet;csharp;sdl3;silk-net;opengl;rendering;pluggable-renderer;renderer-api;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
-    <Version>2.1.1</Version>
+    <Version>2.2.0</Version>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageReleaseNotes>
-    VOID Engine 2.1.1
+    VOID Engine 2.2.0
 
-    Rendering
-    - Added renderer-neutral scissor clipping support for batch rendering.
-    - Added BaseBatcher.SetScissor(Rect2) and ClearScissor().
-    - Scissor changes automatically flush queued geometry before changing clipping state.
-    - Scissor rectangles use VOID logical viewport coordinates and scale correctly to active render targets.
-    - Scissor clipping works correctly with supersampling and custom render targets.
-    - Added scissor state to renderer-neutral RenderCommand submissions for custom renderer support.
-    - Added OpenGL scissor support with top-left VOID coordinates converted correctly to OpenGL coordinates.
-    - Scissor rectangles are clamped to the active render target.
-    - Render target clears are protected from stale scissor state.
-    - Scissor state is automatically cleared when a batch ends.
-    - SpriteBatcher and PrimitiveBatcher inherit scissor support without renderer-specific changes.
+    Beacons
+    - Added timed Beacon subscriptions using float lifetimes in seconds.
+    - Added TimeSpan subscription overloads through BeaconManager extensions.
+    - Added SubscribeOnce support for string and enum topics.
+    - Added timed SubscribeOnce overloads using float and TimeSpan lifetimes.
+    - Timed subscriptions expire lazily when their topic is published, subscribed to, or unsubscribed from.
+    - Timed subscription expiration uses Game.Instance.FrameTime.TotalTime.
+    - Preserved the existing multicast delegate publish path for normal Beacon dispatch.
+    - Timed Beacon subscriptions do not require a per-frame BeaconManager update.
+    - Timed subscriptions can still be manually removed using their original callback.
 
     Input Actions
-    - Removed unnecessary per-frame InputActionState dictionary allocations.
-    - Input action snapshots are now reused when current and previous logical action states have not changed.
-    - Added a fast path when no input actions are registered.
-    - Default InputActionState remains allocation-free and treats missing actions as released.
-    - Preserved stable retained snapshots across subsequent input updates.
-    - Preserved JustPressed, Pressed, JustReleased, and Up transition behavior.
+    - Changed InputAction internal action and state dictionaries to cached 64-bit identifiers.
+    - InputAction names now use HashHelper.Cache64 for internal lookup.
+    - Changed InputActionState snapshots to use ulong action identifiers instead of string dictionary keys.
+    - Reduced repeated string-key lookup and comparison work for action state queries.
+    - Preserved the existing public string and enum InputAction APIs.
+    - Preserved retained InputActionState snapshot behavior and action transition semantics.
+    - Input action string identifiers are now case-sensitive and follow HashHelper caching behavior.
+
+    Spritesheets
+    - Fixed Aseprite nine-patch slice center data being interpreted as border sizes.
+    - Nine-patch borders are now calculated correctly from the Aseprite center rectangle.
+    - Fixed incorrect nine-patch corner sizing when using smaller source patches such as 16x16 sprites.
+
+    LDtk
+    - Fixed IntGrid instance world positions using layer grid dimensions instead of the layer tile size.
+    - IntGrid positions are now calculated from grid location and tile size.
+
+    Collision
+    - Fixed MoveAndSlideCircle corner jitter and touching behavior.
+    - Circle-vs-rectangle and circle-vs-circle resolution now use penetration-only collision checks.
+    - Improved circle collision resolution using radial push-out behavior.
+    - Limited circle collision resolution to four passes to prevent unstable corner behavior.
     </PackageReleaseNotes>
   </PropertyGroup>
 

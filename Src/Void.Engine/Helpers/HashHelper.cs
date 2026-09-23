@@ -39,7 +39,7 @@ public sealed class HashHelper
     /// <param name="input">String to encode as UTF-8 and hash.</param>
     /// <returns>The cached 32-bit hash.</returns>
     public static uint Cache32(string input)
-        => _cache32.GetOrAdd(input, new Lazy<uint>(() => Hash32(input))).Value;
+        => _cache32.GetOrAdd(input, static key => new Lazy<uint>(() => Hash32(key))).Value;
 
     /// <summary>
     /// Computes a 32-bit FNV-1a hash for an enum's stable enum-string representation.
@@ -56,7 +56,7 @@ public sealed class HashHelper
     /// <param name="input">String to encode as UTF-8 and hash.</param>
     /// <returns>The cached 64-bit hash.</returns>
     public static ulong Cache64(string input)
-        => _cache64.GetOrAdd(input, new Lazy<ulong>(() => Hash64(input))).Value;
+        => _cache64.GetOrAdd(input, static key => new Lazy<ulong>(() => Hash64(key))).Value;
 
     /// <summary>Gets a cached 64-bit FNV-1a hash for an enum's stable enum-string representation.</summary>
     /// <param name="input">Enum value to hash.</param>
