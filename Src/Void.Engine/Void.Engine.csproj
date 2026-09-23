@@ -45,6 +45,12 @@
     - Preserved retained InputActionState snapshot behavior and action transition semantics.
     - Input action string identifiers are now case-sensitive and follow HashHelper caching behavior.
 
+    Hashing
+    - Optimized HashHelper cached lookups to avoid creating unused Lazy hash values on cache hits.
+    - Cache32 and Cache64 now create Lazy values only when a key is missing.
+    - Preserved existing FNV-1a hashing, cached results, and thread-safe initialization behavior.
+    - Reduced unnecessary allocations during repeated cached hash lookups.
+
     Spritesheets
     - Fixed Aseprite nine-patch slice center data being interpreted as border sizes.
     - Nine-patch borders are now calculated correctly from the Aseprite center rectangle.
