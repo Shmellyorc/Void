@@ -146,12 +146,12 @@ public sealed class Spritesheet : IAsset
 
                 if (keyItem.TryGetProperty("center", out var jCenter))
                 {
-                    patch = new Rect2(
-                        jCenter.GetProperty("x").GetInt32(),
-                        jCenter.GetProperty("y").GetInt32(),
-                        jCenter.GetProperty("w").GetInt32(),
-                        jCenter.GetProperty("h").GetInt32()
-                    );
+                    int x = jCenter.GetProperty("x").GetInt32();
+                    int y = jCenter.GetProperty("y").GetInt32();
+                    int w = jCenter.GetProperty("w").GetInt32();
+                    int h = jCenter.GetProperty("h").GetInt32();
+
+                    patch = new Rect2(x, y, bounds.Width - x - w, bounds.Height - y - h);
                 }
 
                 if (keyItem.TryGetProperty("pivot", out var jPivot))

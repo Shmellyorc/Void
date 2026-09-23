@@ -63,12 +63,12 @@ namespace Void.Engine.Inputs.InputActions;
 /// </remarks>
 public readonly struct InputActionState
 {
-    private readonly Dictionary<string, bool> _states;
-    private readonly Dictionary<string, bool> _previousStates;
+    private readonly Dictionary<ulong, bool> _states;
+    private readonly Dictionary<ulong, bool> _previousStates;
 
     internal InputActionState(
-        Dictionary<string, bool> states,
-        Dictionary<string, bool> previousStates)
+        Dictionary<ulong, bool> states,
+        Dictionary<ulong, bool> previousStates)
     {
         ArgumentNullException.ThrowIfNull(states);
         ArgumentNullException.ThrowIfNull(previousStates);
@@ -80,18 +80,13 @@ public readonly struct InputActionState
             return;
         }
 
-        _states = new Dictionary<string, bool>(
-            states,
-            StringComparer.OrdinalIgnoreCase);
-
-        _previousStates = new Dictionary<string, bool>(
-            previousStates,
-            StringComparer.OrdinalIgnoreCase);
+        _states = new Dictionary<ulong, bool>(states);
+        _previousStates = new Dictionary<ulong, bool>(previousStates);
     }
 
     internal bool Matches(
-        Dictionary<string, bool> states,
-        Dictionary<string, bool> previousStates)
+        Dictionary<ulong, bool> states,
+        Dictionary<ulong, bool> previousStates)
     {
         ArgumentNullException.ThrowIfNull(states);
         ArgumentNullException.ThrowIfNull(previousStates);
@@ -101,8 +96,8 @@ public readonly struct InputActionState
     }
 
     private static bool MatchesDictionary(
-        Dictionary<string, bool> snapshot,
-        Dictionary<string, bool> source)
+        Dictionary<ulong, bool> snapshot,
+        Dictionary<ulong, bool> source)
     {
         if (snapshot == null)
             return source.Count == 0;
@@ -110,7 +105,7 @@ public readonly struct InputActionState
         if (snapshot.Count != source.Count)
             return false;
 
-        foreach (KeyValuePair<string, bool> pair in source)
+        foreach (KeyValuePair<ulong, bool> pair in source)
         {
             if (!snapshot.TryGetValue(pair.Key, out bool value) ||
                 value != pair.Value)
@@ -137,14 +132,29 @@ public readonly struct InputActionState
         if (string.IsNullOrEmpty(name))
             return ActionState.Up;
 
+        return GetState(HashHelper.Cache64(name));
+    }
+
+    /// <summary>
+    /// Gets the transition state of the action identified by the specified enum value.
+    /// </summary>
+    /// <param name="name">The enum value used to identify the action.</param>
+    /// <returns>
+    /// The action's <see cref="ActionState"/>, or <see cref="ActionState.Up"/> when
+    /// <paramref name="name"/> is <see langword="null"/> or the action does not exist.
+    /// </returns>
+    public ActionState GetState(Enum name) => name == null ? ActionState.Up : GetState(HashHelper.Cache64(name));
+
+    private ActionState GetState(ulong hash)
+    {
         bool current =
             _states != null &&
-            _states.TryGetValue(name, out bool currentValue) &&
+            _states.TryGetValue(hash, out bool currentValue) &&
             currentValue;
 
         bool previous =
             _previousStates != null &&
-            _previousStates.TryGetValue(name, out bool previousValue) &&
+            _previousStates.TryGetValue(hash, out bool previousValue) &&
             previousValue;
 
         if (current && !previous)
@@ -160,19 +170,6 @@ public readonly struct InputActionState
     }
 
     /// <summary>
-    /// Gets the transition state of the action identified by the specified enum value.
-    /// </summary>
-    /// <param name="name">The enum value used to identify the action.</param>
-    /// <returns>
-    /// The action's <see cref="ActionState"/>, or <see cref="ActionState.Up"/> when
-    /// <paramref name="name"/> is <see langword="null"/> or the action does not exist.
-    /// </returns>
-    public ActionState GetState(Enum name)
-        => name == null
-            ? ActionState.Up
-            : GetState(name.ToEnumString());
-
-    /// <summary>
     /// Determines whether the specified action became pressed during this update.
     /// </summary>
     /// <param name="name">The action name.</param>
@@ -180,8 +177,7 @@ public readonly struct InputActionState
     /// <see langword="true"/> only when the action changed from released to pressed;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    public bool IsJustPressed(string name)
-        => GetState(name) == ActionState.JustPressed;
+    public bool IsJustPressed(string name) => GetState(name) == ActionState.JustPressed;
 
     /// <summary>
     /// Determines whether the action identified by the specified enum value became pressed during this update.
@@ -191,8 +187,7 @@ public readonly struct InputActionState
     /// <see langword="true"/> only when the action changed from released to pressed;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    public bool IsJustPressed(Enum name)
-        => GetState(name) == ActionState.JustPressed;
+    public bool IsJustPressed(Enum name) => GetState(name) == ActionState.JustPressed;
 
     /// <summary>
     /// Determines whether the specified action is currently pressed.
@@ -207,8 +202,7 @@ public readonly struct InputActionState
         if (string.IsNullOrEmpty(name) || _states == null)
             return false;
 
-        return _states.TryGetValue(name, out bool current) &&
-               current;
+        return IsPressed(HashHelper.Cache64(name));
     }
 
     /// <summary>
@@ -219,9 +213,9 @@ public readonly struct InputActionState
     /// <see langword="true"/> while the action is pressed, including the update on which
     /// it first became pressed; otherwise, <see langword="false"/>.
     /// </returns>
-    public bool IsPressed(Enum name)
-        => name != null &&
-           IsPressed(name.ToEnumString());
+    public bool IsPressed(Enum name) => name != null && IsPressed(HashHelper.Cache64(name));
+
+    private bool IsPressed(ulong hash) => _states != null && _states.TryGetValue(hash, out bool current) && current;
 
     /// <summary>
     /// Determines whether the specified action became released during this update.
@@ -231,8 +225,7 @@ public readonly struct InputActionState
     /// <see langword="true"/> only when the action changed from pressed to released;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    public bool IsJustReleased(string name)
-        => GetState(name) == ActionState.JustReleased;
+    public bool IsJustReleased(string name) => GetState(name) == ActionState.JustReleased;
 
     /// <summary>
     /// Determines whether the action identified by the specified enum value became released during this update.
@@ -242,8 +235,7 @@ public readonly struct InputActionState
     /// <see langword="true"/> only when the action changed from pressed to released;
     /// otherwise, <see langword="false"/>.
     /// </returns>
-    public bool IsJustReleased(Enum name)
-        => GetState(name) == ActionState.JustReleased;
+    public bool IsJustReleased(Enum name) => GetState(name) == ActionState.JustReleased;
 
     /// <summary>
     /// Determines whether the specified action is currently released.
@@ -253,8 +245,7 @@ public readonly struct InputActionState
     /// <see langword="true"/> while the action is released, including the update on which
     /// it first became released. Missing actions are also treated as released.
     /// </returns>
-    public bool IsReleased(string name)
-        => !IsPressed(name);
+    public bool IsReleased(string name) => !IsPressed(name);
 
     /// <summary>
     /// Determines whether the action identified by the specified enum value is currently released.
@@ -264,6 +255,5 @@ public readonly struct InputActionState
     /// <see langword="true"/> while the action is released, including the update on which
     /// it first became released. Missing or <see langword="null"/> actions are also treated as released.
     /// </returns>
-    public bool IsReleased(Enum name)
-        => !IsPressed(name);
+    public bool IsReleased(Enum name) => !IsPressed(name);
 }

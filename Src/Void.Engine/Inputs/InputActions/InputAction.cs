@@ -23,7 +23,7 @@ namespace Void.Engine.Inputs.InputActions;
 /// <para>
 /// Actions are registered by name and may contain one or more bindings. An action
 /// is active when any of its bindings is active during the current game update.
-/// Names are matched without regard to letter casing.
+/// Action names are converted to cached 64-bit identifiers for internal lookup.
 /// </para>
 /// <para>
 /// The engine updates the action system once per game update. <see cref="GetState"/>
@@ -68,14 +68,10 @@ namespace Void.Engine.Inputs.InputActions;
 /// </remarks>
 public static class InputAction
 {
-    private static readonly Dictionary<string, ActionBinding> _actions =
-        new(StringComparer.OrdinalIgnoreCase);
+    private static readonly Dictionary<ulong, ActionBinding> _actions = [];
 
-    private static Dictionary<string, bool> _currentStates =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    private static Dictionary<string, bool> _previousStates =
-        new(StringComparer.OrdinalIgnoreCase);
+    private static Dictionary<ulong, bool> _currentStates = [];
+    private static Dictionary<ulong, bool> _previousStates = [];
 
     private static InputActionState _state;
 
@@ -85,8 +81,7 @@ public static class InputAction
     /// <remarks>
     /// The returned collection reflects the actions currently registered with the manager.
     /// </remarks>
-    public static IReadOnlyCollection<ActionBinding> Actions
-        => _actions.Values;
+    public static IReadOnlyCollection<ActionBinding> Actions => _actions.Values;
 
     /// <summary>
     /// Gets an existing action or creates a new action with the specified name.
@@ -111,11 +106,13 @@ public static class InputAction
                 nameof(name));
         }
 
-        if (_actions.TryGetValue(name, out ActionBinding existing))
+        ulong hash = HashHelper.Cache64(name);
+
+        if (_actions.TryGetValue(hash, out ActionBinding existing))
             return existing;
 
         var action = new ActionBinding(name);
-        _actions[name] = action;
+        _actions[hash] = action;
         return action;
     }
 
@@ -172,9 +169,7 @@ public static class InputAction
     /// <returns>
     /// <see langword="true"/> when the action exists; otherwise, <see langword="false"/>.
     /// </returns>
-    public static bool TryGetAction(
-        string name,
-        out ActionBinding action)
+    public static bool TryGetAction(string name, out ActionBinding action)
     {
         if (name.IsEmpty())
         {
@@ -182,7 +177,7 @@ public static class InputAction
             return false;
         }
 
-        return _actions.TryGetValue(name, out action);
+        return _actions.TryGetValue(HashHelper.Cache64(name), out action);
     }
 
     /// <summary>
@@ -196,9 +191,7 @@ public static class InputAction
     /// <returns>
     /// <see langword="true"/> when the action exists; otherwise, <see langword="false"/>.
     /// </returns>
-    public static bool TryGetAction(
-        Enum name,
-        out ActionBinding action)
+    public static bool TryGetAction(Enum name, out ActionBinding action)
     {
         if (name is null)
         {
@@ -206,9 +199,7 @@ public static class InputAction
             return false;
         }
 
-        return TryGetAction(
-            name.ToEnumString(),
-            out action);
+        return _actions.TryGetValue(HashHelper.Cache64(name), out action);
     }
 
     /// <summary>
@@ -219,8 +210,7 @@ public static class InputAction
     /// <see langword="true"/> if the action exists; otherwise, <see langword="false"/>.
     /// Null, empty, or whitespace names return <see langword="false"/>.
     /// </returns>
-    public static bool HasAction(string name)
-        => TryGetAction(name, out _);
+    public static bool HasAction(string name) => TryGetAction(name, out _);
 
     /// <summary>
     /// Determines whether an action is registered for the specified enum value.
@@ -230,8 +220,7 @@ public static class InputAction
     /// <see langword="true"/> if the action exists; otherwise, <see langword="false"/>.
     /// A <see langword="null"/> value returns <see langword="false"/>.
     /// </returns>
-    public static bool HasAction(Enum name)
-        => TryGetAction(name, out _);
+    public static bool HasAction(Enum name) => TryGetAction(name, out _);
 
     /// <summary>
     /// Removes the action registered with the specified name.
@@ -246,9 +235,7 @@ public static class InputAction
         if (name.IsEmpty())
             return false;
 
-        _previousStates.Remove(name);
-        _currentStates.Remove(name);
-        return _actions.Remove(name);
+        return RemoveAction(HashHelper.Cache64(name));
     }
 
     /// <summary>
@@ -259,9 +246,14 @@ public static class InputAction
     /// <see langword="true"/> if an action was removed; otherwise, <see langword="false"/>.
     /// A <see langword="null"/> value is ignored and returns <see langword="false"/>.
     /// </returns>
-    public static bool RemoveAction(Enum name)
-        => name is not null &&
-           RemoveAction(name.ToEnumString());
+    public static bool RemoveAction(Enum name) => name is not null && RemoveAction(HashHelper.Cache64(name));
+
+    private static bool RemoveAction(ulong hash)
+    {
+        _previousStates.Remove(hash);
+        _currentStates.Remove(hash);
+        return _actions.Remove(hash);
+    }
 
     /// <summary>
     /// Removes all registered actions and resets the current action state snapshot.
@@ -295,17 +287,16 @@ public static class InputAction
         KeyboardState keyboard = Keyboard.GetState();
         GamepadState gamepad = Gamepad.GetState();
 
-        Dictionary<string, bool> temp =
-            _previousStates;
+        Dictionary<ulong, bool> temp = _previousStates;
 
         _previousStates = _currentStates;
         _currentStates = temp;
 
         _currentStates.Clear();
 
-        foreach ((string name, ActionBinding action) in _actions)
+        foreach ((ulong hash, ActionBinding action) in _actions)
         {
-            _currentStates[name] =
+            _currentStates[hash] =
                 action.Evaluate(
                     mouse,
                     keyboard,
@@ -331,6 +322,5 @@ public static class InputAction
     /// <see cref="Clear"/>, the default snapshot treats every action as released.
     /// </remarks>
     /// <returns>The current input action snapshot.</returns>
-    public static InputActionState GetState()
-        => _state;
+    public static InputActionState GetState() => _state;
 }
