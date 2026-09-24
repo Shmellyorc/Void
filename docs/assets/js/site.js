@@ -1,4 +1,10 @@
 (() => {
+  const script = document.currentScript;
+  const siteRoot = script
+    ? new URL("../../", script.src)
+    : new URL("/", window.location.href);
+  const urlFor = (path = "") => new URL(path, siteRoot).href;
+
   const header = document.querySelector('.site-header');
   const menuButton = document.querySelector('.menu-button');
   const navLinks = document.querySelector('.nav-links');
@@ -37,4 +43,21 @@
       }
     });
   });
+
+  document.querySelectorAll('.footer-links').forEach((footer) => {
+    if (footer.querySelector('[data-privacy-link]')) return;
+
+    const privacy = document.createElement('a');
+    privacy.href = urlFor('privacy/');
+    privacy.textContent = 'Privacy';
+    privacy.dataset.privacyLink = '';
+    footer.appendChild(privacy);
+  });
+
+  if (script && !document.querySelector('script[data-void-analytics]')) {
+    const analytics = document.createElement('script');
+    analytics.src = new URL('analytics.js?v=1', script.src).href;
+    analytics.dataset.voidAnalytics = '';
+    document.head.appendChild(analytics);
+  }
 })();

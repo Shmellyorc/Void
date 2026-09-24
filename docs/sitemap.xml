@@ -7,4 +7,5 @@
   <url><loc>https://voidengine.net/install/</loc><priority>0.9</priority></url>
   <url><loc>https://voidengine.net/articles/</loc><lastmod>2026-09-24</lastmod><priority>0.8</priority></url>
   <url><loc>https://voidengine.net/articles/design-for-vulkan-ship-opengl/</loc><lastmod>2026-09-24</lastmod><priority>0.8</priority></url>
+  <url><loc>https://voidengine.net/privacy/</loc><lastmod>2026-09-24</lastmod><priority>0.3</priority></url>
 </urlset>
