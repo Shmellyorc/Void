@@ -1,11 +1,11 @@
 (() => {
   "use strict";
 
-  if (window.__voidAnalyticsBootstrapped) return;
-  window.__voidAnalyticsBootstrapped = true;
+  if (window.__voidSitePreferencesBootstrapped) return;
+  window.__voidSitePreferencesBootstrapped = true;
 
   const MeasurementId = "G-Q17H2TPKEV";
-  const ConsentKey = "void-analytics-consent";
+  const PreferenceKey = "void-site-preference";
   const script = document.currentScript;
   const siteRoot = script
     ? new URL("../../", script.src)
@@ -14,20 +14,20 @@
   const host = window.location.hostname.toLowerCase();
   const isProduction = host === "voidengine.net" || host === "www.voidengine.net";
 
-  const readConsent = () => {
+  const readPreference = () => {
     try {
-      return window.localStorage.getItem(ConsentKey);
+      return window.localStorage.getItem(PreferenceKey);
     } catch {
       return null;
     }
   };
 
-  const writeConsent = (value) => {
+  const writePreference = (value) => {
     try {
       if (value === null)
-        window.localStorage.removeItem(ConsentKey);
+        window.localStorage.removeItem(PreferenceKey);
       else
-        window.localStorage.setItem(ConsentKey, value);
+        window.localStorage.setItem(PreferenceKey, value);
     } catch {
       // If storage is unavailable, the current choice still applies to this page.
     }
@@ -67,12 +67,12 @@
   };
 
   const addStyles = () => {
-    if (document.getElementById('void-analytics-styles')) return;
+    if (document.getElementById('void-site-choice-styles')) return;
 
     const style = document.createElement('style');
-    style.id = 'void-analytics-styles';
+    style.id = 'void-site-choice-styles';
     style.textContent = `
-      .analytics-consent {
+      .void-site-choice {
         position: fixed;
         z-index: 1000;
         left: 20px;
@@ -89,25 +89,25 @@
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
-      .analytics-consent p {
+      .void-site-choice p {
         margin: 0;
         color: #aaa3b4;
         line-height: 1.55;
         font-size: .94rem;
       }
 
-      .analytics-consent a {
+      .void-site-choice a {
         color: #c9a9ef;
       }
 
-      .analytics-consent-actions {
+      .void-site-choice-actions {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
         margin-top: 14px;
       }
 
-      .analytics-consent button {
+      .void-site-choice button {
         min-height: 40px;
         padding: 8px 13px;
         border-radius: 6px;
@@ -118,23 +118,23 @@
         cursor: pointer;
       }
 
-      .analytics-consent button[data-consent="accept"] {
+      .void-site-choice button[data-site-choice="accept"] {
         border-color: rgba(191, 153, 241, .42);
         background: linear-gradient(180deg, #8d58cf, #7140aa);
         color: #fff;
       }
 
-      .analytics-consent button:hover {
+      .void-site-choice button:hover {
         border-color: rgba(183, 138, 237, .48);
       }
 
-      .analytics-consent button:focus-visible {
+      .void-site-choice button:focus-visible {
         outline: 2px solid #b78aed;
         outline-offset: 3px;
       }
 
       @media (max-width: 640px) {
-        .analytics-consent {
+        .void-site-choice {
           left: 14px;
           right: 14px;
           bottom: 14px;
@@ -146,38 +146,38 @@
   };
 
   const removePrompt = () => {
-    document.getElementById('analytics-consent')?.remove();
+    document.getElementById('void-site-choice')?.remove();
   };
 
   const showPrompt = () => {
-    if (document.getElementById('analytics-consent')) return;
+    if (document.getElementById('void-site-choice')) return;
 
     addStyles();
 
     const prompt = document.createElement('section');
-    prompt.id = 'analytics-consent';
-    prompt.className = 'analytics-consent';
+    prompt.id = 'void-site-choice';
+    prompt.className = 'void-site-choice';
     prompt.setAttribute('role', 'dialog');
-    prompt.setAttribute('aria-label', 'Analytics preference');
+    prompt.setAttribute('aria-label', 'Site preference');
     prompt.innerHTML = `
       <p>
         VOID uses Google Analytics to understand site traffic and improve the website.
         Analytics only loads if you accept. <a href="${privacyUrl}">Privacy details</a>.
       </p>
-      <div class="analytics-consent-actions">
-        <button type="button" data-consent="accept">Accept analytics</button>
-        <button type="button" data-consent="decline">Decline</button>
+      <div class="void-site-choice-actions">
+        <button type="button" data-site-choice="accept">Accept analytics</button>
+        <button type="button" data-site-choice="decline">Decline</button>
       </div>
     `;
 
-    prompt.querySelector('[data-consent="accept"]')?.addEventListener('click', () => {
-      writeConsent('granted');
+    prompt.querySelector('[data-site-choice="accept"]')?.addEventListener('click', () => {
+      writePreference('granted');
       removePrompt();
       loadAnalytics();
     });
 
-    prompt.querySelector('[data-consent="decline"]')?.addEventListener('click', () => {
-      writeConsent('denied');
+    prompt.querySelector('[data-site-choice="decline"]')?.addEventListener('click', () => {
+      writePreference('denied');
       removePrompt();
     });
 
@@ -186,18 +186,18 @@
 
   document.querySelectorAll('[data-analytics-reset]').forEach((button) => {
     button.addEventListener('click', () => {
-      writeConsent(null);
+      writePreference(null);
       window[`ga-disable-${MeasurementId}`] = true;
       clearAnalyticsCookies();
       window.location.reload();
     });
   });
 
-  const consent = readConsent();
+  const preference = readPreference();
 
-  if (consent === 'granted') {
+  if (preference === 'granted') {
     loadAnalytics();
-  } else if (consent !== 'denied') {
+  } else if (preference !== 'denied') {
     showPrompt();
   }
 })();

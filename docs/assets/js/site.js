@@ -54,10 +54,10 @@
     footer.appendChild(privacy);
   });
 
-  if (script && !document.querySelector('script[data-void-analytics]')) {
-    const analytics = document.createElement('script');
-    analytics.src = new URL('analytics.js?v=1', script.src).href;
-    analytics.dataset.voidAnalytics = '';
-    document.head.appendChild(analytics);
+  if (script && !document.querySelector('script[data-void-preferences]')) {
+    const preferences = document.createElement('script');
+    preferences.src = new URL('preferences.js?v=2', script.src).href;
+    preferences.dataset.voidPreferences = '';
+    document.head.appendChild(preferences);
   }
 })();
