@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Design for Vulkan, Ship OpenGL | VOID Engine</title>
+  <meta name="description" content="How VOID Engine keeps OpenGL as its default renderer while preserving a backend-neutral path for Vulkan, Direct3D, Metal, and other graphics APIs.">
+  <meta name="theme-color" content="#08070b">
+  <link rel="canonical" href="https://voidengine.net/articles/design-for-vulkan-ship-opengl/">
+  <link rel="icon" href="../../assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/css/site.css?v=6">
+  <link rel="stylesheet" href="../../assets/css/articles.css?v=1">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Design for Vulkan, Ship OpenGL">
+  <meta property="og:description" content="Building a pluggable renderer for a .NET game engine without letting OpenGL define the architecture.">
+  <meta property="og:url" content="https://voidengine.net/articles/design-for-vulkan-ship-opengl/">
+  <meta property="og:image" content="https://voidengine.net/assets/images/renderer-architecture.webp">
+  <meta property="article:published_time" content="2026-09-24">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Design for Vulkan, Ship OpenGL">
+  <meta name="twitter:description" content="Building a pluggable renderer for a .NET game engine without letting OpenGL define the architecture.">
+  <meta name="twitter:image" content="https://voidengine.net/assets/images/renderer-architecture.webp">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Design for Vulkan, Ship OpenGL",
+    "description": "Building a pluggable renderer for a .NET game engine without letting OpenGL define the architecture.",
+    "datePublished": "2026-09-24",
+    "dateModified": "2026-09-24",
+    "author": {
+      "@type": "Person",
+      "name": "Shmellyorc"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "VOID Engine",
+      "url": "https://voidengine.net/"
+    },
+    "image": "https://voidengine.net/assets/images/renderer-architecture.webp",
+    "mainEntityOfPage": "https://voidengine.net/articles/design-for-vulkan-ship-opengl/"
+  }
+  </script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="site-nav"></div>
+<script src="../../assets/js/nav.js?v=7"></script>
+
+<main id="main">
+  <section class="page-hero article-hero">
+    <div class="container">
+      <p class="section-kicker">Rendering</p>
+      <h1>Design for Vulkan,<br>Ship OpenGL</h1>
+      <p class="article-subtitle">Building a Pluggable Renderer for a .NET Game Engine</p>
+      <div class="article-meta">
+        <time datetime="2026-09-24">24 September 2026</time>
+        <span>VOID Engine</span>
+      </div>
+    </div>
+  </section>
+
+  <article class="section">
+    <div class="article-shell">
+      <figure class="article-cover image-frame">
+        <img src="../../assets/images/renderer-architecture.webp" alt="VOID Engine renderer architecture showing the renderer-neutral layer and pluggable graphics backend boundary.">
+      </figure>
+      <div class="article-body prose">
+<p>When I started replacing VOID's old rendering stack, I did not want
+to end up with an OpenGL renderer hidden behind a few interfaces and
+call that "pluggable."</p>
+<p>The goal was more demanding than that.</p>
+<p>VOID should be able to ship with OpenGL today while still allowing
+another developer to bring in Vulkan, Direct3D, Metal, or another
+graphics API later without rewriting the engine around it. OpenGL could
+be the default renderer, but it could not be allowed to define what a
+renderer is.</p>
+<p>From a game's point of view, replacing the renderer should stay
+simple:</p>
+<pre class="csharp"><code>var settings = GameSettings.Instance
+    .SetAppCompany(&quot;MyStudio&quot;)
+    .SetAppName(&quot;MyGame&quot;)
+    .SetRenderer&lt;MyVulkanRenderer&gt;()
+    .Build();</code></pre>
+<p>That one line is easy to write.</p>
+<p>Making it actually mean something required changing far more than the
+startup code.</p>
+<p>A renderer boundary only becomes useful if it survives the entire
+path from native window creation to GPU resource creation, batching,
+shaders, render targets, cameras, presentation, resize handling, and
+platform-specific requirements. If any of those systems quietly assume
+OpenGL, then the renderer is not really replaceable. The abstraction
+simply moved the OpenGL dependency somewhere less obvious.</p>
+<p>That became the central design rule for VOID 2.x: ship OpenGL, but
+own the rendering architecture.</p>
+<h2 id="what-pluggable-renderer-means-in-void">What "Pluggable Renderer"
+Means in VOID</h2>
+<p>The phrase "pluggable renderer" can mean several different
+things.</p>
+<p>Sometimes it means an engine ships multiple backends and lets the
+user choose between them. Sometimes it means shaders are replaceable
+while the graphics API underneath them stays fixed. Sometimes it is
+little more than an interface placed in front of one renderer
+implementation.</p>
+<p>VOID is aiming for something different.</p>
+<p>The renderer owns the graphics backend itself.</p>
+<p>It provides the graphics device, creates GPU resources, reports
+capabilities, supplies the default 2D shader, manages presentation
+state, responds to resize events, and translates VOID's renderer-neutral
+commands into whatever work its graphics API actually requires.</p>
+<p>Normal game code should not care how that happens.</p>
+<p>A call such as:</p>
+<pre class="csharp"><code>spriteBatch.Draw(...);</code></pre>
+<p>describes what the game wants drawn. The active backend decides
+whether that eventually becomes an OpenGL DrawElements call, a Vulkan
+vkCmdDrawIndexed, a Direct3D draw, or something else entirely.</p>
+<p>That distinction is the test I keep coming back to. If changing
+graphics APIs forces ordinary game code to change with it, the
+abstraction is leaking.</p>
+<h2 id="avoiding-an-opengl-shaped-engine">Avoiding an OpenGL-Shaped
+Engine</h2>
+<p>OpenGL is a practical first renderer for a 2D framework. It is widely
+available, comparatively easy to debug, and more than capable of
+handling the workloads VOID currently targets.</p>
+<p>It is also very easy to design an engine around its conveniences
+without noticing.</p>
+<p>OpenGL is stateful. It can hide a great deal of information behind
+global state and permissive resource behavior. A shader can look like
+"some GLSL source." A texture can appear to be useful for almost
+anything. Context creation, function loading, buffer swapping, and state
+changes can start to feel like the natural shape of a renderer because
+OpenGL makes those operations familiar.</p>
+<p>That works until a more explicit API enters the picture.</p>
+<p>Vulkan wants more information up front. Image usage matters during
+resource creation. Shader modules commonly arrive as SPIR-V instead of
+GLSL source compiled directly by the driver. Indexed and non-indexed
+draws are distinct operations. Presentation depends on a surface and
+swapchain lifecycle. Ownership and synchronization have to be considered
+much more carefully.</p>
+<p>If an engine throws away that information because OpenGL did not need
+it, then adding Vulkan later is not just a matter of implementing
+another backend. The renderer contract itself has to be redesigned.</p>
+<p>At that point, the original abstraction was never truly
+backend-neutral. It was an OpenGL-shaped hole.</p>
+<p>VOID takes the opposite approach. The public renderer contracts try
+to preserve information that a more explicit backend could reasonably
+need without turning the engine API into a copy of Vulkan.</p>
+<p>That balance matters. A Vulkan-shaped abstraction would be just as
+limiting as an OpenGL-shaped one.</p>
+<p>The goal is not to model a specific graphics API. The goal is to
+preserve useful rendering intent.</p>
+<h2 id="preserve-intent-not-api-calls">Preserve Intent, Not API
+Calls</h2>
+<p>Shader data is a good example.</p>
+<p>VOID does not define a shader as "a GLSL string." Shader descriptions
+carry the shader stage, language, source or binary data, and entry
+point. The language model can represent GLSL, HLSL, SPIR-V, DXIL, MSL,
+or a custom representation.</p>
+<p>The built-in OpenGL backend only needs GLSL today, but GLSL is not
+the public contract.</p>
+<p>Textures follow the same principle. A texture description is more
+than width, height, and pixels. It also includes information such as
+format, intended usage, sampling behavior, wrapping, sample count, and
+mipmap policy.</p>
+<p>OpenGL may not need every field with the same level of strictness.
+Another backend might.</p>
+<p>The important part is that VOID does not discard useful information
+before the backend has a chance to interpret it.</p>
+<p>The same idea applies to drawing. A renderer-neutral RenderCommand
+contains enough information for indexed and non-indexed rendering
+without pretending that they are the same operation. The OpenGL backend
+can translate that command into DrawArrays or DrawElements. A Vulkan
+backend could translate the same intent into vkCmdDraw or
+vkCmdDrawIndexed.</p>
+<p>The command is not an OpenGL draw call with different names.</p>
+<p>It is a description of work.</p>
+<h2 id="the-renderer-boundary-reaches-the-gpu">The Renderer Boundary
+Reaches the GPU</h2>
+<p>One of the biggest changes since the first version of this renderer
+work is that the abstraction does not stop after window creation.</p>
+<p>VOID now has a renderer-neutral IGraphicsDevice underneath its normal
+graphics systems. The active renderer exposes that device through
+IRendererBackend.Device, and higher-level engine code uses it without
+knowing which API implements it.</p>
+<p>The device creates renderer-owned resources:</p>
+<pre class="csharp"><code>IGraphicsBuffer CreateBuffer(...);
+IGraphicsTexture CreateTexture(...);
+IGraphicsShaderProgram CreateShaderProgram(...);
+IGraphicsRenderTarget CreateRenderTarget(...);</code></pre>
+<p>It also owns the operations that update and submit those
+resources:</p>
+<pre class="csharp"><code>void UpdateBuffer&lt;T&gt;(...);
+void UpdateTexture(...);
+
+void SetRenderTarget(...);
+void Clear(Color color);
+void Draw(in RenderCommand command);
+
+void WaitIdle();</code></pre>
+<p>The built-in GLDevice translates those calls into OpenGL.</p>
+<p>A Vulkan device could translate them into Vulkan. A Direct3D device
+could do the same for Direct3D. Higher-level systems continue talking to
+the same renderer-neutral interface.</p>
+<p>Resource ownership is part of that contract too. Resources created by
+one graphics device belong to that device and should not be mixed with
+another. Callers are responsible for disposing the GPU resources they
+create. Device access should also be treated as render-thread work
+unless a backend explicitly guarantees stronger behavior.</p>
+<p>Those details may sound less exciting than a draw call, but they are
+what make an abstraction usable in a real engine rather than only
+convincing in a diagram.</p>
+<h2 id="renderer-neutral-does-not-mean-slow">Renderer-Neutral Does Not
+Mean Slow</h2>
+<p>A common concern with renderer abstraction is that supporting
+multiple APIs forces every backend through the same
+lowest-common-denominator path.</p>
+<p>I did not want that for VOID.</p>
+<p>The public contracts are renderer-neutral, but each implementation is
+still free to optimize aggressively for its own graphics API.</p>
+<p>The current OpenGL renderer does exactly that.</p>
+<p>SpriteBatcher now uses indexed quads, so each sprite needs four
+unique vertices instead of duplicating six vertices for two triangles.
+Reusable index buffers provide the six indices required for each
+quad.</p>
+<p>Inside the OpenGL backend, shared state caching avoids redundant work
+for shader programs, textures, vertex arrays, index buffers, render
+targets, viewports, clear state, and blend state. Uniform values are
+cached as well, which avoids resubmitting values that have not
+changed.</p>
+<p>Those optimizations are specific to OpenGL, and that is where they
+belong.</p>
+<p>The public rendering API did not need to become OpenGL-specific to
+support them.</p>
+<p>That separation is important. Backend-neutral should mean that engine
+code does not depend on one graphics API. It should not mean that a
+backend is forbidden from using the strengths of the API it
+implements.</p>
+<h2 id="render-targets-had-to-become-truly-public">Render Targets Had to
+Become Truly Public</h2>
+<p>Render targets exposed another hidden dependency during the renderer
+work.</p>
+<p>It is easy to say that a renderer is replaceable while still
+requiring outside implementations to inherit from an internal or
+concrete render-target type designed around the built-in backend.</p>
+<p>That is not really extensible.</p>
+<p>VOID's public IRenderTarget now exposes renderer-neutral graphics
+resources so custom render targets can participate in the normal
+rendering path without inheriting from a built-in OpenGL-oriented
+target.</p>
+<p>The batchers can submit to compatible custom render targets while
+still validating that the target belongs to the correct graphics
+device.</p>
+<p>That is a small detail from the game's point of view, but it matters
+a lot to someone writing a renderer plugin. A third-party backend should
+not have to impersonate a VOID concrete class just to use the engine's
+normal batching system.</p>
+<h2 id="even-the-final-present-is-renderer-neutral">Even the Final
+Present Is Renderer-Neutral</h2>
+<p>Another place abstractions often leak is the final step.</p>
+<p>An engine may keep its drawing systems renderer-neutral, then use
+direct OpenGL calls to copy the final game surface to the window. At
+that point the renderer boundary quietly disappears at the end of every
+frame.</p>
+<p>VOID does not do that now.</p>
+<p>The game renders to an internal game surface. That render size is
+intentionally separate from the native window size, which allows VOID to
+handle viewport scaling and supersampling without making the game itself
+operate directly in window pixels.</p>
+<p>When the frame is ready to be shown, RendererPresenter performs the
+final draw through IGraphicsDevice. It creates its buffer through the
+active device, uses the renderer's default 2D shader, submits a
+renderer-neutral RenderCommand, and draws the game surface into the
+destination rectangle on the native backbuffer.</p>
+<p>There are no OpenGL draw calls in that presentation layer.</p>
+<p>The active backend decides what those operations mean.</p>
+<p>That matters because renderer replacement should not end one draw
+before the frame reaches the screen.</p>
+<h2 id="the-default-2d-shader-is-part-of-the-contract">The Default 2D
+Shader Is Part of the Contract</h2>
+<p>VOID's built-in batching systems need a predictable shader when the
+game has not supplied a custom one.</p>
+<p>That shader is now an explicit responsibility of the renderer:</p>
+<pre class="csharp"><code>IGraphicsShaderProgram Default2DShader { get; }</code></pre>
+<p>The requirements are documented rather than implied.</p>
+<p>VOID's built-in 2D vertex layout uses position, normalized vertex
+color, and texture coordinates. The engine also supplies the standard
+state needed by the built-in drawing path, including the view-projection
+matrix, whether a texture is present, the texture size, and the primary
+texture.</p>
+<p>A backend can implement those bindings however its API requires
+internally. What matters is that the resulting shader preserves the
+behavior VOID's 2D systems expect.</p>
+<p>That turns the default shader from an OpenGL implementation detail
+into part of the renderer extension contract.</p>
+<p>A renderer author should not have to reverse-engineer SpriteBatcher
+to discover what the default shader is supposed to do.</p>
+<h2 id="custom-shaders-stay-above-the-backend">Custom Shaders Stay Above
+the Backend</h2>
+<p>Custom shaders follow the same separation.</p>
+<p>Game-facing shader code prepares renderer-neutral state and resolves
+it to the active backend's IGraphicsShaderProgram. VOID's built-in 2D
+rendering path can use either a custom shader or the renderer's default
+shader without knowing whether the actual implementation is an OpenGL
+program, Vulkan shader objects and pipeline state, or something
+else.</p>
+<p>The OpenGL backend still has its own rules internally. For example,
+it manages texture units and sampler bindings in a way that makes sense
+for OpenGL, including keeping the primary draw texture separate from
+custom shader samplers.</p>
+<p>Those details stay inside the backend.</p>
+<p>The public shader system does not need to expose them.</p>
+<h2 id="cameras-became-engine-owned-data-too">Cameras Became
+Engine-Owned Data Too</h2>
+<p>The camera system changed during this work as well.</p>
+<p>VOID now owns its own 4x4 Matrix type and exposes an extensible
+BaseCamera abstraction. The rendering path no longer depends on
+System.Numerics.Matrix4x4 for its camera transforms.</p>
+<p>Batchers, render targets, post-processing, shaders, camera conversion
+helpers, and the OpenGL uniform path all use VOID's matrix type.</p>
+<p>That gives the renderer another clean piece of engine-owned data to
+consume. A backend receives the transform semantics VOID needs without
+the camera system being coupled to OpenGL or to a framework-specific
+matrix implementation.</p>
+<p>The no-camera path still behaves as expected in pixel space, while
+custom cameras can provide their own view-projection behavior. World and
+UI rendering can also use separate cameras without leaking state between
+them.</p>
+<p>This is not only a camera feature. It is another example of removing
+assumptions from the graphics boundary.</p>
+<h2 id="game-textures-are-not-gpu-textures">Game Textures Are Not GPU
+Textures</h2>
+<p>VOID still has a normal game-facing Texture asset.</p>
+<p>That is not the same thing as the backend's GPU texture object.</p>
+<p>Renderer implementations work with IGraphicsTexture.</p>
+<p>The built-in OpenGL renderer can use a private GLTexture. A Vulkan
+renderer could use its own Vulkan texture implementation. A Direct3D
+backend could provide another implementation entirely.</p>
+<p>Game code does not need to know.</p>
+<p>The same rule applies to buffers, render targets, and shader
+programs. Public interfaces describe what VOID needs. Private backend
+types describe how a graphics API satisfies those needs.</p>
+<p>This avoids one of the easiest mistakes in multi-backend engine
+design: claiming the engine is renderer-neutral while still passing
+OpenGL object IDs, Vulkan handles, or Direct3D objects through the
+public rendering layer.</p>
+<h2 id="the-atlas-stayed-above-the-renderer">The Atlas Stayed Above the
+Renderer</h2>
+<p>VOID's texture atlas also moved away from backend-specific
+assumptions.</p>
+<p>Atlas pages maintain CPU-side pixel data and create their GPU
+resources through the active renderer-neutral graphics device. Texture
+uploads go through IGraphicsTexture and
+IGraphicsDevice.UpdateTexture.</p>
+<p>That keeps atlas packing, eviction, fragmentation recovery, and
+incremental defragmentation as engine systems rather than OpenGL
+systems.</p>
+<p>If the renderer resources need to be recreated, the atlas retains the
+CPU-side information required to rebuild its GPU pages.</p>
+<p>This was important to me because the atlas is a higher-level asset
+and batching optimization. It should not need to know which graphics API
+owns the texture underneath it.</p>
+<h2 id="the-platform-boundary-was-the-hard-part">The Platform Boundary
+Was the Hard Part</h2>
+<p>Graphics APIs do not only differ at the GPU level.</p>
+<p>They also need different things from the operating system and
+windowing layer.</p>
+<p>OpenGL needs a context, function loading, buffer swapping, and swap
+interval control. Vulkan needs native platform information to create a
+presentation surface. Metal and Direct3D have their own platform
+requirements.</p>
+<p>VOID exposes that seam through IRendererContext.</p>
+<p>The renderer context provides the game's settings, the native window
+size, the internal render size, the active native window backend, an
+opaque window-system handle, graphics function loading, buffer swapping,
+swap interval control, and native-handle retrieval.</p>
+<p>The important part is what it does not expose.</p>
+<p>A renderer plugin does not receive VOID's internal SDL window host.
+It does not need to depend on VOID's internal SDL implementation just to
+create its own graphics backend.</p>
+<p>Instead, it receives a small public interface containing the platform
+services a renderer may reasonably need.</p>
+<h2 id="native-handles-without-leaking-sdl">Native Handles Without
+Leaking SDL</h2>
+<p>This is one of the places where designing the seam early already paid
+off.</p>
+<p>A renderer cannot simply ask, "Am I running on Linux?" and assume
+that tells it enough.</p>
+<p>The active window system might be X11, XWayland, or native Wayland.
+Windows and macOS expose different native objects again.</p>
+<p>IRendererContext.PlatformBackend tells the renderer what VOID
+actually initialized.</p>
+<p>The renderer can then request borrowed native handles through:</p>
+<pre class="csharp"><code>TryGetNativeHandle(...)</code></pre>
+<p>VOID can expose the native objects required for supported
+environments such as Win32, X11 and XWayland, Wayland, and Cocoa.
+Depending on the platform, that can include handles such as an HWND,
+HMONITOR, HINSTANCE, or HDC on Windows, a Window/XID and Display* on
+X11, wl_surface* and wl_display* on Wayland, or an NSWindow* on
+Cocoa.</p>
+<p>Those objects remain owned by VOID and the platform layer.</p>
+<p>The renderer only borrows them while the window and renderer context
+are alive.</p>
+<p>There is also an external renderer smoke test that uses the same
+public registration path available to third-party renderer authors. The
+probe can inspect the active platform and request the native handles it
+needs without touching VOID's internal SDL implementation.</p>
+<p>That is exactly what the platform boundary was supposed to make
+possible.</p>
+<h2 id="the-renderer-is-chosen-before-the-window-is-created">The
+Renderer Is Chosen Before the Window Is Created</h2>
+<p>A renderer can declare its native window requirements through
+RendererWindowFlags.</p>
+<p>This happens before renderer initialization because the order
+matters.</p>
+<p>VOID first chooses the renderer. It reads the renderer's required
+window flags and graphics version, creates the native window with the
+appropriate requirements, creates the renderer context, initializes the
+renderer, and only then attaches the graphics device and default 2D
+shader to the rest of the engine.</p>
+<p>If the engine created an OpenGL window first and asked which renderer
+the game wanted afterward, the renderer would never have been truly
+replaceable.</p>
+<p>The native platform environment has to be created around the selected
+backend, not the other way around.</p>
+<h2 id="capabilities-are-reported-not-assumed">Capabilities Are
+Reported, Not Assumed</h2>
+<p>Choosing a graphics API does not guarantee every optional feature
+exists.</p>
+<p>VOID therefore asks the active renderer to report
+RendererCapabilities rather than hardcoding assumptions based on the API
+name.</p>
+<p>Those capabilities include practical information such as texture
+limits, render-target limits, sample limits, and support for features
+such as instancing, geometry shaders, compute shaders, and debug
+output.</p>
+<p>The built-in OpenGL renderer reports what the active implementation
+and hardware actually support.</p>
+<p>That becomes even more important for APIs such as Vulkan, where
+optional GPU features can vary significantly between devices.</p>
+<p>The engine should ask the renderer what is true.</p>
+<p>It should not guess from the logo on the API.</p>
+<h2 id="what-a-custom-renderer-looks-like">What a Custom Renderer Looks
+Like</h2>
+<p>Renderer authors can implement IRendererBackend directly or derive
+from VOID's RendererBackend base class.</p>
+<p>A simplified Vulkan renderer might begin like this:</p>
+<pre class="csharp"><code>public sealed class MyVulkanRenderer : RendererBackend
+{
+    public override string Name =&gt; &quot;My Vulkan&quot;;
+    public override GraphicsApi Api =&gt; GraphicsApi.Vulkan;
+    public override GraphicsVersion Version =&gt; new(1, 3);
+
+    public override RendererWindowFlags RequiredWindowFlags
+        =&gt; RendererWindowFlags.Vulkan;
+
+    public override RendererCapabilities Capabilities
+        =&gt; _capabilities;
+
+    public override IGraphicsDevice Device
+        =&gt; _device;
+
+    public override IGraphicsShaderProgram Default2DShader
+        =&gt; _default2DShader;
+
+    protected override void OnInitialize(IRendererContext context)
+    {
+        // Create Vulkan-specific instance, device,
+        // surface, swapchain, and rendering resources.
+    }
+
+    public override void BeginFrame(Color clearColor)
+    {
+        // Acquire or prepare the frame.
+    }
+
+    public override void EndFrame()
+    {
+        // Submit and present.
+    }
+
+    public override void Resize(int width, int height)
+    {
+        // Recreate presentation resources if needed.
+    }
+}</code></pre>
+<p>What matters here is not only what the interface contains.</p>
+<p>It is what the interface leaves out.</p>
+<p>VOID does not expose methods named CreateVkSurface,
+CreateDxgiSwapChain, or CreateMetalLayer. Those are implementation
+details that belong inside their respective backends.</p>
+<p>The public contract describes what VOID needs from a renderer. The
+renderer decides how its graphics API satisfies those requirements.</p>
+<h2 id="configuration-closes-the-loop">Configuration Closes the
+Loop</h2>
+<p>For a renderer with a public parameterless constructor, registration
+stays simple:</p>
+<pre class="csharp"><code>GameSettings.Instance
+    .SetRenderer&lt;MyVulkanRenderer&gt;()
+    .Build();</code></pre>
+<p>If a renderer needs dependencies, VOID also accepts a factory:</p>
+<pre class="csharp"><code>GameSettings.Instance
+    .SetRenderer(() =&gt;
+        new MyVulkanRenderer(myDependency));</code></pre>
+<p>If no custom renderer is configured, VOID creates its built-in OpenGL
+renderer.</p>
+<p>That makes OpenGL the default implementation.</p>
+<p>It does not make OpenGL the definition of the renderer
+architecture.</p>
+<h2 id="the-limits-are-intentional">The Limits Are Intentional</h2>
+<p>VOID currently activates one renderer for a rendering session.</p>
+<p>It is not designed to swap from OpenGL to Vulkan halfway through a
+running game while automatically migrating every live GPU resource.</p>
+<p>Supporting that would introduce a large amount of synchronization and
+resource-migration complexity for very little practical benefit to the
+kind of framework VOID is trying to be.</p>
+<p>The renderer is chosen during startup. Once initialized and attached,
+VOID prevents another renderer from becoming active until the current
+one has been disposed and detached.</p>
+<p>Resize handling is intentionally small at the public boundary as
+well:</p>
+<p>Resize(int width, int height)</p>
+<p>For OpenGL, that may update viewport and presentation state. For
+Vulkan, it may eventually trigger swapchain recreation. That extra
+complexity belongs inside the Vulkan implementation.</p>
+<p>VOID also does not pretend to have already solved every
+synchronization primitive, descriptor model, command queue, or
+backend-specific resource problem for APIs that have not been
+implemented yet.</p>
+<p>There is a difference between designing ahead and guessing.</p>
+<p>The goal is to leave enough information and extension points in the
+public contract that a new backend can be implemented honestly when the
+time comes.</p>
+<h2 id="opengl-is-still-the-renderer-void-ships">OpenGL Is Still the
+Renderer VOID Ships</h2>
+<p>After all of this, VOID still ships with OpenGL.</p>
+<p>That is intentional.</p>
+<p>SDL3 owns the platform layer. Silk.OpenGL provides the OpenGL
+bindings. VOID owns the rendering contracts between the engine and the
+backend.</p>
+<p>There are OpenGL-specific classes in the engine because VOID includes
+an OpenGL renderer. There are OpenGL-specific optimizations because the
+OpenGL backend should be good at being an OpenGL backend.</p>
+<p>Renderer neutrality does not mean deleting every reference to OpenGL
+from the codebase.</p>
+<p>It means preventing OpenGL from determining the shape of the public
+architecture.</p>
+<p>Those are very different goals.</p>
+<h2 id="why-design-for-vulkan-before-shipping-vulkan">Why Design for
+Vulkan Before Shipping Vulkan?</h2>
+<p>VOID is a 2D game framework. It does not urgently need Vulkan to draw
+sprites, text, primitives, render targets, or post-processing
+effects.</p>
+<p>OpenGL is already capable of doing that job well.</p>
+<p>The reason Vulkan mattered during the design process was not because
+I wanted to claim support that VOID does not have.</p>
+<p>Vulkan was useful as a harder consumer of the abstraction.</p>
+<p>Thinking about a more explicit API forced hidden assumptions into the
+open. Shader representation had to become real data rather than "GLSL
+source." Texture usage had to be represented. Indexed drawing had to be
+explicit. GPU resource ownership had to be clear. Render targets had to
+be public enough for external implementations. Camera transforms had to
+become engine-owned data. Native platform access had to exist without
+exposing SDL internals. Capabilities had to be reported rather than
+guessed. Even the final presentation step had to stay above the graphics
+API.</p>
+<p>Once those responsibilities are represented clearly, OpenGL can
+remain simple where OpenGL is simple, while another backend can use the
+same engine-level intent without first tearing the engine apart.</p>
+<p>That is the part of the architecture I care about most.</p>
+<h2
+id="ship-the-renderer-you-need-preserve-the-renderer-you-may-need-later">Ship
+the Renderer You Need, Preserve the Renderer You May Need Later</h2>
+<p>The design principle behind VOID's renderer is fairly simple:</p>
+<p>Build the abstraction with its hardest realistic consumer in mind,
+then ship the implementation that solves the problem you actually have
+today.</p>
+<p>VOID currently ships OpenGL.</p>
+<p>It does not ship Vulkan.</p>
+<p>It does not ship Direct3D.</p>
+<p>It does not ship Metal.</p>
+<p>But the renderer boundary now reaches from startup and native window
+creation through graphics devices, GPU resources, batching, shaders,
+cameras, render targets, the texture atlas, and final presentation.</p>
+<p>From the game's point of view, replacing the renderer is still one
+line:</p>
+<pre class="csharp"><code>.SetRenderer&lt;MyRenderer&gt;()</code></pre>
+<p>Everything underneath that line exists so that the line can actually
+mean what it says.</p>
+      </div>
+
+      <div class="article-end">
+        <p>VOID currently ships with a Silk.NET.OpenGL renderer. The renderer-neutral contracts are public so another backend can be implemented without redefining the rest of the framework.</p>
+        <div class="article-links">
+          <a class="button button-secondary" href="https://github.com/Shmellyorc/Void">VOID on GitHub</a>
+          <a class="button button-secondary" href="https://github.com/Shmellyorc/Void/wiki/Rendering">Renderer Documentation</a>
+          <a class="button button-secondary" href="../">More Articles</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div><img class="footer-brand" src="../../assets/images/void-logo.png" alt="VOID"><div>Open-source .NET game framework. MIT licensed.</div></div>
+    <div class="footer-links"><a href="https://github.com/Shmellyorc/Void">GitHub</a><a href="https://github.com/Shmellyorc/Void/wiki">Documentation</a><a href="https://github.com/Shmellyorc/Void/blob/master/LICENSE">License</a></div>
+  </div>
+</footer>
+<script src="../../assets/js/site.js?v=6"></script>
+</body>
+</html>

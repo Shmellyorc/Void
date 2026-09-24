@@ -9,7 +9,7 @@
   // nav.js always lives at assets/js/nav.js.
   // ../../ resolves to the real site root on both:
   //   http://localhost:8000/
-  //   https://shmellyorc.github.io/Void/
+  //   https://voidengine.net/
   const siteRoot = new URL("../../", script.src);
   const urlFor = (path = "") => new URL(path, siteRoot).href;
 
@@ -50,6 +50,7 @@
       <a href="${urlFor("features/")}"${current("features")}>Features</a>
       <a href="${urlFor("philosophy/")}"${current("philosophy")}>Philosophy</a>
       <a href="${urlFor("rendering/")}"${current("rendering")}>Rendering</a>
+      <a href="${urlFor("articles/")}"${current("articles")}>Articles</a>
       <a href="https://github.com/Shmellyorc/Void/wiki">Docs</a>
       <a href="https://github.com/Shmellyorc/Void">GitHub</a>
       <a class="nav-install" href="${urlFor("install/")}"${current("install")}>Install</a>

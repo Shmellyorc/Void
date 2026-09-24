@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://shmellyorc.github.io/Void/sitemap.xml
+Sitemap: https://voidengine.net/sitemap.xml
