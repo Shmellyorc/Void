@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Where the Renderer Boundary Lives: Stride and VOID | VOID Engine</title>
+  <meta name="description" content="A technical comparison of where Stride and VOID place their graphics abstraction boundaries, and why VOID makes the renderer itself replaceable.">
+  <meta name="theme-color" content="#08070b">
+  <link rel="canonical" href="https://voidengine.net/articles/where-the-renderer-boundary-lives/">
+  <link rel="icon" href="../../assets/images/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/css/site.css?v=6">
+  <link rel="stylesheet" href="../../assets/css/articles.css?v=1">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Where the Renderer Boundary Lives: Stride and VOID">
+  <meta property="og:description" content="Two .NET engines, two different places to draw the graphics abstraction boundary.">
+  <meta property="og:url" content="https://voidengine.net/articles/where-the-renderer-boundary-lives/">
+  <meta property="og:image" content="https://voidengine.net/assets/images/technical-article-banner.webp">
+  <meta property="article:published_time" content="2026-09-29">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Where the Renderer Boundary Lives: Stride and VOID">
+  <meta name="twitter:description" content="Two .NET engines, two different places to draw the graphics abstraction boundary.">
+  <meta name="twitter:image" content="https://voidengine.net/assets/images/technical-article-banner.webp">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "Where the Renderer Boundary Lives: Stride and VOID",
+    "description": "A technical comparison of where Stride and VOID place their graphics abstraction boundaries, and why VOID makes the renderer itself replaceable.",
+    "datePublished": "2026-09-29",
+    "dateModified": "2026-09-29",
+    "author": {
+      "@type": "Person",
+      "name": "Shmellyorc"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "VOID Engine",
+      "url": "https://voidengine.net/"
+    },
+    "image": "https://voidengine.net/assets/images/technical-article-banner.webp",
+    "mainEntityOfPage": "https://voidengine.net/articles/where-the-renderer-boundary-lives/"
+  }
+  </script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div id="site-nav"></div>
+<script src="../../assets/js/nav.js?v=7"></script>
+
+<main id="main">
+  <section class="page-hero article-hero">
+    <div class="container">
+      <p class="section-kicker">Architecture</p>
+      <h1>Where the Renderer<br>Boundary Lives</h1>
+      <p class="article-subtitle">Stride and VOID solve graphics abstraction at different layers.</p>
+      <div class="article-meta">
+        <time datetime="2026-09-29">29 September 2026</time>
+        <span>VOID Engine</span>
+      </div>
+    </div>
+  </section>
+
+  <article class="section">
+    <div class="article-shell">
+      <figure class="article-cover image-frame">
+        <img src="../../assets/images/technical-article-banner.webp" alt="Purple-lit development workstation with code on multiple monitors and mountains in the background.">
+      </figure>
+      <div class="article-body prose">
+<p>Graphics abstraction sounds like one problem until two engines solve it in completely different places.</p>
+<p>I have been looking through Stride's rendering architecture while working on VOID's renderer contracts. The useful part of the comparison was not deciding which engine has the better renderer. Stride and VOID have very different scopes. What interested me was where each project decides the abstraction should stop.</p>
+<p>Stride has a deep graphics abstraction inside a much larger rendering stack. VOID exposes a smaller graphics device too, but the main extension boundary sits one level higher: the renderer itself is replaceable.</p>
+<p>That difference changes a surprising amount of the architecture.</p>
+
+<h2 id="same-problem-different-boundary">The Same Problem, a Different Boundary</h2>
+<p>Both projects need engine code to describe rendering without scattering API-specific calls everywhere.</p>
+<p>Stride solves that with a broad graphics layer. Its source exposes concepts such as <a href="https://github.com/stride3d/stride/blob/master/sources/engine/Stride.Graphics/GraphicsDevice.cs">GraphicsDevice</a>, <a href="https://github.com/stride3d/stride/blob/master/sources/engine/Stride.Graphics/CommandList.cs">CommandList</a>, pipeline state, resources, and backend-specific implementations for graphics APIs such as Vulkan and Direct3D.</p>
+<p>That is a strong fit for Stride. It is a full 3D engine with a rendering pipeline that needs to model far more GPU behavior than a small 2D framework normally would.</p>
+<p>VOID has a different goal. I wanted its normal rendering systems to stay simple while still allowing the entire backend to be replaced from outside the engine.</p>
+<p>So the public boundary became three contracts:</p>
+<pre class="csharp"><code>IRendererBackend
+IGraphicsDevice
+IRendererContext</code></pre>
+<p>Those interfaces are related, but they solve three different problems.</p>
+
+<h2 id="stride-graphics-layer">Stride Goes Deeper at the Graphics Layer</h2>
+<p>Stride's abstraction is much richer at the GPU level. A <code>GraphicsDevice</code> represents the graphics device, while <code>CommandList</code> handles rendering commands and resource binding. Pipeline state and other graphics resources sit in the same engine-level model.</p>
+<p>The source also contains API-specific implementations of shared graphics classes. For example, Stride has Vulkan and Direct3D12 versions of <code>CommandList</code> and <code>PipelineState</code>. Its build infrastructure accounts for graphics-API-specific assemblies as well.</p>
+<p>That means the graphics API can change while higher-level Stride systems continue targeting the same Stride graphics model.</p>
+<p>It is a deeper abstraction than VOID needs. That is not a criticism. Stride has to support a much larger renderer, including workloads and features VOID simply does not try to model.</p>
+
+<h2 id="void-renderer-replaceable">VOID Makes the Renderer Itself Replaceable</h2>
+<p>VOID still needs renderer-neutral buffers, textures, shaders, render targets, uploads, clears, and draw commands. That is the job of <code>IGraphicsDevice</code>.</p>
+<p>But <code>IGraphicsDevice</code> is not the top of the boundary.</p>
+<p><code>IRendererBackend</code> owns the renderer lifecycle, graphics device, capabilities, presentation, resize behavior, and the default 2D shader used by VOID's built-in rendering path.</p>
+<p>The built-in OpenGL renderer is one implementation of that contract.</p>
+<p>A different backend can provide another implementation without making SpriteBatcher, PrimitiveBatcher, cameras, render targets, or the rest of the 2D layer understand that graphics API directly.</p>
+<p>From game startup, selecting a renderer can stay small:</p>
+<pre class="csharp"><code>GameSettings.Instance
+    .SetRenderer&lt;MyRenderer&gt;()
+    .Build();</code></pre>
+<p>The important part is that the line changes more than the class eventually receiving a draw call.</p>
+
+<h2 id="renderer-before-window">The Renderer Is Chosen Before the Window Exists</h2>
+<p>This was one of the parts I really wanted to get right. A Vulkan backend may need a Vulkan-capable window and native surface handles, OpenGL needs an OpenGL context, and Metal has its own requirements.</p>
+<p>So VOID chooses the renderer first.</p>
+<p><code>IRendererBackend</code> exposes its required window flags and graphics version before initialization. VOID uses those requirements when creating the native window, then creates an <code>IRendererContext</code>, and only after that initializes the renderer.</p>
+<p>If VOID always created an OpenGL window first and asked which renderer the game wanted afterward, the renderer would not actually be replaceable. The platform layer would already have committed to one backend.</p>
+<p>This is where <code>IRendererContext</code> matters. It gives a backend the platform services it may need, including function lookup, buffer swapping where appropriate, and borrowed native handles, without exposing VOID's internal SDL implementation as the extension contract.</p>
+
+<h2 id="small-public-surface">Why Keep the Public Surface Small?</h2>
+<p>It would be easy to keep adding lower-level concepts until VOID had a graphics abstraction that looked more like a modern explicit API.</p>
+<p>I do not want that unless VOID actually needs it.</p>
+<p>A 2D framework should not force every renderer author to implement a giant API just because a larger engine might need those concepts. The public contract should contain enough information to preserve rendering intent without pretending VOID is a universal GPU library.</p>
+<p>That is why the graphics device deals in renderer-neutral descriptions and commands, while backend-specific details stay behind the implementation.</p>
+<p>OpenGL can cache state internally. A Vulkan renderer could manage command buffers, synchronization, descriptor state, and swapchain details internally. A Direct3D renderer could organize the same engine-level intent around its own API.</p>
+<p>The engine should know what needs to be drawn. The backend should know how its API makes that happen.</p>
+
+<h2 id="what-stride-exposes">What Stride Exposes That VOID Does Not</h2>
+<p>The tradeoff is straightforward: Stride gives developers a much deeper graphics model.</p>
+<p>Its rendering architecture includes concepts VOID intentionally does not expose at the same level. That gives Stride more room for complex 3D rendering systems and direct control over a broader set of GPU behavior.</p>
+<p>VOID's boundary is narrower because its target is narrower.</p>
+<p>The goal is not to reproduce every graphics concept behind a new set of names. The goal is to give VOID's 2D systems enough abstraction that the renderer can be swapped without dragging a specific API through the rest of the engine.</p>
+<p>If VOID eventually needs a new renderer-neutral concept, I would rather add it because a real backend requires it than predict every possible need ahead of time.</p>
+
+<h2 id="external-backend-boundary">The External Backend Boundary Is the Important Part</h2>
+<p>This is the biggest architectural difference I see between the two projects.</p>
+<p>Stride's graphics abstraction is deeply integrated into <code>Stride.Graphics</code> and its rendering stack. Looking through the source, adding another graphics API means extending that engine-level graphics implementation across the places that need backend-specific behavior.</p>
+<p>VOID deliberately exposes the renderer boundary as a public extension point.</p>
+<p>An external backend can implement <code>IRendererBackend</code>, expose its own <code>IGraphicsDevice</code>, use <code>IRendererContext</code> for platform access, and register itself during game configuration.</p>
+<p>That was the design target from the beginning of the SDL3 and Silk.NET migration. I did not want OpenGL to be hidden behind interfaces. I wanted OpenGL to be one renderer that happens to ship with VOID.</p>
+
+<h2 id="different-problems">Neither Approach Is Trying to Solve the Exact Same Problem</h2>
+<p>I do not think one architecture is universally better. Stride is solving a much larger rendering problem and gives developers considerably more low-level graphics control.</p>
+<p>VOID is solving a narrower problem: <strong>keep a 2D framework simple while making the entire renderer genuinely replaceable.</strong></p>
+<p>That difference in scope leads to two different abstraction boundaries.</p>
+<p>A short way I have started thinking about it is:</p>
+<blockquote>
+<p><strong>Stride abstracts graphics APIs.</strong><br>
+<strong>VOID abstracts the renderer itself.</strong></p>
+</blockquote>
+<p>That sentence is intentionally simplified. Stride's renderer is much broader than one line can describe, and VOID still has a renderer-neutral graphics device underneath its backend contract.</p>
+<p>But it captures the distinction I find useful: Stride builds a deep engine-owned graphics model across APIs, while VOID tries to make the renderer implementation itself a clean replaceable seam.</p>
+
+<h2 id="why-the-boundary-matters">Why the Boundary Matters</h2>
+<p>Abstraction is not only about avoiding API names in high-level code. It determines who is allowed to replace what.</p>
+<p>If the graphics API is abstracted but the renderer architecture remains fixed inside the engine, developers can target multiple APIs through the engine's graphics model.</p>
+<p>If the renderer itself is the extension point, a developer can replace a larger chunk of the rendering stack while the rest of the framework keeps the same 2D-facing behavior.</p>
+<p>Those are both valid designs. They optimize for different kinds of control.</p>
+<p>For VOID, the second one fits the project better. I want the framework to provide a capable default renderer without turning that default into a permanent architectural decision.</p>
+<p>OpenGL is what VOID ships today.</p>
+<p>It is not what a VOID renderer has to be.</p>
+      </div>
+
+      <div class="article-end">
+        <p>This comparison is based on the current Stride and VOID source as of September 2026. The projects have different scopes, so the interesting part is the abstraction boundary rather than a feature-for-feature ranking.</p>
+        <div class="article-links">
+          <a class="button button-secondary" href="https://github.com/Shmellyorc/Void">VOID on GitHub</a>
+          <a class="button button-secondary" href="https://github.com/stride3d/stride">Stride on GitHub</a>
+          <a class="button button-secondary" href="../">More Articles</a>
+        </div>
+      </div>
+    </div>
+  </article>
+</main>
+
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div><img class="footer-brand" src="../../assets/images/void-logo.png" alt="VOID"><div>Open-source .NET game framework. MIT licensed.</div></div>
+    <div class="footer-links"><a href="https://github.com/Shmellyorc/Void">GitHub</a><a href="https://github.com/Shmellyorc/Void/wiki">Documentation</a><a href="https://github.com/Shmellyorc/Void/blob/master/LICENSE">License</a></div>
+  </div>
+</footer>
+<script src="../../assets/js/site.js?v=6"></script>
+</body>
+</html>
