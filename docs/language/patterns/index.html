@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Pattern Matching &amp; Switch Expressions</title>
+<meta content="VOID Language pattern matching: declaration, constant/null, relational, logical, property and recursive patterns, pattern switch statements, when guards, deterministic first-match ordering, and switch expressions." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/patterns/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header"><div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+</div></header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a class="active" href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../getting-started/">Getting Started</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language patterns</p><h1>Match structure.<br/>Keep control flow readable.</h1><p>VOID pattern matching now covers type/declaration, constant/null, relational, logical, property, and recursive patterns, then carries the same semantics into switch cases, guarded cases, and expression-form switch.</p></div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal"><p class="kicker">Completed pattern-matching foundation</p><h2>Flow-sensitive matching built on the type system already underneath VOID.</h2><p>Patterns reuse normal type relationships, conversions, property access, definite assignment, short-circuiting, interface/value semantics, and GC-safe temporaries. Switch patterns and switch expressions build on the same matcher instead of introducing separate pattern rules.</p></div>
+<div class="content-grid">
+<article class="content-card reveal"><h3>Declaration patterns</h3><p><code>value is Type name</code> narrows the matched value and introduces a pattern local only where the match establishes it as definitely assigned.</p></article>
+<article class="content-card reveal"><h3>Constant &amp; null patterns</h3><p>Constants and <code>null</code> flow through the same pattern machinery, so they compose naturally with logical and switch patterns.</p></article>
+<article class="content-card reveal"><h3>Relational patterns</h3><p><code>&lt;</code>, <code>&lt;=</code>, <code>&gt;</code>, and <code>&gt;=</code> patterns reuse VOID's existing numeric and comparison semantics.</p></article>
+<article class="content-card reveal"><h3>Logical patterns</h3><p><code>and</code>, <code>or</code>, and <code>not</code> compose patterns with short-circuiting and flow-aware variable-binding rules.</p></article>
+<article class="content-card reveal"><h3>Property patterns</h3><p>Classes, structs, interfaces, inherited properties, and nullable/reference receivers can be matched through ordinary getter semantics.</p></article>
+<article class="content-card reveal"><h3>Recursive patterns</h3><p>Nested property patterns preserve single evaluation, GC-safe temporary receivers, pattern-local flow, and nullable/value behavior.</p></article>
+<article class="content-card reveal"><h3>Pattern switch statements</h3><p>Existing switch statements now accept typed and recursive case patterns while retaining normal switch ordering, grouping, break/continue, and legacy constant behavior.</p></article>
+<article class="content-card reveal"><h3>Guards &amp; ordering</h3><p><code>when</code> guards participate in deterministic first-match case ordering, with focused diagnostics for invalid or reliably unreachable combinations.</p></article>
+<article class="content-card reveal"><h3>Switch expressions</h3><p>Expression-form switch unifies result types across managed/value results, nullable values, conversions, and the same target-typing machinery used by conditional expressions.</p></article><article class="content-card reveal"><h3>Pattern locals across <code>yield</code></h3><p>Declaration, switch-case, switch-expression-arm, recursive-pattern, and guarded pattern locals are promoted through the existing iterator capture model when they must survive suspension, with their scope and GC lifetime preserved.</p></article>
+</div>
+<section class="editorial-block reveal"><div><p class="kicker">One pattern engine</p><h2><code>is</code>, <code>switch</code>, and switch expressions share the same semantics.</h2></div><p>VOID does not maintain separate implementations for each syntax form. Type tests, property access, recursive matching, pattern-local flow, ordering, and result typing build on compiler mechanisms that already power ordinary expressions and control flow.</p></section>
+<div class="native-code-pair reveal">
+<div class="code-block-preview"><div class="code-head">Declaration + logical pattern</div><pre><code class="void-syntax" data-void-code="">object value = FindActor();
+
+if (value is Player player)
+{
+    Console.WriteLine(player.Name);
+}</code></pre></div>
+<div class="code-block-preview"><div class="code-head">Recursive property pattern</div><pre><code class="void-syntax" data-void-code="">if (actor is Player
+    {
+        Health: &gt; 0,
+        Inventory: Inventory { Count: &gt; 0 }
+    } player)
+{
+    UseFirstItem(player);
+}</code></pre></div>
+</div>
+<div class="code-block-preview reveal"><div class="code-head">Guarded switch + switch expression</div><pre><code class="void-syntax" data-void-code="">switch (actor)
+{
+    case Player player when player.Health &lt;= 0:
+        Respawn(player);
+        break;
+
+    case Player player:
+        Update(player);
+        break;
+}
+
+string state = actor switch
+{
+    Player { Health: &lt;= 0 } =&gt; "down",
+    Player { Health: &gt; 0 } =&gt; "active",
+    null =&gt; "missing",
+    _ =&gt; "other"
+};</code></pre></div>
+<div class="page-actions reveal"><a class="primary-button" href="../examples/">Browse Pattern Examples</a><a class="outline-button" href="../object-model/">Object Model</a><a class="outline-button" href="../value-types/">Value Types</a><a class="outline-button" href="../lifetime/">Lifetime</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
+</div></section>
+</main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script>
+</body></html>

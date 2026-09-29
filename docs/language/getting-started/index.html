@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>Getting Started with VOID Language</title>
+<meta content="Getting started with VOID Language: check, build, run, publish, emit reusable native libraries, use compiler diagnostics/LSP, and link native dependencies." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/getting-started/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links">
+<a href="../../">Home</a>
+<a href="../../engine/">Engine</a>
+<a class="active" href="../../language/">Language</a>
+<a href="../../articles/">Articles</a>
+<a href="https://github.com/Shmellyorc/Void">GitHub</a>
+</nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a class="active" href="../getting-started/">Getting Started</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language</p><h1>Check source.<br/>Build native. Power an editor.</h1><p>The same compiler front end now drives source-only validation, native builds, ranged diagnostics, debug mapping, and semantic language-server features for active editor documents.</p></div></section>
+<section class="content-page"><div class="shell content-narrow">
+<h2>The current development flow.</h2><p>VOID Language is still being prepared for public release, but the compiler workflow itself is established. The commands below describe the working toolchain rather than a hypothetical future interface.</p>
+<div class="install-list public-steps">
+<div class="install-item reveal" data-step="1"><h2>Create or open a VOID project</h2><p>Use a normal <code>.voidproj</code> project, a project directory, or supported projectless <code>Program.void</code> input.</p></div>
+<div class="install-item reveal" data-step="2"><h2>Validate without building</h2><p><code>voidc check</code> runs project resolution, lexing, parsing, specialization/lowering, and semantic analysis, then stops before generated C or native compilation.</p></div>
+<div class="install-item reveal" data-step="3"><h2>Read precise diagnostics</h2><p>Lexer, parser, semantic, and check failures carry end-exclusive source ranges so errors point at the exact offending token or source region.</p></div>
+<div class="install-item reveal" data-step="4"><h2>Build, run, or publish</h2><p>Executable projects lower VOID to C and invoke the system compiler/linker. Debug builds retain symbols; publish output remains optimized/stripped. Library projects use the same front end but emit a native static archive instead of requiring Main.</p></div>
+<div class="install-item reveal" data-step="5"><h2>Debug against VOID source</h2><p>Generated C contains standard <code>#line</code> mappings, so native debug information refers back to original <code>.void</code> filenames and lines.</p></div>
+<div class="install-item reveal" data-step="6"><h2>Start the language server when needed</h2><p><code>voidc lsp</code> provides live ranged diagnostics, hover, signature help, semantic completion, go-to-definition, references, document symbols, and workspace symbols over standard LSP/JSON-RPC.</p></div><div class="install-item reveal" data-step="7"><h2>Edit across files without stale state</h2><p>Open project files are analyzed together from their current in-memory text. Dependent diagnostics and semantic queries refresh when another unsaved file changes, and closing a document falls back to its on-disk source.</p></div><div class="install-item reveal" data-step="8"><h2>Link native dependencies when needed</h2><p>Unsafe projects can declare native libraries and project-relative search paths, keeping native dependencies beside the project.</p></div><div class="install-item reveal" data-step="9"><h2>Build reusable libraries when needed</h2><p>A project using <code>"output": "library"</code> produces <code>lib&lt;ProjectName&gt;.a</code>. Public static methods marked with <code>[Export("symbol")]</code> become stable native entry points, and VOID or C consumers link the archive through normal native-library settings.</p></div>
+</div>
+<div class="code-block-preview reveal"><div class="code-head">Front-end-only validation</div><pre><code>./bin/voidc check MyGame
+
+VOID project resolved
+...
+checked: MyGame</code></pre></div>
+<div class="code-block-preview reveal"><div class="code-head">Native development flow</div><pre><code>./bin/voidc build MyGame
+./bin/voidc run MyGame
+./bin/voidc publish MyGame
+
+# Compiler-side language server
+./bin/voidc lsp</code></pre></div>
+<div class="local-note reveal"><strong>No hidden build:</strong> <code>voidc check</code> does not generate C, create build output directories, or invoke the native C compiler. It uses the same compiler front end as a real build, which keeps CI/editor validation aligned with actual language semantics.</div>
+<div class="page-actions reveal"><a class="outline-button" href="../examples/">See Examples</a><a class="outline-button" href="../diagnostics/">Diagnostics</a><a class="outline-button" href="../tooling/">Tooling</a></div>
+</div></section></main>
+<footer class="site-footer">
+<div class="shell footer-grid">
+<div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div>
+<nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+<p class="footer-note">VOID Language is independently designed for game development.</p>
+</div>
+</footer>
+<script src="../../assets/js/home.js?v=3"></script>
+<script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

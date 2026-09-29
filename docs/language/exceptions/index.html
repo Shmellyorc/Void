@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Exceptions &amp; Runtime Control Flow</title>
+<meta content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, native/library boundaries, and recovery-safe static initialization." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/exceptions/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a class="active" href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../getting-started/">Getting Started</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero">
+<div class="shell subpage-copy reveal">
+<p class="kicker">VOID Language exceptions &amp; runtime control flow</p>
+<h1>Structured exceptions.<br/>Structured cleanup.</h1>
+<p>VOID now has a managed exception hierarchy, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally semantics, rethrow, and integration across iterators, delegates, events, native/library boundaries, and static initialization.</p>
+</div>
+</section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal">
+<p class="kicker">Completed exception foundation</p>
+<h2>Control flow stays explicit even when execution fails.</h2>
+<p>Exceptions were built as a runtime/control-flow subsystem rather than a parser-only feature. Throwing, handler selection, unwinding, GC root restoration, cleanup, suspended iterators, and boundary behavior share the same compiler-owned control-flow model.</p>
+</div>
+<div class="content-grid">
+<article class="content-card reveal"><h3>Managed exception objects</h3><p>The standard <code>Exception</code> class is an ordinary managed type with default/message constructors, inheritance, runtime type identity, and GC tracing. User exceptions derive from it normally.</p></article>
+<article class="content-card reveal"><h3>Throw &amp; catch</h3><p><code>throw expression;</code>, typed catches, catch variables, catch-all handlers, and derived-to-base handler ordering are supported through normal semantic validation.</p></article>
+<article class="content-card reveal"><h3>Propagation &amp; GC unwinding</h3><p>Exceptions propagate across call frames while unwinding restores managed-root checkpoints and preserves the thrown exception object for the selected handler.</p></article>
+<article class="content-card reveal"><h3>Finally semantics</h3><p><code>finally</code> runs on normal completion and exceptional exits. Required cleanup is not skipped when control leaves a protected region.</p></article>
+<article class="content-card reveal"><h3>Structured exits</h3><p><code>return</code>, <code>break</code>, and <code>continue</code> cross one or more finally regions through the same structured cleanup machinery.</p></article>
+<article class="content-card reveal"><h3>Nested handlers &amp; rethrow</h3><p>Nested <code>try</code>/<code>catch</code>/<code>finally</code> regions compose normally. Bare <code>throw;</code> rethrows the active exception while preserving its identity.</p></article>
+<article class="content-card reveal"><h3>Iterator integration</h3><p>Thrown exceptions, handler regions, cleanup, and managed roots remain valid across iterator suspension/resume and <code>yield</code>-generated state machines.</p></article>
+<article class="content-card reveal"><h3>Delegates &amp; events</h3><p>Delegate, multicast-delegate, and event invocation propagate exceptions through the ordinary call/unwinding model while preserving managed targets.</p></article>
+<article class="content-card reveal"><h3>Native &amp; library boundaries</h3><p>Exception behavior is defined at native and reusable-library boundaries instead of allowing uncontrolled raw unwinding through C ABI frames. Boundary misuse receives focused diagnostics.</p></article>
+<article class="content-card reveal"><h3>Recovery-safe type initialization</h3><p>If static initialization throws, VOID restores the type-initialization state and GC-root checkpoint before rethrowing, allowing later use to retry through a clean runtime state.</p></article>
+</div>
+<section class="editorial-block reveal"><div>
+<p class="kicker">Representative syntax</p>
+<h2>Familiar syntax, compiler-owned lifetime.</h2>
+</div>
+<p>The surface looks familiar, but the important work is below it: handler discovery, propagation, root restoration, finally execution, rethrow identity, and integration with generated iterator state all remain part of one native runtime/control-flow implementation.</p></section>
+<div class="native-code-pair reveal">
+<div class="code-block-preview">
+<div class="code-head">Typed catch + finally</div>
+<pre><code class="void-syntax" data-void-code="">public sealed class GameException : Exception
+{
+    public GameException(string message) : base(message)
+    {
+    }
+}
+
+try
+{
+    throw new GameException("bad state");
+}
+catch (GameException error)
+{
+    Console.WriteLine(error.Message);
+}
+finally
+{
+    Cleanup();
+}</code></pre>
+</div>
+<div class="code-block-preview">
+<div class="code-head">Nested rethrow</div>
+<pre><code class="void-syntax" data-void-code="">try
+{
+    try
+    {
+        RunStep();
+    }
+    catch (GameException)
+    {
+        LogFailure();
+        throw;
+    }
+}
+catch (Exception error)
+{
+    Console.WriteLine(error.Message);
+}</code></pre>
+</div>
+</div>
+<div class="code-block-preview reveal">
+<div class="code-head">Structured exit through finally</div>
+<pre><code class="void-syntax" data-void-code="">public static int FindScore(int[] scores)
+{
+    try
+    {
+        foreach (int score in scores)
+        {
+            if (score &gt; 100)
+                return score;
+        }
+
+        return -1;
+    }
+    finally
+    {
+        Console.WriteLine("search finished");
+    }
+}</code></pre>
+</div>
+<div class="page-actions reveal">
+<a class="primary-button" href="../examples/">Browse Exception Examples</a>
+<a class="outline-button" href="../features/">All Features</a>
+<a class="outline-button" href="../lifetime/">Lifetime &amp; Using</a><a class="outline-button" href="../compiler/">Compiler</a>
+<a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../roadmap/">Roadmap</a>
+</div>
+</div></section>
+</main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

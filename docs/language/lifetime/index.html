@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Deterministic Lifetime &amp; Advanced Abstractions</title>
+<meta content="VOID Language deterministic lifetime and advanced abstractions: IDisposable, iterator and foreach disposal, using statements/declarations, generic method inference, extension methods, static interface contracts, constrained static calls, and default interface methods." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/lifetime/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header"><div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+</div></header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a class="active" href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../getting-started/">Getting Started</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language lifetime &amp; abstractions</p><h1>Deterministic cleanup.<br/>Powerful abstractions.</h1><p>VOID now combines <code>IDisposable</code>, iterator and foreach disposal, using statements/declarations, generic method inference, extension methods, static interface contracts, constrained static calls, and default interface methods without adding a second lifetime or dispatch system.</p></div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal"><p class="kicker">Completed lifetime &amp; abstraction foundation</p><h2>Cleanup and abstraction reuse the machinery already underneath VOID.</h2><p>Disposal lowers through the same structured cleanup model built for exceptions and <code>finally</code>. Generic inference and extension methods reuse normal overload resolution. Static/default interface methods extend the existing interface model rather than introducing a parallel runtime representation.</p></div>
+<div class="content-grid">
+<article class="content-card reveal"><h3><code>IDisposable</code> &amp; iterator disposal</h3><p><code>Void.IDisposable</code> is part of the root library contract. Collection enumerators and compiler-generated iterators can dispose deterministically, including pending iterator cleanup.</p></article>
+<article class="content-card reveal"><h3>Foreach disposal</h3><p>Non-array <code>foreach</code> disposes its enumerator on normal completion, early <code>break</code>, <code>return</code>, and exception paths through structured cleanup.</p></article>
+<article class="content-card reveal"><h3>Using statements</h3><p>C#-style <code>using (...)</code> works with disposable reference and value types, null resources, nesting, exceptions, and normal GC behavior.</p></article>
+<article class="content-card reveal"><h3>Using declarations</h3><p><code>using var</code> and typed using declarations dispose resources at scope exit in reverse declaration order across normal and exceptional exits.</p></article>
+<article class="content-card reveal"><h3>Generic method inference</h3><p>Generic calls can omit explicit type arguments when VOID can infer them through the existing overload resolver and monomorphizer, including constrained and by-reference cases where inference is well-defined.</p></article>
+<article class="content-card reveal"><h3>Extension methods</h3><p>Static methods with a <code>this</code> first parameter can participate in instance-style call syntax while preserving ordinary instance-member precedence and normal overload resolution.</p></article>
+<article class="content-card reveal"><h3>Static interface methods</h3><p>Interfaces can require static methods as compile-time contracts, implemented by ordinary public static methods on concrete classes or structs without interface-owned static storage.</p></article>
+<article class="content-card reveal"><h3>Constrained static dispatch</h3><p>Generic code constrained by an interface can call required static members through the type parameter; monomorphization lowers the call to the concrete static implementation.</p></article>
+<article class="content-card reveal"><h3>Default interface methods</h3><p>Interface methods may provide bodies. Concrete implementations take precedence, inherited defaults provide fallback behavior, and ambiguous inherited defaults are diagnosed.</p></article>
+</div>
+<section class="editorial-block reveal"><div><p class="kicker">One cleanup model</p><h2><code>using</code> builds on <code>finally</code>, not beside it.</h2></div><p>VOID already had structured exits, rethrow, GC-safe unwinding, and iterator cleanup. Deterministic disposal extends that control-flow foundation, so resource cleanup stays predictable instead of becoming another compiler-only special case.</p></section>
+<div class="native-code-pair reveal">
+<div class="code-block-preview"><div class="code-head">Deterministic disposal</div><pre><code class="void-syntax" data-void-code="">public sealed class GameFile : IDisposable
+{
+    public void Dispose()
+    {
+        Console.WriteLine("closed");
+    }
+}
+
+using (GameFile file = new GameFile())
+{
+    Run(file);
+}</code></pre></div>
+<div class="code-block-preview"><div class="code-head">Generic inference + extension method</div><pre><code class="void-syntax" data-void-code="">public static T Identity&lt;T&gt;(T value)
+{
+    return value;
+}
+
+public static int Twice(this int value)
+{
+    return value * 2;
+}
+
+int value = Identity(21);
+Console.WriteLine(value.Twice() == 42);</code></pre></div>
+</div>
+<div class="code-block-preview reveal"><div class="code-head">Constrained static + default interface behavior</div><pre><code class="void-syntax" data-void-code="">public interface IFactory&lt;T&gt;
+{
+    static T Create();
+
+    string Name()
+    {
+        return "default";
+    }
+}
+
+public static T Build&lt;T, TFactory&gt;()
+    where TFactory : IFactory&lt;T&gt;
+{
+    return TFactory.Create();
+}</code></pre></div>
+<section class="editorial-block reveal"><div><p class="kicker">Iterator lifetime</p><h2>Pattern-captured iterator values follow the same lifetime rules.</h2></div><p>Pattern locals and managed intermediate values that survive <code>yield</code> are promoted into normal iterator state-machine storage, remain rooted through suspension and forced GC, and participate in disposal, exception, <code>finally</code>, and teardown cleanup without a parallel capture system.</p></section>
+<div class="page-actions reveal"><a class="primary-button" href="../examples/">Browse Lifetime Examples</a><a class="outline-button" href="../exceptions/">Exceptions</a><a class="outline-button" href="../object-model/">Object Model</a><a class="outline-button" href="../patterns/">Patterns</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
+</div></section>
+</main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script>
+</body></html>

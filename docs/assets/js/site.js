@@ -54,6 +54,7 @@
     footer.appendChild(privacy);
   });
 
+
   if (script && !document.querySelector('script[data-void-preferences]')) {
     const preferences = document.createElement('script');
     preferences.src = new URL('preferences.js?v=2', script.src).href;

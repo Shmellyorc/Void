@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Value Types &amp; Control Flow</title>
+<meta content="VOID Language value types and control flow: nested/readonly structs, jagged and rectangular arrays with explicit or inferred initializer shapes, null-conditional array access, closure frames, iterator control flow, compound targets, and GC-aware value semantics." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/value-types/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a class="active" href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../getting-started/">Getting Started</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal">
+<p class="kicker">VOID Language value types &amp; control flow</p>
+<h1>Value types that compose.<br/>Control flow that holds up.</h1>
+<p>VOID now handles nested and readonly value layouts, jagged and rectangular arrays, null-conditional indexing, explicit and inferred rectangular initializers, escaped closures, richer iterator state machines, compound targets, and managed references across those features as one coherent language/runtime surface.</p>
+</div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal">
+<p class="kicker">Completed value-type &amp; control-flow foundation</p>
+<h2>Everyday game code without the old deferred walls.</h2>
+<p>The completed integration pass combines value layouts, arrays, closures, iterators, unsafe members, compound targets, and forced GC in one normal multi-file project through check, build, run, and publish.</p>
+</div>
+<div class="content-grid">
+<article class="content-card reveal"><h3>Nested value structs</h3><p>Structs can contain other value structs normally. Layout, default values, copying, generics, arrays, nullable wrappers, static storage, and recursive GC tracing all understand nested value layouts.</p></article>
+<article class="content-card reveal"><h3>Readonly structs</h3><p><code>readonly struct</code>, readonly instance methods/accessors, readonly fields, and calls through <code>in</code> parameters preserve value semantics without hidden mutation.</p></article>
+<article class="content-card reveal"><h3>Jagged arrays</h3><p>Recursive array-of-array types such as <code>T[][]</code> and deeper forms support allocation, initialization, nested indexing, <code>foreach</code>, generics, nullable inner arrays, and managed elements.</p></article>
+<article class="content-card reveal"><h3>Rectangular arrays</h3><p>Real multidimensional arrays support rank, dimensions, indexing, iteration, GC-aware elements, and nested typed initializer braces such as <code>new int[,] { { 1, 2 }, { 3, 4 } }</code> with inferred shape, row-major layout, conversions, and ragged-shape diagnostics.</p></article>
+<article class="content-card reveal"><h3>Nested closures</h3><p>Closures can live inside other closures, and <code>foreach</code> captures receive proper per-iteration frames so escaped delegates keep the value from the iteration that created them.</p></article>
+<article class="content-card reveal"><h3>By-reference closure capture</h3><p>Closures can capture <code>ref</code>, <code>out</code>, and <code>in</code> parameters. Delegate lambdas can use by-reference parameters, while struct instance methods can safely capture struct <code>this</code>.</p></article>
+<article class="content-card reveal"><h3>Iterator completion</h3><p>Iterator state machines preserve ordinary local inference, definite assignment, nested/sibling shadowing, managed roots, control flow across <code>yield</code>, <code>foreach</code>, <code>switch</code>, loops, and base-member access, plus exception propagation and finally cleanup across suspension/resume.</p></article>
+<article class="content-card reveal"><h3>Unsafe pointer members</h3><p>Unsafe types can expose pointer properties and constructors, including pointer <code>ref/out/in</code> parameters, without weakening the existing unsafe project/type boundaries.</p></article><article class="content-card reveal"><h3>Rectangular initializer completion</h3><p>Rectangular arrays can combine explicit compile-time dimensions with nested values or infer their dimensions directly from <code>new[,]</code>-style initializers, while preserving rank/shape validation, conversions, evaluation order, and managed-element tracing.</p></article><article class="content-card reveal"><h3>Null-conditional arrays</h3><p><code>?[]</code> works across one-dimensional, jagged, and higher-rank rectangular arrays with nullable lifting, short-circuiting, chained element access, single evaluation, and skipped index expressions when the receiver is null.</p></article>
+<article class="content-card reveal"><h3>Compound targets</h3><p>Compound assignment works through indexers and writable vector swizzles while preserving single evaluation of receivers, indices, and right-hand sides.</p></article>
+<article class="content-card reveal"><h3>GC-aware composition</h3><p>Managed references remain traceable when buried inside nested value structs, arrays, closure frames, iterator state, nullable values, static roots, and combinations of those structures.</p></article>
+</div>
+<section class="editorial-block reveal"><div>
+<p class="kicker">Integrated behavior</p>
+<h2>The hard part is the composition.</h2></div>
+<p>A readonly struct can sit inside a nested mutable value layout that contains a managed object, move through jagged or rectangular arrays, escape through a closure, survive iterator suspension and forced GC, then participate in compound indexer updates in the same project. The completed integration pass proves those paths together rather than as isolated syntax demos.</p>
+</section>
+<div class="page-actions reveal">
+<a class="primary-button" href="../examples/">Browse Value-Type Examples</a>
+<a class="outline-button" href="../features/">All Features</a>
+<a class="outline-button" href="../object-model/">Object Model</a>
+<a class="outline-button" href="../patterns/">Patterns</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../roadmap/">Roadmap</a>
+<a class="outline-button" href="../exceptions/">Exceptions</a><a class="outline-button" href="../lifetime/">Lifetime</a></div>
+</div></section>
+</main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

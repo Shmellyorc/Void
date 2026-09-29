@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>VOID Design Philosophy - A Foundation, Not a Cage</title>
+  <meta name="description" content="VOID is built around transparency, useful defaults, replaceable systems, and control.">
+  <meta name="theme-color" content="#07060b">
+  <link rel="icon" href="../../assets/images/void-favicon.png" type="image/png">
+  <link rel="stylesheet" href="../../assets/css/home.css?v=17">
+</head>
+<body class="has-subnav has-tiered-subnav">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="../../" aria-label="VOID home"><img src="../../assets/images/void-logo.webp" alt="VOID"></a>
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="../../">Home</a>
+        <a class="active" href="../../engine/">Engine</a>
+        <a href="../../language/">Language</a>
+        <a href="../../articles/">Articles</a>
+        <a href="https://github.com/Shmellyorc/Void">GitHub</a>
+      </nav>
+    </div>
+  </header>
+  <div class="section-nav-wrap engine-nav"><nav aria-label="VOID Engine categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Engine</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../install/">Workflow</a><a href="../rendering/">Rendering</a></nav><nav aria-label="VOID Engine core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a class="active" href="../philosophy/">Philosophy</a></nav></div>
+  <main id="main">
+    <section class="subpage-hero">
+      <div class="shell subpage-copy reveal">
+        <p class="kicker">Design philosophy</p>
+        <h1>A foundation,<br>not a cage.</h1>
+        <p>VOID should remove work without removing choices. The normal path stays simple, while the deeper architecture remains available when your project needs control.</p>
+      </div>
+    </section>
+    <section class="content-page"><div class="shell content-narrow">
+<h2>Useful defaults, not mandatory defaults.</h2><p>Very low-level frameworks give you freedom, but often leave you rebuilding the same infrastructure. Large engines can solve more out of the box, but may also pull a project toward one workflow. VOID sits in the middle: provide the useful framework-level pieces, then expose the places where another solution may make sense.</p>
+<h2>Extend, don't fight.</h2><p>The built-in implementation is not assumed to be the only implementation. Renderer backends, asset sources, atlas packing, log sinks, cameras, render targets, custom assets, and other systems expose extension points so projects can grow without requiring an engine fork.</p>
+<h2>Transparency matters.</h2><p>A framework should be understandable. VOID aims to keep normal game code straightforward while avoiding hidden machinery that becomes impossible to work around later.</p>
+<h2>Start simple. Go deep when you need to.</h2><p>You should not need to understand swap chains, native window handles, or backend contracts to draw your first sprite. Those systems belong underneath the easy path, not in front of it.</p>
+<h2>Focused by design.</h2><p>VOID deliberately stays focused on framework-level systems. It does not need to absorb every possible game-development feature.</p>
+<h2>Your game owns the decisions.</h2><p><strong>Use what works. Replace what doesn't.</strong> The defaults are there to save time, not to claim ownership of the project built on top of them.</p>
+<div class="page-actions"><a class="outline-button" href="../rendering/">Explore Rendering</a><a class="outline-button" href="../">Back to Engine</a></div>
+</div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div class="footer-brand"><img src="../../assets/images/void-logo.webp" alt="VOID"><p>A foundation, not a cage.</p></div>
+      <nav class="footer-links" aria-label="Footer navigation"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+      <p class="footer-note">Built for game developers who want control.</p>
+    </div>
+  </footer>
+  <script src="../../assets/js/home.js?v=1"></script>
+  <script src="../../assets/js/site.js?v=7"></script>
+</body>
+</html>

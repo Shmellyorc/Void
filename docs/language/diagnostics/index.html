@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Diagnostics &amp; Source Spans</title>
+<meta content="VOID Language diagnostics use precise end-exclusive ranges across lexer, parser, semantic analysis, voidc check, and live LSP diagnostics for unsaved editor buffers." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/diagnostics/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language reference pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Reference</span><a href="../library/">Library</a><a href="../compiler/">Compiler</a><a class="active" href="../diagnostics/">Diagnostics</a><a href="../tooling/">Tooling</a><a href="../native/">Native</a><a href="../design/">Design</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Diagnostics</p><h1>Precise errors.<br/>Shared compiler ranges.</h1><p>Explicit start/end source spans flow through lexing and parsing, and lexer, parser, semantic analysis, and <code>voidc check</code> all report through the same ranged diagnostic model.</p></div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal"><p class="kicker">Source locations</p><h2>An error points at the source region that actually failed.</h2><p>Source spans retain byte offset, line, and column at both ends. Ranges are end-exclusive, matching the range model used by editor/LSP protocols while remaining useful to the normal command line today.</p></div>
+<div class="code-block-preview reveal"><div class="code-head">Semantic diagnostic</div><pre><code>error: Program.void:5:21-5:33: unknown identifier 'MissingValue'</code></pre></div>
+<div class="content-grid">
+<article class="content-card reveal"><h3>Exact token spans</h3><p>Identifiers, literals, punctuation, operators, and EOF receive deterministic start/end ranges directly from the lexer.</p></article>
+<article class="content-card reveal"><h3>One diagnostic shape</h3><p>Lexer, parser, and semantic failures share source path, source span, and message instead of maintaining separate public error models.</p></article>
+<article class="content-card reveal"><h3>Multi-line ranges</h3><p>Failures such as unterminated block comments retain the complete offending source region.</p></article>
+<article class="content-card reveal"><h3>Syntax/type spans</h3><p>AST nodes and type references retain spans, including generic, nullable, pointer, and array suffixes.</p></article>
+<article class="content-card reveal"><h3><code>voidc check</code></h3><p>Front-end-only validation reports the same ranged parser and semantic diagnostics without generating C or invoking a native compiler.</p></article>
+<article class="content-card reveal"><h3>Live editor diagnostics</h3><p>The same diagnostic objects publish through LSP for unsaved text, carry document versions, convert UTF-8 source offsets to UTF-16 editor positions, and clear when source becomes valid or closes.</p></article><article class="content-card reveal"><h3>Stable diagnostic contracts</h3><p>User-facing messages describe the invalid or unsupported language construct itself rather than exposing historical internal milestone labels, so diagnostics remain meaningful as the compiler evolves.</p></article>
+</div>
+<section class="editorial-block reveal"><div><p class="kicker">Compiler to editor</p><h2>The same ranges now drive live editor feedback.</h2></div><p><code>voidc lsp</code> publishes lexer, parser, and semantic diagnostics directly from in-memory editor text. Changes replace stale errors, valid source clears them, closing a document clears its diagnostics, and dependent project documents are refreshed when another open file changes. Hover, completion, navigation, references, and symbols sit on the same source/semantic foundation.</p></section>
+<div class="code-block-preview reveal"><div class="code-head">Token ranges</div><pre><code>1:1-1:7 public             "public"
+1:8-1:13 class             "class"</code></pre></div>
+<div class="page-actions reveal"><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../compiler/">Compiler</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
+</div></section></main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

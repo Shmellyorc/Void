@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Native Interop</title>
+<meta content="VOID Language native interop: pointers, native structs, ref/out/in, by-reference callbacks, aliases, project-local native dependencies, exported VOID library symbols, raw memory, stackalloc, and debug source mapping." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/native/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links">
+<a href="../../">Home</a>
+<a href="../../engine/">Engine</a>
+<a class="active" href="../../language/">Language</a>
+<a href="../../articles/">Articles</a>
+<a href="https://github.com/Shmellyorc/Void">GitHub</a>
+</nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language reference pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Reference</span><a href="../library/">Library</a><a href="../compiler/">Compiler</a><a href="../diagnostics/">Diagnostics</a><a href="../tooling/">Tooling</a><a class="active" href="../native/">Native</a><a href="../design/">Design</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Native Interop</p><h1>High-level code.<br/>A real C boundary.</h1><p>VOID can stay high level for normal game code while exposing an explicit unsafe path for C libraries, native structures, callbacks, stack memory, and low-level memory operations.</p></div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal"><p class="kicker">Native foundation</p><h2>The low-level pieces work together through one ABI path.</h2><p>The native layer is project-controlled and explicit. The compiler emits ordinary C declarations/calls and lets the platform compiler/linker finish the job.</p></div>
+<div class="status-list">
+<article class="feature-row-page reveal"><h2>Pointers</h2><p><span class="status-chip current">Current</span> Pointer types, address-of, dereference, arithmetic, comparisons, parameters/returns, <code>void*</code>, pointer properties on unsafe classes/interfaces/value types, virtual/interface pointer-property dispatch, pointer constructors, and pointer <code>ref/out/in</code> constructor parameters inside the existing unsafe boundaries.</p></article>
+<article class="feature-row-page reveal"><h2>Native structs</h2><p><span class="status-chip current">Current</span> Unmanaged C-compatible structures cross the ABI with native field layout.</p></article>
+<article class="feature-row-page reveal"><h2>Native by-reference parameters</h2><p><span class="status-chip current">Current</span> Native <code>ref</code>, <code>out</code>, and <code>in</code> lower to the pointer forms required by C APIs.</p></article>
+<article class="feature-row-page reveal"><h2>Bindings &amp; aliases</h2><p><span class="status-chip current">Current</span> Type-qualified native bindings and <code>[Native("symbol")]</code> aliases keep VOID-facing names readable.</p></article>
+<article class="feature-row-page reveal"><h2>Libraries &amp; callbacks</h2><p><span class="status-chip current">Current</span> Projects declare native libraries/search paths; unsafe delegates can carry pointer returns/parameters and <code>ref/out/in</code> pointer forms; compatible static methods cross the ABI as callback function pointers; and callback parameters reuse the same ABI-safe by-reference lowering.</p></article>
+<article class="feature-row-page reveal"><h2>Memory primitives</h2><p><span class="status-chip current">Current</span> <code>sizeof</code>, memory copy/clear, and <code>stackalloc</code> cover focused unmanaged-memory needs.</p></article>
+<article class="feature-row-page reveal"><h2>Project-local native dependencies</h2><p><span class="status-chip current">Current</span> Relative library paths keep native dependencies beside the project, while VOID library projects can emit their own <code>lib&lt;ProjectName&gt;.a</code> archives and stable <code>[Export]</code> C symbols for VOID or plain-C consumers.</p></article>
+<article class="feature-row-page reveal"><h2>Native debug source mapping</h2><p><span class="status-chip current">Current</span> Debug builds preserve VOID filenames and statement line numbers through generated C <code>#line</code> directives and standard GCC/Clang debug information.</p></article>
+<article class="feature-row-page reveal"><h2>Exception boundaries</h2><p><span class="status-chip current">Current</span> VOID exception propagation is integrated with native and reusable-library boundaries without permitting uncontrolled raw unwinding through C ABI frames; invalid boundary cases receive focused diagnostics.</p></article></div>
+<section class="editorial-block reveal"><div><p class="kicker">Why this matters</p><h2>Native libraries can become ordinary game dependencies.</h2></div><p>Audio, windowing, compression, platform APIs, custom C libraries, and future engine-facing native code can be bound without giving up the high-level language. VOID code can also be packaged back out as a reusable native archive, so the same ABI works in both directions. Native debugging still reports the originating VOID source lines.</p></section>
+<div class="page-actions reveal"><a class="outline-button" href="../examples/">Native Examples</a><a class="outline-button" href="../compiler/">Compiler</a><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../exceptions/">Exceptions</a></div>
+</div></section></main>
+<footer class="site-footer">
+<div class="shell footer-grid">
+<div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div>
+<nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+<p class="footer-note">VOID Language is independently designed for game development.</p>
+</div>
+</footer>
+<script src="../../assets/js/home.js?v=3"></script>
+<script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

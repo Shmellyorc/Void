@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Libraries</title>
+<meta content="VOID Language libraries: standard-library generic collections plus reusable native static-library project output with exported C symbols, reachability, static initialization, GC roots, and VOID/C consumers." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/library/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav has-tiered-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links">
+<a href="../../">Home</a>
+<a href="../../engine/">Engine</a>
+<a class="active" href="../../language/">Language</a>
+<a href="../../articles/">Articles</a>
+<a href="https://github.com/Shmellyorc/Void">GitHub</a>
+</nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language reference pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Reference</span><a class="active" href="../library/">Library</a><a href="../compiler/">Compiler</a><a href="../diagnostics/">Diagnostics</a><a href="../tooling/">Tooling</a><a href="../native/">Native</a><a href="../design/">Design</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Libraries</p><h1>Use the library.<br/>Build your own.</h1><p>The standard library is written in VOID, and project library output can now package your own VOID code as a native static archive with stable exported C entry points.</p></div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Collections built on the language, not hidden compiler magic.</h2><p>The standard library uses VOID generics, interfaces, hashing/equality, enumeration, GC-managed references, and ordinary method binding. Collection initializer syntax lowers through normal <code>Add(...)</code> calls rather than a separate runtime path.</p></div>
+<div class="library-grid">
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>List&lt;T&gt;</code></h3><p>Resizable generic sequence with indexing, enumeration, managed-element tracing, and collection initializer support.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Queue&lt;T&gt;</code></h3><p>FIFO storage built as normal generic library code.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Stack&lt;T&gt;</code></h3><p>LIFO storage using the same generic/runtime model.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Dictionary&lt;TKey,TValue&gt;</code></h3><p>Generic hash lookup with resizing, removal, enumeration, and multi-argument collection initializer entries through <code>Add(key, value)</code>.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>HashSet&lt;T&gt;</code></h3><p>Generic set semantics using the dictionary-compatible hashing/equality model and collection initializer syntax.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>IEnumerable&lt;T&gt;</code> / <code>IEnumerator&lt;T&gt;</code></h3><p>The shared iteration contract used by collections, <code>foreach</code>, and compiler-generated iterator state machines.</p></article>
+</div>
+<div class="native-code-pair reveal"><div class="code-block-preview"><div class="code-head">VOID library export</div><pre><code class="void-syntax" data-void-code="">public static class MathApi
+{
+    [Export("void_math_add")]
+    public static int Add(int left, int right)
+    {
+        return left + right;
+    }
+}</code></pre></div><div class="code-block-preview"><div class="code-head">VOID consumer binding</div><pre><code class="void-syntax" data-void-code="">public static class MathNative
+{
+    [Native("void_math_add")]
+    public static unsafe extern int Add(int left, int right);
+}</code></pre></div></div>
+<section class="editorial-block reveal" id="project-libraries"><div><p class="kicker">Project libraries</p><h2>VOID projects can ship as native archives.</h2></div><p>Set a project to <code>"output": "library"</code> and <code>voidc build</code> produces <code>bin/lib&lt;ProjectName&gt;.a</code>; publish produces the matching archive under <code>publish/</code>. Public static methods marked with <code>[Export("symbol")]</code> seed normal reachability, keep their stable native symbol, and reuse the existing scalar/string/pointer/native-struct and <code>ref/out/in</code> ABI. Library static initialization and managed static GC roots persist across repeated exported calls.</p></section><section class="editorial-block reveal"><div><p class="kicker">Initialization &amp; GC</p><h2>Collections participate in the completed initialization model.</h2></div><p>Arrays and collections can be populated inline, stored in initialized instance/static members, contain nullable or managed values, and remain reachable through managed static GC roots. The language-completion integration regression exercises these paths together rather than as isolated syntax tests.</p></section>
+<div class="code-block-preview reveal"><div class="code-head">Collection initializer</div><pre><code class="void-syntax" data-void-code="">Dictionary&lt;string, int&gt; scores = new()
+{
+    { "Alpha", 10 },
+    { "Beta", 20 }
+};
+
+List&lt;Node&gt; nodes = new()
+{
+    new Node(10),
+    new Node(20) { Score = default }
+};</code></pre></div>
+<div class="page-actions reveal"><a class="outline-button" href="../examples/">Library Examples</a><a class="outline-button" href="../features/">Language Features</a><a class="outline-button" href="../native/">Native ABI</a></div>
+</div></section></main>
+<footer class="site-footer">
+<div class="shell footer-grid">
+<div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div>
+<nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+<p class="footer-note">VOID Language is independently designed for game development.</p>
+</div>
+</footer>
+<script src="../../assets/js/home.js?v=3"></script>
+<script src="../../assets/js/syntax.js?v=2"></script>
+<script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

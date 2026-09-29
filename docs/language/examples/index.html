@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID Language Examples</title>
+<meta content="Browse highlighted VOID Language examples for deterministic lifetime, using, generic inference, extension methods, advanced interface abstractions, structured exceptions, object model, value types, native interop, reusable libraries, and compiler tooling." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/language/examples/" rel="canonical"/>
+<link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+</head>
+<body class="has-subnav">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+</div>
+</header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a href="../library/">Reference</a><a class="active" href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav></div>
+<main id="main">
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language</p><h1>Pick an example.<br/>See the language and tooling.</h1><p>The example browser covers the working language through completed deterministic-lifetime/advanced-abstraction, exception/control-flow, surface-completion, object-model, value/control-flow, project-output, native interop, and compiler-tooling phases.</p></div></section>
+<section class="content-page"><div class="shell">
+<div class="section-heading reveal"><p class="kicker">Code browser</p><h2>One selector. One focused example at a time.</h2><p>Choose an operator/iterator, pattern/switch-expression, lifetime/abstraction, exception/control-flow, surface-completion, object-model, value/control-flow, project/library, native, diagnostic, or compiler-tooling example. Examples reflect the public feature surface without exposing internal milestone numbering.</p></div>
+<div class="example-browser reveal" data-example-browser="">
+<div class="example-browser-bar"><div class="example-picker"><label for="void-example-select">Example</label><div class="example-select-wrap"><select class="example-select" data-example-select="" id="void-example-select"><optgroup label="Iterator lifetime &amp; generic operators"><option value="iterator-pattern-capture">Iterator declaration-pattern capture</option><option value="iterator-switch-capture">Iterator switch/guard capture</option><option value="iterator-pattern-gc">Iterator pattern lifetime + GC</option><option value="iterator-state-audit">Iterator state-machine integration</option><option value="stable-diagnostics">Stable diagnostics</option><option value="unary-operators">Unary operators</option><option value="binary-operators">Binary operators</option><option value="static-interface-operators">Static interface operator contracts</option><option value="constrained-generic-operators">Constrained generic operator dispatch</option><option selected="" value="operator-integration">Iterator + generic operator integration</option></optgroup><optgroup label="Pattern matching &amp; control-flow expressions">
+<option value="declaration-patterns">Declaration patterns</option>
+<option value="constant-null-patterns">Constant + null patterns</option>
+<option value="relational-patterns">Relational patterns</option>
+<option value="logical-patterns">Logical patterns</option>
+<option value="property-patterns">Property patterns</option>
+<option value="recursive-patterns">Recursive patterns</option>
+<option value="pattern-switch">Pattern switch statements</option>
+<option value="switch-guards">Switch guards + ordering</option>
+<option value="switch-expressions">Switch expressions</option>
+<option value="pattern-integration">Pattern integration</option>
+</optgroup><optgroup label="Deterministic lifetime &amp; advanced abstractions">
+<option value="idisposable-iterator">IDisposable + iterator disposal</option>
+<option value="foreach-disposal">foreach disposal</option>
+<option value="using-statement">using statement</option>
+<option value="using-declaration">using declaration</option>
+<option value="generic-inference">Generic method inference</option>
+<option value="extension-methods">Extension methods</option>
+<option value="static-interface-methods">Static interface methods</option>
+<option value="constrained-static-dispatch">Constrained static dispatch</option>
+<option value="default-interface-methods">Default interface methods</option>
+<option value="lifetime-abstractions-integration">Lifetime + abstractions integration</option>
+</optgroup><optgroup label="Exceptions &amp; runtime control flow">
+<option value="exception-foundation">Exception + throw</option>
+<option value="try-catch">Typed + catch-all handlers</option>
+<option value="exception-propagation">Propagation + GC unwinding</option>
+<option value="finally">Finally cleanup</option>
+<option value="structured-finally">Structured exits through finally</option>
+<option value="nested-rethrow">Nested handlers + rethrow</option>
+<option value="iterator-exceptions">Iterator exceptions</option>
+<option value="delegate-event-exceptions">Delegate + event exceptions</option>
+<option value="native-library-exceptions">Native + library boundaries</option>
+<option value="exception-integration">Exception integration</option>
+</optgroup><optgroup label="Language surface completion II">
+<option value="unsafe-delegates">Unsafe delegates</option>
+<option value="unsafe-pointer-properties">Unsafe pointer properties</option>
+<option value="do-while">do / while</option>
+<option value="expression-bodied-members">Expression-bodied members</option>
+<option value="custom-event-accessors">Custom event accessors</option>
+<option value="null-conditional-arrays">Null-conditional arrays</option>
+<option value="sized-rectangular-initializers">Sized rectangular initializers</option>
+<option value="implicit-rectangular-initializers">Implicit rectangular initializers</option>
+<option value="generic-constraints">Generic constraints</option>
+<option value="surface-completion-integration">Surface-completion integration</option>
+</optgroup>
+<optgroup label="Language edge &amp; project completion">
+<option value="static-interface-properties">Static interface properties</option>
+<option value="static-interface-events">Static interface events</option>
+<option value="constructor-return">Constructor return</option>
+<option value="rectangular-array-initializers">Rectangular array initializers</option>
+<option value="iterator-locals">Iterator locals</option>
+<option value="receiver-expressions">Receiver expressions</option>
+<option value="explicit-generic-calls">Explicit generic method calls</option>
+<option value="native-callback-byref">By-reference native callbacks</option>
+<option value="project-library-output">Project library output</option>
+<option value="language-edge-integration">Language-edge integration</option>
+</optgroup>
+<optgroup label="Object model &amp; expressions">
+<option value="base-constructor-chaining">Base constructor chaining</option>
+<option value="constructor-delegation">Constructor delegation</option>
+<option value="interface-inheritance">Interface inheritance</option>
+<option value="struct-interfaces">Struct interface implementation</option>
+<option value="virtual-properties">Virtual properties</option>
+<option value="static-events">Static events</option>
+<option value="interface-events">Interface events + initializers</option>
+<option value="delegate-completion">Delegate completion</option>
+<option value="conditional-expression">Conditional expression</option>
+<option value="object-model-integration">Object-model integration</option>
+</optgroup><optgroup label="Value types, closures &amp; control flow"><option value="nested-value-structs">Nested value structs</option><option value="readonly-structs">Readonly structs</option><option value="jagged-arrays">Jagged arrays</option><option value="rectangular-arrays">Rectangular arrays</option><option value="closure-frames">Nested + foreach closures</option><option value="byref-closures">By-reference closures</option><option value="iterator-completion">Iterator completion</option><option value="unsafe-pointer-members">Unsafe pointer members</option><option value="compound-targets">Compound targets</option><option value="value-control-integration">Value/control-flow integration</option></optgroup>
+<optgroup label="Nullability &amp; initialization">
+<option value="completion-integration">Game-style registry integration</option><option value="nullable-values">Nullable values</option><option value="nullable-operators">Nullable operators</option><option value="null-conditional-indexing">Null-conditional indexing</option><option value="named-arguments">Named arguments</option><option value="target-typed-default">Target-typed default</option><option value="instance-initializers">Instance initializers</option><option value="object-initializers">Object initializers</option><option value="array-initializers">Array initializers</option><option value="collection-initializers">Collection initializers</option><option value="static-members">Static members</option><option value="static-initialization">Static initialization</option>
+</optgroup>
+<optgroup label="Core language ergonomics"><option value="enums">Enums</option><option value="switch">Switch statements</option><option value="const-readonly">const + readonly</option><option value="casts-is-as">Casts + is / as</option><option value="null-operators">Null operators</option><option value="optional-params">Optional parameters + params</option><option value="default-values">default(T)</option><option value="type-metadata">typeof + type metadata</option><option value="conversions">implicit / explicit conversions</option><option value="ergonomics-integration">Ergonomics integration</option></optgroup>
+<optgroup label="Language &amp; library"><option value="collections">Generic collections + foreach</option><option value="iterators">Iterator methods + yield</option><option value="closures">Lambdas + closures</option><option value="events">Events</option><option value="discovery">Runtime discovery</option></optgroup>
+<optgroup label="Unsafe &amp; native"><option value="pointers">Unsafe pointers</option><option value="native-structs">Native structs</option><option value="native-byref">Native ref / out / in</option><option value="native-aliases">Native symbol aliases</option><option value="callbacks">Native callbacks</option><option value="memory">sizeof + raw memory</option><option value="stackalloc">Stack allocation</option><option value="local-library">Project-local native library</option><option value="integration">End-to-end native integration</option></optgroup>
+<optgroup label="Compiler tooling"><option value="source-spans">Source spans</option><option value="ranged-diagnostics">Ranged diagnostics</option><option value="source-checking">Source-only checking</option><option value="semantic-queries">Semantic queries</option><option value="debug-source-mapping">Debug source mapping</option><option value="lsp-bootstrap">LSP bootstrap</option><option value="live-diagnostics">Live LSP diagnostics</option><option value="hover-signature-help">Hover + signature help</option><option value="semantic-completion">Semantic completion</option><option value="navigation-symbols">Navigation + symbols</option><option value="tooling-integration">Multi-file editor integration</option></optgroup>
+</select><span aria-hidden="true" class="example-select-arrow">▾</span></div><div class="example-picker-hint">Choose a language feature or compiler-tooling example.</div></div><div class="example-browser-meta"><span class="status-chip complete">Completed</span><span data-example-category="">Iterator lifetime &amp; generic operators</span></div></div>
+<div class="example-stage"><div class="example-stage-head"><div><strong data-example-title="">Iterator + generic operator integration</strong><small data-example-caption="">Constrained generic operator provenance survives iterator promotion, yield/resume, GC, disposal, exceptions, and normal operator lowering without a parallel dispatch path.</small></div><span data-example-language="">VOID</span></div><pre><code class="void-syntax" data-example-code="">public interface IAdd&lt;T&gt;
+{
+    static T operator +(T left, T right);
+}
+
+public static IEnumerable&lt;T&gt; Accumulate&lt;T&gt;(T sum, T other)
+    where T : IAdd&lt;T&gt;
+{
+    yield return sum;
+    sum += other;
+    yield return sum;
+}</code></pre></div>
+</div>
+<div class="page-actions reveal"><a class="outline-button" href="../features/">All Features</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
+</div></section></main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/examples.js?v=13"></script><script src="../../assets/js/site.js?v=10"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Install VOID - Create Your First VOID Project</title>
+  <meta name="description" content="Install the official VOID project template and create a game.">
+  <meta name="theme-color" content="#07060b">
+  <link rel="icon" href="../../assets/images/void-favicon.png" type="image/png">
+  <link rel="stylesheet" href="../../assets/css/home.css?v=17">
+</head>
+<body class="has-subnav has-tiered-subnav">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header" id="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="../../" aria-label="VOID home"><img src="../../assets/images/void-logo.webp" alt="VOID"></a>
+      <button class="menu-button" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="../../">Home</a>
+        <a class="active" href="../../engine/">Engine</a>
+        <a href="../../language/">Language</a>
+        <a href="../../articles/">Articles</a>
+        <a href="https://github.com/Shmellyorc/Void">GitHub</a>
+      </nav>
+    </div>
+  </header>
+  <div class="section-nav-wrap engine-nav"><nav aria-label="VOID Engine categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Engine</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../install/">Workflow</a><a href="../rendering/">Rendering</a></nav><nav aria-label="VOID Engine workflow pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Workflow</span><a class="active" href="../install/">Install</a><a class="section-nav-docs" href="https://github.com/Shmellyorc/Void/wiki">Documentation</a></nav></div>
+  <main id="main">
+    <section class="subpage-hero">
+      <div class="shell subpage-copy reveal">
+        <p class="kicker">Install VOID</p>
+        <h1>From zero to a<br>working VOID project.</h1>
+        <p>The official template is the recommended way to start. It creates the expected project structure and references so you begin with a known-good setup instead of rebuilding it by hand.</p>
+      </div>
+    </section>
+    <section class="content-page"><div class="shell content-narrow">
+  <div class="local-note reveal"><strong>Requirement:</strong> .NET 10. Runtime graphics, platform, input, and audio dependencies are restored through <code>Void.Engine</code>.</div>
+  <div class="local-note reveal language-transition-note"><strong>VOID Engine and VOID Language:</strong> VOID Engine currently runs on C# and .NET. A VOID Language edition of the engine is planned alongside it. The C#/.NET edition will remain available, while the VOID Language edition is intended to follow the same game-facing APIs, concepts, and workflow as closely as practical. If you already know VOID Engine in C#, moving to the VOID Language edition should feel familiar rather than like learning a different engine.<br><br><strong>Two language paths. The same VOID Engine philosophy.</strong></div>
+  <div class="install-list" style="margin-top:42px">
+    <article class="install-item reveal" data-step="1"><h2>Install the official template</h2><p>Install <code>Void.Templates</code> from NuGet.</p><div class="code-block-preview"><div class="code-head">terminal</div><pre><code>dotnet new install Void.Templates</code></pre></div></article>
+    <article class="install-item reveal" data-step="2"><h2>Create your game</h2><p>Create a new project in a new folder.</p><div class="code-block-preview"><div class="code-head">terminal</div><pre><code>dotnet new voidgame -n MyGame
+cd MyGame</code></pre></div></article>
+    <article class="install-item reveal" data-step="3"><h2>Run it</h2><p>Restore happens through the normal .NET workflow.</p><div class="code-block-preview"><div class="code-head">terminal</div><pre><code>dotnet run</code></pre></div></article>
+  </div>
+  <h2>Why the template?</h2><p>The template creates a complete runnable project with <code>Program.cs</code>, your main <code>Game</code> subclass, a <code>Content/</code> folder, and a preconfigured project reference to <code>Void.Engine</code>.</p>
+  <h2>Prefer the current folder?</h2><div class="code-block-preview"><div class="code-head">terminal</div><pre><code>mkdir MyGame
+cd MyGame
+dotnet new voidgame
+dotnet run</code></pre></div>
+  <div class="page-actions"><a class="outline-button" href="../">Back to Engine</a></div>
+</div></section>
+  </main>
+  <footer class="site-footer">
+    <div class="shell footer-grid">
+      <div class="footer-brand"><img src="../../assets/images/void-logo.webp" alt="VOID"><p>A foundation, not a cage.</p></div>
+      <nav class="footer-links" aria-label="Footer navigation"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
+      <p class="footer-note">Built for game developers who want control.</p>
+    </div>
+  </footer>
+  <script src="../../assets/js/home.js?v=1"></script>
+  <script src="../../assets/js/site.js?v=7"></script>
+</body>
+</html>

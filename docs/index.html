@@ -1,214 +1,196 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>VOID Engine - Extensible .NET 2D Game Framework</title>
-  <meta name="description" content="VOID is a modular, extensible 2D game framework for .NET with SDL3, Silk.NET, OpenGL, asset tooling, input, audio, and pluggable renderer contracts.">
-  <meta name="theme-color" content="#08070b">
-  <link rel="canonical" href="https://shmellyorc.github.io/Void/">
-  <link rel="icon" href="assets/images/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="assets/css/site.css?v=6">
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="VOID Engine - A foundation, not a cage.">
-  <meta property="og:description" content="A modular, extensible 2D game framework for .NET. Use the defaults, extend them, or replace them.">
-  <meta property="og:url" content="https://shmellyorc.github.io/Void/">
-  <meta property="og:image" content="https://shmellyorc.github.io/Void/assets/images/social-card.png">
-  <meta name="twitter:card" content="summary_large_image">
-  <script type="application/ld+json">
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1" name="viewport"/>
+<title>VOID - Game Development Tools Without the Cage</title>
+<meta content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, runtime, GC, deterministic disposal, structured exceptions, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling." name="description"/>
+<meta content="#07060b" name="theme-color"/>
+<link href="https://voidengine.net/" rel="canonical"/>
+<link href="assets/images/void-favicon.png" rel="icon" type="image/png"/>
+<link href="assets/css/home.css?v=17" rel="stylesheet"/>
+<meta content="website" property="og:type"/>
+<meta content="VOID - A foundation, not a cage." property="og:title"/>
+<meta content="Two paths. One philosophy. VOID Engine and VOID Language are built for game developers who want control without unnecessary friction." property="og:description"/>
+<meta content="https://voidengine.net/" property="og:url"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "SoftwareSourceCode",
-    "name": "VOID Engine",
-    "description": "A modular, extensible 2D game framework for .NET.",
-    "codeRepository": "https://github.com/Shmellyorc/Void",
-    "programmingLanguage": "C#",
-    "runtimePlatform": ".NET 10",
-    "license": "https://opensource.org/licenses/MIT"
+    "@type": "WebSite",
+    "name": "VOID",
+    "url": "https://voidengine.net/",
+    "description": "A game development ecosystem built around simplicity, control, and performance."
   }
   </script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
-  <div id="site-nav"></div>
-<script src="assets/js/nav.js?v=6"></script>
-
-  <main id="main">
-    <section class="hero">
-      <div class="hero-atmosphere" aria-hidden="true">
-        <div class="hero-grid"></div>
-        <div class="hero-glow"></div>
-        <img class="portal" src="assets/images/void-portal.svg" alt="">
-        <div class="particles">
-          <i class="particle" style="--x:5%;--d:18s;--delay:-8s;--drift:22px"></i>
-          <i class="particle" style="--x:13%;--d:15s;--delay:-3s;--drift:-14px"></i>
-          <i class="particle" style="--x:24%;--d:20s;--delay:-11s;--drift:10px"></i>
-          <i class="particle" style="--x:37%;--d:17s;--delay:-6s;--drift:-18px"></i>
-          <i class="particle" style="--x:49%;--d:22s;--delay:-15s;--drift:18px"></i>
-          <i class="particle" style="--x:61%;--d:16s;--delay:-9s;--drift:-12px"></i>
-          <i class="particle" style="--x:72%;--d:19s;--delay:-4s;--drift:15px"></i>
-          <i class="particle" style="--x:83%;--d:21s;--delay:-13s;--drift:-20px"></i>
-          <i class="particle" style="--x:93%;--d:17s;--delay:-7s;--drift:11px"></i>
-        </div>
-      </div>
-      <div class="container">
-        <div class="hero-content">
-          <img class="hero-logo" src="assets/images/void-logo.png" alt="VOID Engine">
-          <h1>A foundation, <span>not a cage.</span></h1>
-          <p class="hero-copy">An extensible .NET game framework built to give you useful defaults without locking you into them.</p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="install/">Install VOID</a>
-            <a class="button button-secondary" href="#what-is-void">Explore the Framework</a>
-          </div>
-          <div class="tech-line">C# &nbsp;•&nbsp; .NET 10 &nbsp;•&nbsp; SDL3 &nbsp;•&nbsp; Silk.NET &nbsp;•&nbsp; MIT</div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section band" id="what-is-void">
-      <div class="container">
-        <p class="section-kicker">What is VOID?</p>
-        <h2 class="section-title">Build the game. Keep control of the framework.</h2>
-        <p class="section-lead">VOID is a lightweight, modular 2D game framework for developers who want a capable starting point without surrendering control of their architecture. Use the systems VOID provides, extend them when you need more, or replace them when your project needs something different.</p>
-        <div class="three-up">
-          <article class="card"><h3>Useful defaults</h3><p>Start with rendering, input, audio, assets, saving, tooling, and common game systems already available.</p></article>
-          <article class="card"><h3>Built to extend</h3><p>Major systems expose clear extension points instead of assuming one implementation is right for every project.</p></article>
-          <article class="card"><h3>Your project stays yours</h3><p>VOID provides the foundation. It does not dictate how your entire game has to be structured.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container">
-        <p class="section-kicker">Core systems</p>
-        <h2 class="section-title">Everything you need to start building.</h2>
-        <p class="section-lead">Practical framework-level systems without turning VOID into a giant all-in-one engine.</p>
-        <div class="feature-grid">
-          <article class="card"><div class="mono">01</div><h3>Rendering</h3><p>Sprite and primitive batching, texture atlases, shaders, render targets, post-processing, and a renderer-neutral API.</p></article>
-          <article class="card"><div class="mono">02</div><h3>Platform & Input</h3><p>SDL3 windowing, displays, keyboard, mouse, gamepads, and fullscreen handling.</p></article>
-          <article class="card"><div class="mono">03</div><h3>Assets & Tooling</h3><p>Virtual mounts, custom asset types, pack loading, project templates, and encrypted asset packing tools.</p></article>
-          <article class="card"><div class="mono">04</div><h3>Audio</h3><p>OpenAL playback, sound pooling, priority-based voice stealing, and category volumes.</p></article>
-          <article class="card"><div class="mono">05</div><h3>Game Systems</h3><p>Coroutines, tweens, pathfinding, encrypted saves, logging, math helpers, and LDtk integration.</p></article>
-          <article class="card"><div class="mono">06</div><h3>Extension Points</h3><p>Custom renderers, asset sources, atlas packers, logging sinks, batchers, render targets, cameras, and more.</p></article>
-        </div>
-        <div class="hero-actions"><a class="button button-secondary" href="features/">View All Features</a></div>
-      </div>
-    </section>
-
-    <section class="section editorial">
-      <div class="container statement">
-        <p class="section-kicker">Design philosophy</p>
-        <strong>A foundation,<br>not a cage.</strong>
-        <p>Frameworks should remove work, not remove choices. VOID is designed around transparency, replaceable systems, and sensible defaults so you can start quickly without discovering later that the framework owns your architecture.</p>
-        <p><b>Use what works. Replace what doesn't.</b></p>
-        <a class="button button-secondary" href="philosophy/">Read the Design Philosophy</a>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container split">
-        <div>
-          <p class="section-kicker">Rendering</p>
-          <h2 class="section-title">OpenGL included. OpenGL not required.</h2>
-          <p class="section-lead">VOID ships with a built-in Silk.NET.OpenGL renderer, but OpenGL is a backend, not the identity of the engine.</p>
-          <div class="mini-list">
-            <div class="mini-row">Public renderer-neutral contracts keep higher-level systems API-agnostic.</div>
-            <div class="mini-row">Custom backends can target Vulkan, Direct3D, Metal, WebGPU, or another API.</div>
-            <div class="mini-row">Native window handles are exposed through the renderer context when a backend needs them.</div>
-          </div>
-          <div class="hero-actions"><a class="button button-secondary" href="rendering/">Explore Rendering</a></div>
-        </div>
-        <figure class="renderer-diagram image-frame">
-          <img
-            src="assets/images/renderer-architecture.webp"
-            alt="VOID Engine renderer architecture showing the API-agnostic rendering layer, renderer abstraction, pluggable graphics backends, SDL3, and OpenAL."
-            loading="lazy"
-          >
-        </figure>
-      </div>
-    </section>
-
-    <section class="section band">
-      <div class="container">
-        <p class="section-kicker">Real projects</p>
-        <h2 class="section-title">Built for real games.</h2>
-        <p class="section-lead">Real VOID project screenshots showing gameplay, in-game UI, and framework integration with LDtk.</p>
-        <div class="shot-grid">
-          <div
-            class="placeholder-panel image-frame"
-            aria-label="Framework integration screenshot"
-          >
-            <img
-              src="assets/images/framework-integration.webp"
-              alt="VOID game project code beside an LDtk level, showing framework lifecycle, rendering, assets, collision, and level integration."
-              loading="lazy"
-            >
-          </div>
-
-          <div
-            class="placeholder-panel image-frame"
-            aria-label="UI and rendering screenshot"
-          >
-            <img
-              src="assets/images/ui-rendering.webp"
-              alt="In-game VOID interface showing inventory items, item details, icons, selection highlighting, and input prompts."
-              loading="lazy"
-            >
-          </div>
-
-          <div
-            class="placeholder-panel image-frame"
-            aria-label="Gameplay screenshot"
-          >
-            <img
-              src="assets/images/gameplay.png"
-              alt="Gameplay from a game built with VOID showing characters, a room, and an in-game dialogue box."
-              loading="lazy"
-            >
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container split">
-        <div>
-          <p class="section-kicker">Start simple</p>
-          <h2 class="section-title">Go as deep as you want.</h2>
-          <p class="section-lead">You do not need to understand VOID's renderer architecture to make your first game. Start with the official project template and use the built-in systems. The deeper architecture is there when you need it.</p>
-          <div class="note" style="margin-top:28px"><strong>Recommended:</strong> use the official template. It creates the expected project structure and references so you can start with a known-good setup.</div>
-          <div class="hero-actions"><a class="button button-primary" href="install/">Install VOID</a></div>
-        </div>
-        <div class="code-block">
-          <div class="code-head"><span>terminal</span><button class="copy-button" data-copy="quickstart">Copy</button></div>
-          <pre id="quickstart"><code>dotnet new install Void.Templates
-
-dotnet new voidgame -n MyGame
-cd MyGame
-dotnet run</code></pre>
-        </div>
-      </div>
-    </section>
-
-    <section class="section final-cta">
-      <div class="container">
-        <p class="section-kicker">Ready when you are</p>
-        <h2 class="section-title">Build with VOID.</h2>
-        <p class="section-lead">Start with the official template and get a correctly configured VOID project from the beginning.</p>
-        <div class="hero-actions">
-          <a class="button button-primary" href="install/">Get Started</a>
-          <a class="button button-secondary" href="https://github.com/Shmellyorc/Void/wiki">View Documentation</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container footer-grid">
-      <div><img class="footer-brand" src="assets/images/void-logo.png" alt="VOID"><div>Open-source .NET game framework. MIT licensed.</div></div>
-      <div class="footer-links"><a href="https://github.com/Shmellyorc/Void">GitHub</a><a href="https://github.com/Shmellyorc/Void/wiki">Documentation</a><a href="https://github.com/Shmellyorc/Void/blob/master/LICENSE">License</a></div>
-    </div>
-  </footer>
-  <script src="assets/js/site.js?v=6"></script>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="site-header">
+<div class="shell nav-wrap">
+<a aria-label="VOID home" class="brand" href="./">
+<img alt="VOID" src="assets/images/void-logo.webp"/>
+</a>
+<button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button>
+<nav aria-label="Main navigation" class="nav-links">
+<a class="active" href="./">Home</a>
+<a href="engine/">Engine</a>
+<a href="language/">Language</a>
+<a href="articles/">Articles</a>
+<a href="https://github.com/Shmellyorc/Void">GitHub</a>
+</nav>
+</div>
+</header>
+<main id="main">
+<section class="hero">
+<div aria-hidden="true" class="hero-art"></div>
+<div aria-hidden="true" class="hero-shade"></div>
+<div class="shell hero-layout">
+<div class="hero-copy-block reveal">
+<img alt="VOID" class="hero-logo" src="assets/images/void-logo.webp"/>
+<h1>A foundation, not a cage.</h1>
+<p class="hero-tagline">Tools for building games without fighting your tools.</p>
+<div class="accent-line"></div>
+<p class="hero-description">VOID is a growing ecosystem for game developers. It now surfaces two paths: a high-performance 2D engine and a modern, C#-inspired language built to work together, but designed to stand on their own.</p>
+</div>
+</div>
+<div class="shell product-pair hero-products">
+<a class="product-card engine-card reveal" href="engine/">
+<div class="product-art" style="--card-art:url('assets/images/void-engine.webp')"></div>
+<div class="product-overlay"></div>
+<div class="product-content">
+<img alt="" class="product-icon" src="assets/images/icon-engine.png"/>
+<div>
+<p class="eyebrow">VOID</p>
+<h2>Engine</h2>
+<p>A high-performance 2D game engine with SDL3 platform and input, a pluggable renderer with OpenGL included, sprite and primitive batching, shaders, render targets, texture atlases, OpenAL audio, virtual asset mounts and packed assets, saving, LDtk integration, coroutines, tweens, pathfinding, and extension points throughout.</p>
+<span class="button-link">Explore Engine</span>
+</div>
+</div>
+</a>
+<a class="product-card language-card reveal" href="language/">
+<div class="product-art" style="--card-art:url('assets/images/void-language.webp')"></div>
+<div class="product-overlay"></div>
+<div class="product-content">
+<img alt="" class="product-icon" src="assets/images/icon-language.png"/>
+<div>
+<p class="eyebrow">VOID</p>
+<h2>Language</h2>
+<p>A C#-inspired game development language with its own compiler, runtime, GC, deterministic disposal and using, structured exceptions, inferred generics, extension methods, advanced interface abstractions, native C output, reusable native library builds, direct C interoperability, and compiler-backed tooling.</p>
+<span class="button-link">Explore Language</span>
+</div>
+</div>
+</a>
+</div>
+</section>
+<section class="quick-links section-divider">
+<div class="shell quick-grid">
+<a class="quick-item reveal" href="engine/philosophy/">
+<img alt="" src="assets/images/icon-philosophy.png"/>
+<div><h3>Philosophy</h3><p>Simplicity, control, and creativity over constraints.</p><span class="quick-button">Read Philosophy</span></div>
+</a>
+<a class="quick-item reveal" href="engine/install/">
+<img alt="" src="assets/images/icon-install.png"/>
+<div><h3>Install</h3><p>Get VOID Engine up and running in minutes.</p><span class="quick-button">Install Engine</span></div>
+</a>
+<a class="quick-item reveal" href="engine/features/">
+<img alt="" src="assets/images/icon-features.png"/>
+<div><h3>Features</h3><p>A growing set of practical tools for game developers.</p><span class="quick-button">View Features</span></div>
+</a>
+<a class="quick-item reveal" href="#why-void">
+<img alt="" src="assets/images/icon-why.png"/>
+<div><h3>Why VOID</h3><p>Built around control, performance, and less friction.</p><span class="quick-button">Why VOID</span></div>
+</a>
+</div>
+</section>
+<section class="section vision" id="why-void">
+<div class="shell">
+<div class="section-heading centered reveal">
+<p class="kicker">Two paths. One vision.</p>
+<h2>Different tools. A shared foundation.</h2>
+<p>VOID Engine and VOID Language are independent projects designed to work beautifully together. Use one, or both. Either way, the goal is the same: give game developers more control, less friction, and a foundation that gets out of your way.</p>
+</div>
+<div class="product-pair deep-pair">
+<article class="deep-card reveal">
+<div class="deep-art engine-art"></div>
+<div class="deep-body">
+<div class="title-row"><img alt="" src="assets/images/icon-engine.png"/><div><p class="eyebrow">VOID</p><h3>Engine</h3></div></div>
+<p>A high-performance 2D game engine with a pluggable renderer, built for flexibility and control. Designed to scale from small prototypes to ambitious projects.</p>
+<ul class="check-list">
+<li>Fast and lightweight</li>
+<li>Pluggable renderer architecture</li>
+<li>Modern tooling and workflow</li>
+<li>Built for 2D without forcing a workflow</li>
+</ul>
+<a class="outline-button" href="engine/">Explore Engine</a>
+</div>
+</article>
+<article class="deep-card reveal">
+<div class="deep-art language-art"></div>
+<div class="deep-body">
+<div class="title-row"><img alt="" src="assets/images/icon-language.png"/><div><p class="eyebrow">VOID</p><h3>Language</h3></div></div>
+<p>A modern, C#-inspired language with its own compiler and runtime. Its working core combines a mature object model, deterministic lifetime, nested and readonly structs, rectangular arrays, closures and iterators, pattern matching and switch expressions, user-defined and constrained generic operators, inferred/constrained generics, extension methods, default/static interface methods, structured exceptions/finally, unsafe/native interop, native callbacks, and reusable native library output.</p>
+<ul class="check-list">
+<li>C#-inspired, developer-friendly syntax</li>
+<li>Compiles to C</li>
+<li>Direct C interoperability</li>
+<li>Rich object model, delegates, events, and generics</li>
+</ul>
+<a class="outline-button" href="language/">Explore Language</a>
+</div>
+</article>
+</div>
+</div>
+</section>
+<section class="section features-band">
+<div class="shell">
+<div class="section-heading centered reveal">
+<p class="kicker">Key features</p>
+<h2>Built for the way you make games.</h2>
+<p>A growing set of tools and ideas designed around control, performance, and simplicity.</p>
+</div>
+<div class="feature-grid">
+<article class="feature-tile reveal"><img alt="" src="assets/images/icon-engine.png"/><div><h3>Pluggable Renderer</h3><p>A rendering architecture that adapts to the backend your project needs.</p></div></article>
+<article class="feature-tile reveal"><img alt="" src="assets/images/icon-language.png"/><div><h3>Familiar Language Surface</h3><p>Deterministic disposal, nested and readonly structs, jagged/rectangular arrays, completed closures and iterators, structured exceptions, inferred/constrained generics, extension methods, interface defaults, and familiar game-code ergonomics.</p></div></article>
+<article class="feature-tile reveal"><div class="symbol-icon">C</div><div><h3>Compiles to C</h3><p>Portable output without requiring the .NET runtime.</p></div></article>
+<article class="feature-tile reveal"><div class="symbol-icon">◇</div><div><h3>Simplicity First</h3><p>Less framework friction and less unnecessary complexity.</p></div></article>
+<article class="feature-tile reveal"><div class="symbol-icon">C</div><div><h3>Native C Interop</h3><p>Pointers, native structs, by-reference callbacks, raw memory tools, stack allocation, project-local native dependencies, and reusable VOID library archives.</p></div></article>
+<article class="feature-tile reveal"><div class="symbol-icon">L</div><div><h3>Compiler Tooling</h3><p>Live diagnostics, hover, signature help, semantic completion, navigation, references, and symbols all come from the same compiler model.</p></div></article>
+</div>
+</div>
+</section>
+<section class="section final-cta">
+<div aria-hidden="true" class="final-backdrop"></div>
+<div class="shell final-content reveal">
+<img alt="" class="final-mark" src="assets/images/void-mark.webp"/>
+<p class="kicker">Choose your path</p>
+<h2>Build with VOID.</h2>
+<p>Explore the engine, discover the language, or use both as the foundation for what comes next.</p>
+<div class="cta-actions">
+<a class="primary-button" href="engine/">VOID Engine</a>
+<a class="outline-button" href="language/">VOID Language</a>
+</div>
+</div>
+</section>
+</main>
+<footer class="site-footer">
+<div class="shell footer-grid">
+<div class="footer-brand">
+<img alt="VOID" src="assets/images/void-logo.webp"/>
+<p>A foundation, not a cage.</p>
+</div>
+<nav aria-label="Footer navigation" class="footer-links">
+<a href="./">Home</a>
+<a href="engine/">Engine</a>
+<a href="language/">Language</a>
+<a href="articles/">Articles</a>
+<a href="https://github.com/Shmellyorc/Void">GitHub</a>
+</nav>
+<p class="footer-note">Built for game developers who want control.</p>
+</div>
+</footer>
+<script src="assets/js/home.js?v=1"></script>
+<script src="assets/js/site.js?v=8"></script>
 </body>
 </html>
