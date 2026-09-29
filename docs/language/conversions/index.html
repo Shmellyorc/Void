@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>VOID Language Conversions &amp; Generic Conversion Contracts</title><meta content="VOID Language conversion semantics: unified standard and user-defined conversions, lifted nullable conversions, target-typed conversion sites, static interface conversion contracts, constrained generic conversion dispatch, and iterator/closure/GC-safe conversion provenance." name="description"/><meta content="#07060b" name="theme-color"/><link href="https://voidengine.net/language/conversions/" rel="canonical"/><link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/><link href="../../assets/css/home.css?v=17" rel="stylesheet"/><meta property="og:type" content="website">
+<meta property="og:site_name" content="VOID">
+<meta property="og:title" content="VOID Language Conversions &amp; Generic Conversion Contracts">
+<meta property="og:description" content="VOID Language conversion semantics: unified standard and user-defined conversions, lifted nullable conversions, target-typed conversion sites, static interface conversion contracts, constrained generic conversion dispatch, and iterator/closure/GC-safe conversion provenance.">
+<meta property="og:url" content="https://voidengine.net/language/conversions/">
+<meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="1672">
+<meta property="og:image:height" content="941">
+<meta property="og:image:alt" content="VOID Language">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VOID Language Conversions &amp; Generic Conversion Contracts">
+<meta name="twitter:description" content="Unified standard, user-defined, nullable, target-typed, static-interface, and constrained generic conversion semantics in VOID Language.">
+<meta name="twitter:image:alt" content="VOID Language">
+<meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {"@type":"ListItem","position":1,"name":"Home","item":"https://voidengine.net/"},
+    {"@type":"ListItem","position":2,"name":"Language","item":"https://voidengine.net/language/"},
+    {"@type":"ListItem","position":3,"name":"Conversions","item":"https://voidengine.net/language/conversions/"}
+  ]
+}
+</script>
+</head>
+<body class="has-subnav has-tiered-subnav"><a class="skip-link" href="#main">Skip to content</a><header class="site-header" id="site-header"><div class="shell nav-wrap"><a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a><button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button><nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav></div></header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a class="active" href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
+<main id="main"><section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language conversions</p><h1>One conversion model.<br/>Concrete code to constrained generics.</h1><p>VOID now classifies, selects, and preserves conversions through one compiler-owned semantic model. Standard conversions, user-defined operators, nullable lifting, target typing, static-interface contracts, constrained generic dispatch, iterators, closures, and GC all share the same source of truth.</p></div></section>
+<section class="content-page"><div class="shell"><div class="section-heading reveal"><p class="kicker">Completed conversion semantics</p><h2>The compiler decides the conversion once.</h2><p>Semantic analysis classifies the source and target types, selects the applicable standard or user-defined conversion, records why the conversion is legal, and hands that binding forward. Later lowering and code generation consume that decision instead of trying to rediscover it.</p></div>
+<div class="content-grid">
+<article class="content-card reveal"><h3>Standard conversions</h3><p>Identity, numeric, enum, reference/interface, null, nullable, and existing pointer/unsafe conversions use one semantic classification vocabulary and ranking model.</p></article>
+<article class="content-card reveal"><h3>User-defined conversions</h3><p><code>implicit</code> and <code>explicit</code> conversion operators participate in applicability, accessibility, ambiguity, and surrounding standard-conversion rules through the shared resolver.</p></article>
+<article class="content-card reveal"><h3>Lifted nullable conversions</h3><p>User-defined value conversions lift through nullable values with normal null propagation, legal explicit extraction, and focused ambiguity/invalid-conversion diagnostics.</p></article>
+<article class="content-card reveal"><h3>Target-typed sites</h3><p>Assignments, locals, fields, properties, parameters, returns, constructors, arrays, initializers, <code>params</code>, conditionals, and switch expressions all ask the same conversion engine.</p></article>
+<article class="content-card reveal"><h3>Static interface contracts</h3><p>Interfaces can require signature-only implicit or explicit conversions. Implementing types are validated through existing static-interface inheritance, conflict, accessibility, and specialization rules.</p></article>
+<article class="content-card reveal"><h3>Constrained generic dispatch</h3><p>Generic implicit or explicit conversions are legal only when the generic constraints authorize the required conversion. Monomorphization then resolves the already-proven operation to the concrete implementation.</p></article>
+<article class="content-card reveal"><h3>Provenance &amp; inference</h3><p>Generic method inference, overload resolution, target typing, specialized fields/properties, and transformed expressions preserve the conversion contract that made the source code valid.</p></article>
+<article class="content-card reveal"><h3>Iterator, closure &amp; GC safety</h3><p>Conversion provenance survives captured locals and iterator promotion across <code>yield</code>, forced GC, exceptions, <code>finally</code>, deterministic disposal, and managed conversion results.</p></article>
+<article class="content-card reveal"><h3>Stable diagnostics</h3><p>Ambiguous, inaccessible, unsupported, and unconstrained conversions are rejected at the semantic site with user-facing diagnostics rather than leaking lowering details.</p></article>
+</div>
+<section class="editorial-block reveal"><div><p class="kicker">Semantic authority</p><h2>Concrete types do not retroactively legalize generic source.</h2></div><p>A specialized type may happen to provide a conversion, but generic source can use that conversion only when its constraints prove it. VOID carries that proof through specialization, iterator/closure transformation, and lowering so code generation never widens the language after semantic analysis.</p></section>
+<div class="native-code-pair reveal"><div class="code-block-preview"><div class="code-head">Concrete user-defined conversions</div><pre><code class="void-syntax" data-void-code="">public struct Meters
+{
+    public int Value;
+
+    public static implicit operator Meters(int value)
+    {
+        return new Meters { Value = value };
+    }
+
+    public static explicit operator int(Meters value)
+    {
+        return value.Value;
+    }
+}
+
+Meters distance = 12;
+int raw = (int)distance;</code></pre></div><div class="code-block-preview"><div class="code-head">Static interface conversion contract</div><pre><code class="void-syntax" data-void-code="">public interface IFromInt&lt;T&gt;
+{
+    static implicit operator T(int value);
+}
+
+public static T Convert&lt;T&gt;(int value)
+    where T : IFromInt&lt;T&gt;
+{
+    return value;
+}</code></pre></div></div>
+<div class="code-block-preview reveal"><div class="code-head">Lifted nullable conversion</div><pre><code class="void-syntax" data-void-code="">int? source = 12;
+Meters? converted = source;
+
+source = null;
+converted = source; // remains empty</code></pre></div>
+<div class="page-actions reveal"><a class="primary-button" href="../examples/">Browse Conversion Examples</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../value-types/">Value Types</a><a class="outline-button" href="../compiler/">Compiler</a><a class="outline-button" href="../roadmap/">Roadmap</a></div></div></section></main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer><script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script></body></html>
