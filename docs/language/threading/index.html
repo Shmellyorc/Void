@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>VOID Language Threading, GC Coordination &amp; Synchronization</title><meta content="VOID Language threading and synchronization: managed Thread start/join, per-thread runtime contexts, thread-safe allocation, cooperative stop-the-world GC, Monitor.Enter/Exit, lock statements, structured cleanup, and worker exception handoff through Join." name="description"/><meta content="#07060b" name="theme-color"/><link href="https://voidengine.net/language/threading/" rel="canonical"/><link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/><link href="../../assets/css/home.css?v=17" rel="stylesheet"/><meta property="og:type" content="website">
+<meta property="og:site_name" content="VOID">
+<meta property="og:title" content="VOID Language Threading, GC Coordination &amp; Synchronization">
+<meta property="og:description" content="Managed threads, per-thread runtime state, coordinated stop-the-world GC, monitors, lock statements, structured cleanup, and worker exception handoff in VOID Language.">
+<meta property="og:url" content="https://voidengine.net/language/threading/">
+<meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="1672">
+<meta property="og:image:height" content="941">
+<meta property="og:image:alt" content="VOID Language">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VOID Language Threading, GC Coordination &amp; Synchronization">
+<meta name="twitter:description" content="Managed Thread start/join, coordinated GC, monitors, lock cleanup, and worker exception handoff in VOID Language.">
+<meta name="twitter:image:alt" content="VOID Language">
+<meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"BreadcrumbList",
+  "itemListElement":[
+    {"@type":"ListItem","position":1,"name":"Home","item":"https://voidengine.net/"},
+    {"@type":"ListItem","position":2,"name":"Language","item":"https://voidengine.net/language/"},
+    {"@type":"ListItem","position":3,"name":"Threading","item":"https://voidengine.net/language/threading/"}
+  ]
+}
+</script></head>
+<body class="has-subnav has-tiered-subnav"><a class="skip-link" href="#main">Skip to content</a><header class="site-header" id="site-header"><div class="shell nav-wrap"><a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a><button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button><nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav></div></header>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a class="active" href="../threading/">Threading</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
+<main id="main"><section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language threading</p><h1>Native threads.<br/>Managed runtime rules stay intact.</h1><p>VOID now has a portable native-thread runtime, per-thread managed execution contexts, thread-safe heap bookkeeping, cooperative stop-the-world collection, managed <code>Thread</code>, recursive monitors, structured <code>lock</code>, and worker exception handoff through <code>Join()</code>.</p></div></section>
+<section class="content-page"><div class="shell"><div class="section-heading reveal"><p class="kicker">Completed concurrency foundation</p><h2>Concurrency extends the runtime instead of bypassing it.</h2><p>Worker threads participate in the same GC, exception, cleanup, delegate, closure, generic, native-boundary, and static-initialization machinery as the main thread. POSIX and Windows details remain behind VOIDC's runtime abstraction rather than leaking into VOID source or generated user code.</p></div>
+<div class="content-grid">
+<article class="content-card reveal"><h3>Portable native thread backend</h3><p>VOIDC owns the create/join and synchronization abstraction. POSIX pthreads and the Windows thread API stay isolated behind the runtime layer, including build/link integration and lifecycle setup.</p></article>
+<article class="content-card reveal"><h3>Per-thread execution context</h3><p>Each attached managed thread owns its automatic GC roots, active exception-handler state, native-boundary bookkeeping, native-call state, and related execution data. The main thread uses the same attachment model.</p></article>
+<article class="content-card reveal"><h3>Thread-safe heap registry</h3><p>Managed allocation metadata and the attached-thread registry are synchronized independently, so worker allocation and runtime bookkeeping are safe without serializing all generated VOID execution behind one global execution lock.</p></article>
+<article class="content-card reveal"><h3>Stop-the-world GC</h3><p>Collection requests cooperatively park managed workers at compiler/runtime safepoints, scan roots from every registered thread, account for native-quiescent blocking states, sweep once, and resume participating threads.</p></article>
+<article class="content-card reveal"><h3><code>Void.Threading.Thread</code></h3><p>The managed surface uses <code>new Thread(Action)</code>, <code>Start()</code>, and <code>Join()</code>. Closures, generic delegate adapters, multicast delegates, nested workers, managed captures, and forced collection use normal language mechanisms.</p></article>
+<article class="content-card reveal"><h3><code>Monitor.Enter</code> / <code>Exit</code></h3><p>Managed objects can own recursive monitors through stable non-moving GC allocation identity. Contending enters are GC-aware while blocked, and wrong-thread, unmatched, and null operations fail deterministically.</p></article>
+<article class="content-card reveal"><h3><code>lock</code> statement</h3><p>The lock expression is evaluated exactly once and rooted for the full critical section. Release uses VOIDC's structured cleanup stack, so normal fallthrough, <code>return</code>, <code>break</code>, <code>continue</code>, and exceptions cannot skip monitor exit.</p></article>
+<article class="content-card reveal"><h3>Worker exception handoff</h3><p>An unhandled managed exception leaving a worker is preserved as a managed root and rethrown by <code>Thread.Join()</code> on the joining thread after the native join and worker-state retirement complete.</p></article>
+<article class="content-card reveal"><h3>Cross-feature integration</h3><p>Threading is integrated with closures, delegates, generics, static initialization, GC, exceptions, deterministic cleanup, native callbacks, native/library boundaries, and the existing compiler/runtime tooling paths.</p></article>
+</div>
+<section class="editorial-block reveal"><div><p class="kicker">Structured synchronization</p><h2><code>lock</code> is cleanup, not a raw mutex shortcut.</h2></div><p>The compiler lowers <code>lock</code> through the existing structured-finally transfer machinery. Monitor ownership therefore follows the same control-flow rules already used by exceptions and deterministic disposal instead of depending on generated jumps that could strand a lock.</p></section>
+<div class="native-code-pair reveal"><div class="code-block-preview"><div class="code-head">Managed worker lifecycle</div><pre><code class="void-syntax" data-void-code="">using Void;
+using Void.Threading;
+
+public sealed class State
+{
+    public int Value;
+}
+
+State state = new State();
+Thread worker = new Thread(() =&gt;
+{
+    state.Value = 42;
+});
+
+worker.Start();
+worker.Join();
+Console.WriteLine(state.Value);</code></pre></div><div class="code-block-preview"><div class="code-head">Structured locking</div><pre><code class="void-syntax" data-void-code="">using Void;
+using Void.Threading;
+
+public sealed class Counter
+{
+    public int Value;
+}
+
+Counter counter = new Counter();
+
+Thread worker = new Thread(() =&gt;
+{
+    lock (counter)
+    {
+        counter.Value++;
+        GC.Collect();
+    }
+});
+
+worker.Start();
+worker.Join();</code></pre></div></div>
+<div class="code-block-preview reveal"><div class="code-head">Worker exception delivery</div><pre><code class="void-syntax" data-void-code="">using Void;
+using Void.Threading;
+
+Thread worker = new Thread(() =&gt;
+{
+    throw new Exception("worker failed");
+});
+
+worker.Start();
+
+try
+{
+    worker.Join();
+}
+catch (Exception error)
+{
+    Console.WriteLine(error.Message);
+}</code></pre></div>
+<section class="editorial-block reveal"><div><p class="kicker">Next synchronization layer</p><h2>Waiting and atomic memory semantics come next.</h2></div><p>The current public surface deliberately stops at managed threads, recursive monitors, <code>lock</code>, coordinated GC, and worker exception handoff. Condition waiting/signaling, interlocked operations, managed-reference atomics, and volatile acquire/release access are the next planned synchronization layer. Thread pools, cancellation, tasks, and async/await remain later work.</p></section>
+<div class="page-actions reveal"><a class="primary-button" href="../examples/">Browse Threading Examples</a><a class="outline-button" href="../exceptions/">Exceptions</a><a class="outline-button" href="../lifetime/">Lifetime</a><a class="outline-button" href="../native/">Native</a><a class="outline-button" href="../compiler/">Compiler</a><a class="outline-button" href="../roadmap/">Roadmap</a></div></div></section></main>
+<footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer><script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script></body></html>

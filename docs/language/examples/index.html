@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Examples</title>
-<meta content="Browse highlighted VOID Language examples for unified conversion semantics and constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, object model, value types, native interop, reusable libraries, and compiler tooling." name="description"/>
+<meta content="Browse highlighted VOID Language examples for managed threading and synchronization, coordinated GC, structured lock, unified conversion semantics, constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, native interop, reusable libraries, and compiler tooling." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/examples/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Examples">
-<meta property="og:description" content="Browse highlighted VOID Language examples for unified conversion semantics and constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, object model, value types, native interop, reusable libraries, and compiler tooling.">
+<meta property="og:description" content="Browse highlighted VOID Language examples for managed threading and synchronization, coordinated GC, structured lock, unified conversion semantics, constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, native interop, reusable libraries, and compiler tooling.">
 <meta property="og:url" content="https://voidengine.net/language/examples/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Examples">
-<meta name="twitter:description" content="Browse highlighted VOID Language examples for unified conversion semantics and constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, object model, value types, native interop, reusable libraries, and compiler tooling.">
+<meta name="twitter:description" content="Browse highlighted VOID Language examples for managed threading and synchronization, coordinated GC, structured lock, unified conversion semantics, constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, native interop, reusable libraries, and compiler tooling.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -63,11 +63,11 @@
 </header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a href="../library/">Reference</a><a class="active" href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language</p><h1>Pick an example.<br/>See the language and tooling.</h1><p>The example browser covers the working language through completed conversion/generic-dispatch, operator/iterator, pattern, deterministic-lifetime, exception/control-flow, surface-completion, object-model, value/control-flow, project-output, native interop, and compiler-tooling phases.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language</p><h1>Pick an example.<br/>See the language and tooling.</h1><p>The example browser covers the working language through completed threading/synchronization, conversion/generic-dispatch, operator/iterator, pattern, deterministic-lifetime, exception/control-flow, surface-completion, object-model, value/control-flow, project-output, native interop, and compiler-tooling phases.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Code browser</p><h2>One selector. One focused example at a time.</h2><p>Choose a conversion/generic-dispatch, operator/iterator, pattern/switch-expression, lifetime/abstraction, exception/control-flow, surface-completion, object-model, value/control-flow, project/library, native, diagnostic, or compiler-tooling example. Examples reflect the public feature surface without exposing internal milestone numbering.</p></div>
+<div class="section-heading reveal"><p class="kicker">Code browser</p><h2>One selector. One focused example at a time.</h2><p>Choose a threading/synchronization, conversion/generic-dispatch, operator/iterator, pattern/switch-expression, lifetime/abstraction, exception/control-flow, surface-completion, object-model, value/control-flow, project/library, native, diagnostic, or compiler-tooling example. Examples reflect the public feature surface without exposing internal milestone numbering.</p></div>
 <div class="example-browser reveal" data-example-browser="">
-<div class="example-browser-bar"><div class="example-picker"><label for="void-example-select">Example</label><div class="example-select-wrap"><select class="example-select" data-example-select="" id="void-example-select"><optgroup label="Conversion semantics &amp; generic conversions"><option value="standard-conversion-classification">Standard conversion classification</option><option value="user-defined-conversion-resolution">User-defined conversion resolution</option><option value="lifted-nullable-conversions">Lifted nullable conversions</option><option value="conversion-site-integration">Target-typed conversion sites</option><option value="static-interface-conversions">Static interface conversion contracts</option><option value="constrained-implicit-conversions">Constrained generic implicit conversion</option><option value="constrained-explicit-conversions">Constrained generic explicit conversion</option><option value="generic-conversion-provenance">Generic conversion provenance</option><option value="conversion-iterator-closure-gc">Conversions through iterator, closure &amp; GC</option><option selected="" value="conversion-integration">Conversion semantics integration</option></optgroup><optgroup label="Iterator lifetime &amp; generic operators"><option value="iterator-pattern-capture">Iterator declaration-pattern capture</option><option value="iterator-switch-capture">Iterator switch/guard capture</option><option value="iterator-pattern-gc">Iterator pattern lifetime + GC</option><option value="iterator-state-audit">Iterator state-machine integration</option><option value="stable-diagnostics">Stable diagnostics</option><option value="unary-operators">Unary operators</option><option value="binary-operators">Binary operators</option><option value="static-interface-operators">Static interface operator contracts</option><option value="constrained-generic-operators">Constrained generic operator dispatch</option><option value="operator-integration">Iterator + generic operator integration</option></optgroup><optgroup label="Pattern matching &amp; control-flow expressions">
+<div class="example-browser-bar"><div class="example-picker"><label for="void-example-select">Example</label><div class="example-select-wrap"><select class="example-select" data-example-select="" id="void-example-select"><optgroup label="Threading &amp; synchronization"><option value="managed-thread-lifecycle">Managed Thread start + join</option><option value="thread-closure-capture">Worker closure capture</option><option value="monitor-enter-exit">Monitor Enter / Exit</option><option value="lock-statement">Structured lock statement</option><option value="worker-exception-join">Worker exception handoff</option><option selected="" value="threading-integration">Threading + GC + lock integration</option></optgroup><optgroup label="Conversion semantics &amp; generic conversions"><option value="standard-conversion-classification">Standard conversion classification</option><option value="user-defined-conversion-resolution">User-defined conversion resolution</option><option value="lifted-nullable-conversions">Lifted nullable conversions</option><option value="conversion-site-integration">Target-typed conversion sites</option><option value="static-interface-conversions">Static interface conversion contracts</option><option value="constrained-implicit-conversions">Constrained generic implicit conversion</option><option value="constrained-explicit-conversions">Constrained generic explicit conversion</option><option value="generic-conversion-provenance">Generic conversion provenance</option><option value="conversion-iterator-closure-gc">Conversions through iterator, closure &amp; GC</option><option value="conversion-integration">Conversion semantics integration</option></optgroup><optgroup label="Iterator lifetime &amp; generic operators"><option value="iterator-pattern-capture">Iterator declaration-pattern capture</option><option value="iterator-switch-capture">Iterator switch/guard capture</option><option value="iterator-pattern-gc">Iterator pattern lifetime + GC</option><option value="iterator-state-audit">Iterator state-machine integration</option><option value="stable-diagnostics">Stable diagnostics</option><option value="unary-operators">Unary operators</option><option value="binary-operators">Binary operators</option><option value="static-interface-operators">Static interface operator contracts</option><option value="constrained-generic-operators">Constrained generic operator dispatch</option><option value="operator-integration">Iterator + generic operator integration</option></optgroup><optgroup label="Pattern matching &amp; control-flow expressions">
 <option value="declaration-patterns">Declaration patterns</option>
 <option value="constant-null-patterns">Constant + null patterns</option>
 <option value="relational-patterns">Relational patterns</option>
@@ -143,15 +143,40 @@
 <optgroup label="Language &amp; library"><option value="collections">Generic collections + foreach</option><option value="iterators">Iterator methods + yield</option><option value="closures">Lambdas + closures</option><option value="events">Events</option><option value="discovery">Runtime discovery</option></optgroup>
 <optgroup label="Unsafe &amp; native"><option value="pointers">Unsafe pointers</option><option value="native-structs">Native structs</option><option value="native-byref">Native ref / out / in</option><option value="native-aliases">Native symbol aliases</option><option value="callbacks">Native callbacks</option><option value="memory">sizeof + raw memory</option><option value="stackalloc">Stack allocation</option><option value="local-library">Project-local native library</option><option value="integration">End-to-end native integration</option></optgroup>
 <optgroup label="Compiler tooling"><option value="source-spans">Source spans</option><option value="ranged-diagnostics">Ranged diagnostics</option><option value="source-checking">Source-only checking</option><option value="semantic-queries">Semantic queries</option><option value="debug-source-mapping">Debug source mapping</option><option value="lsp-bootstrap">LSP bootstrap</option><option value="live-diagnostics">Live LSP diagnostics</option><option value="hover-signature-help">Hover + signature help</option><option value="semantic-completion">Semantic completion</option><option value="navigation-symbols">Navigation + symbols</option><option value="tooling-integration">Multi-file editor integration</option></optgroup>
-</select><span aria-hidden="true" class="example-select-arrow">▾</span></div><div class="example-picker-hint">Choose a language feature or compiler-tooling example.</div></div><div class="example-browser-meta"><span class="status-chip complete">Completed</span><span data-example-category="">Conversion semantics &amp; generic conversions</span></div></div>
-<div class="example-stage"><div class="example-stage-head"><div><strong data-example-title="">Conversion semantics integration</strong><small data-example-caption="">Standard/user conversions, nullable lifting, static-interface contracts, constrained generics, operators, closures, iterators, exceptions, cleanup, GC, and library compilation now share one semantic conversion model.</small></div><span data-example-language="">VOID</span></div><pre><code class="void-syntax" data-example-code="">public static T Build&lt;T&gt;(int? source)
-    where T : IFromInt&lt;T&gt;
-{
-    if (source is int value)
-        return value;
+</select><span aria-hidden="true" class="example-select-arrow">▾</span></div><div class="example-picker-hint">Choose a language feature or compiler-tooling example.</div></div><div class="example-browser-meta"><span class="status-chip complete">Completed</span><span data-example-category="">Threading &amp; synchronization</span></div></div>
+<div class="example-stage"><div class="example-stage-head"><div><strong data-example-title="">Threading + GC + lock integration</strong><small data-example-caption="">Managed workers, structured lock cleanup, and forced collection share one runtime model.</small></div><span data-example-language="">VOID</span></div><pre><code class="void-syntax" data-example-code="">using Void;
+using Void.Threading;
 
-    return default;
-}</code></pre></div>
+public sealed class Counter
+{
+    public int Value;
+}
+
+Counter counter = new Counter();
+
+Thread first = new Thread(() =&gt;
+{
+    lock (counter)
+    {
+        counter.Value++;
+        GC.Collect();
+    }
+});
+
+Thread second = new Thread(() =&gt;
+{
+    lock (counter)
+    {
+        counter.Value++;
+    }
+});
+
+first.Start();
+second.Start();
+first.Join();
+second.Join();
+
+Console.WriteLine(counter.Value == 2);</code></pre></div>
 </div>
 <div class="page-actions reveal"><a class="outline-button" href="../features/">All Features</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../conversions/">Conversions</a><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
 </div></section></main>

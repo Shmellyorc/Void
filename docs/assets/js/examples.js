@@ -1,4 +1,46 @@
 window.VOID_EXAMPLES = {
+  "managed-thread-lifecycle": {
+    "title": "Managed Thread start + join",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "VOID-facing workers use an ordinary managed Action and a C#-like Start/Join lifecycle; native handles never leak into source.",
+    "code": "using Void;\nusing Void.Threading;\n\npublic sealed class State\n{\n    public int Value;\n}\n\nState state = new State();\nThread worker = new Thread(() =>\n{\n    state.Value = 42;\n});\n\nworker.Start();\nworker.Join();\nConsole.WriteLine(state.Value);"
+  },
+  "thread-closure-capture": {
+    "title": "Worker closure capture",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Managed captures cross the worker handoff through the normal closure/delegate and GC-root machinery.",
+    "code": "using Void;\nusing Void.Threading;\n\nBox result = new Box();\nint captured = 7;\n\nThread worker = new Thread(() =>\n{\n    Box local = new Box();\n    local.Value = captured + 5;\n    GC.Collect();\n    result.Value = local.Value;\n});\n\nworker.Start();\nworker.Join();\nConsole.WriteLine(result.Value == 12);"
+  },
+  "monitor-enter-exit": {
+    "title": "Monitor Enter / Exit",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "The public Monitor surface exposes recursive Enter/Exit over managed-object identity; manual use follows ordinary try/finally discipline.",
+    "code": "using Void.Threading;\n\npublic sealed class Gate {}\n\nGate gate = new Gate();\nMonitor.Enter(gate);\ntry\n{\n    // protected work\n}\nfinally\n{\n    Monitor.Exit(gate);\n}"
+  },
+  "lock-statement": {
+    "title": "Structured lock statement",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "lock evaluates its target once and releases through VOIDC's structured cleanup path on normal or exceptional exits.",
+    "code": "using Void;\nusing Void.Threading;\n\npublic sealed class Counter\n{\n    public int Value;\n}\n\nCounter counter = new Counter();\n\nThread worker = new Thread(() =>\n{\n    lock (counter)\n    {\n        counter.Value++;\n        GC.Collect();\n    }\n});\n\nworker.Start();\nworker.Join();"
+  },
+  "worker-exception-join": {
+    "title": "Worker exception handoff",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "An uncaught managed worker exception is preserved across worker teardown and rethrown by Join on the joining thread.",
+    "code": "using Void;\nusing Void.Threading;\n\nThread worker = new Thread(() =>\n{\n    throw new Exception(\"worker failed\");\n});\n\nworker.Start();\n\ntry\n{\n    worker.Join();\n}\ncatch (Exception error)\n{\n    Console.WriteLine(error.Message);\n}"
+  },
+  "threading-integration": {
+    "title": "Threading + GC + lock integration",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Managed workers, structured lock cleanup, and forced collection share one runtime model.",
+    "code": "using Void;\nusing Void.Threading;\n\npublic sealed class Counter\n{\n    public int Value;\n}\n\nCounter counter = new Counter();\n\nThread first = new Thread(() =>\n{\n    lock (counter)\n    {\n        counter.Value++;\n        GC.Collect();\n    }\n});\n\nThread second = new Thread(() =>\n{\n    lock (counter)\n    {\n        counter.Value++;\n    }\n});\n\nfirst.Start();\nsecond.Start();\nfirst.Join();\nsecond.Join();\n\nConsole.WriteLine(counter.Value == 2);"
+  },
 "standard-conversion-classification": {"title": "Standard conversion classification", "category": "Conversion semantics & generic conversions", "language": "VOID", "caption": "Identity, numeric, enum, reference/interface, null, nullable, and existing unsafe conversions are classified by one semantic conversion vocabulary.", "code": "int whole = 12;\nfloat widened = whole;\n\nPlayer player = new Player();\nEntity entity = player;\n\nint? optional = whole;\nEntity missing = null;"},
 "user-defined-conversion-resolution": {"title": "User-defined conversion resolution", "category": "Conversion semantics & generic conversions", "language": "VOID", "caption": "Implicit and explicit conversion operators use one applicability, accessibility, ambiguity, and surrounding-standard-conversion resolver.", "code": "public struct Meters\n{\n    public int Value;\n\n    public static implicit operator Meters(int value)\n    {\n        return new Meters { Value = value };\n    }\n\n    public static explicit operator int(Meters value)\n    {\n        return value.Value;\n    }\n}\n\nMeters distance = 12;\nint raw = (int)distance;"},
 "lifted-nullable-conversions": {"title": "Lifted nullable conversions", "category": "Conversion semantics & generic conversions", "language": "VOID", "caption": "User-defined value conversions lift through nullable values and preserve absence instead of manufacturing a value.", "code": "int? source = 12;\nMeters? converted = source;\n\nsource = null;\nconverted = source; // empty remains empty"},

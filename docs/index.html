@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID - Game Development Tools Without the Cage</title>
-<meta content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, runtime, GC, deterministic disposal, structured exceptions, unified conversion semantics, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling." name="description"/>
+<meta content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, managed threads, coordinated GC, structured synchronization and exceptions, deterministic disposal, unified conversion semantics, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/" rel="canonical"/>
 <link href="assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -22,7 +22,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID - Game Development Tools Without the Cage">
-<meta property="og:description" content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, runtime, GC, deterministic disposal, structured exceptions, unified conversion semantics, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling.">
+<meta property="og:description" content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, managed threads, coordinated GC, structured synchronization and exceptions, deterministic disposal, unified conversion semantics, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling.">
 <meta property="og:url" content="https://voidengine.net/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-hero.webp">
 <meta property="og:image:type" content="image/webp">
@@ -31,7 +31,7 @@
 <meta property="og:image:alt" content="VOID">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID - Game Development Tools Without the Cage">
-<meta name="twitter:description" content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, runtime, GC, deterministic disposal, structured exceptions, unified conversion semantics, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling.">
+<meta name="twitter:description" content="VOID is a growing game development ecosystem: a flexible .NET 2D engine and a C#-inspired native language with its own compiler, managed threads, coordinated GC, structured synchronization and exceptions, deterministic disposal, unified conversion semantics, advanced interface abstractions, direct C interoperability, and compiler-backed language-server tooling.">
 <meta name="twitter:image:alt" content="VOID">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-hero.webp">
 <script type="application/ld+json">
@@ -99,7 +99,7 @@
 <div>
 <p class="eyebrow">VOID</p>
 <h2>Language</h2>
-<p>A C#-inspired game development language with its own compiler, runtime, GC, deterministic disposal and using, structured exceptions, inferred generics, extension methods, advanced interface abstractions, native C output, reusable native library builds, direct C interoperability, and compiler-backed tooling.</p>
+<p>A C#-inspired game development language with its own compiler, runtime, managed threads, coordinated GC, monitors and <code>lock</code>, deterministic disposal and using, structured exceptions, inferred generics, extension methods, advanced interface abstractions, native C output, reusable native library builds, direct C interoperability, and compiler-backed tooling.</p>
 <span class="button-link">Explore Language</span>
 </div>
 </div>
@@ -152,7 +152,7 @@
 <div class="deep-art language-art"></div>
 <div class="deep-body">
 <div class="title-row"><img alt="" src="assets/images/icon-language.png"/><div><p class="eyebrow">VOID</p><h3>Language</h3></div></div>
-<p>A modern, C#-inspired language with its own compiler and runtime. Its working core combines a mature object model, deterministic lifetime, nested and readonly structs, rectangular arrays, closures and iterators, pattern matching and switch expressions, user-defined and constrained generic operators, unified and constrained generic conversions, inferred/constrained generics, extension methods, default/static interface methods, structured exceptions/finally, unsafe/native interop, native callbacks, and reusable native library output.</p>
+<p>A modern, C#-inspired language with its own compiler and runtime. Its working core combines a mature object model, deterministic lifetime, managed threads, recursive monitors and <code>lock</code>, cooperative stop-the-world GC, nested and readonly structs, rectangular arrays, closures and iterators, pattern matching and switch expressions, user-defined and constrained generic operators/conversions, inferred/constrained generics, extension methods, default/static interface methods, structured exceptions/finally, unsafe/native interop, native callbacks, and reusable native library output.</p>
 <ul class="check-list">
 <li>C#-inspired, developer-friendly syntax</li>
 <li>Compiles to C</li>
@@ -174,7 +174,7 @@
 </div>
 <div class="feature-grid">
 <article class="feature-tile reveal"><img alt="" src="assets/images/icon-engine.png"/><div><h3>Pluggable Renderer</h3><p>A rendering architecture that adapts to the backend your project needs.</p></div></article>
-<article class="feature-tile reveal"><img alt="" src="assets/images/icon-language.png"/><div><h3>Familiar Language Surface</h3><p>Deterministic disposal, nested and readonly structs, jagged/rectangular arrays, completed closures and iterators, structured exceptions, unified conversion semantics, inferred/constrained generics, extension methods, interface defaults, and familiar game-code ergonomics.</p></div></article>
+<article class="feature-tile reveal"><img alt="" src="assets/images/icon-language.png"/><div><h3>Familiar Language Surface</h3><p>Managed threads, recursive monitors and <code>lock</code>, coordinated GC, deterministic disposal, nested and readonly structs, jagged/rectangular arrays, completed closures and iterators, structured exceptions, unified conversion semantics, inferred/constrained generics, extension methods, interface defaults, and familiar game-code ergonomics.</p></div></article>
 <article class="feature-tile reveal"><div class="symbol-icon">C</div><div><h3>Compiles to C</h3><p>Portable output without requiring the .NET runtime.</p></div></article>
 <article class="feature-tile reveal"><div class="symbol-icon">◇</div><div><h3>Simplicity First</h3><p>Less framework friction and less unnecessary complexity.</p></div></article>
 <article class="feature-tile reveal"><div class="symbol-icon">C</div><div><h3>Native C Interop</h3><p>Pointers, native structs, by-reference callbacks, raw memory tools, stack allocation, project-local native dependencies, and reusable VOID library archives.</p></div></article>

@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Exceptions &amp; Runtime Control Flow</title>
-<meta content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, native/library boundaries, and recovery-safe static initialization." name="description"/>
+<meta content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, native/library boundaries, and recovery-safe static initialization." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/exceptions/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Exceptions &amp; Runtime Control Flow">
-<meta property="og:description" content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, native/library boundaries, and recovery-safe static initialization.">
+<meta property="og:description" content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, native/library boundaries, and recovery-safe static initialization.">
 <meta property="og:url" content="https://voidengine.net/language/exceptions/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Exceptions &amp; Runtime Control Flow">
-<meta name="twitter:description" content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, native/library boundaries, and recovery-safe static initialization.">
+<meta name="twitter:description" content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, native/library boundaries, and recovery-safe static initialization.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -61,13 +61,13 @@
 <nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav>
 </div>
 </header>
-<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a class="active" href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
+<div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a class="active" href="../exceptions/">Exceptions</a><a href="../threading/">Threading</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
 <main id="main">
 <section class="subpage-hero language-hero">
 <div class="shell subpage-copy reveal">
 <p class="kicker">VOID Language exceptions &amp; runtime control flow</p>
 <h1>Structured exceptions.<br/>Structured cleanup.</h1>
-<p>VOID now has a managed exception hierarchy, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally semantics, rethrow, and integration across iterators, delegates, events, native/library boundaries, and static initialization.</p>
+<p>VOID now has a managed exception hierarchy, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally semantics, rethrow, and integration across iterators, delegates, events, managed worker threads, native/library boundaries, and static initialization.</p>
 </div>
 </section>
 <section class="content-page"><div class="shell">
@@ -84,7 +84,7 @@
 <article class="content-card reveal"><h3>Structured exits</h3><p><code>return</code>, <code>break</code>, and <code>continue</code> cross one or more finally regions through the same structured cleanup machinery.</p></article>
 <article class="content-card reveal"><h3>Nested handlers &amp; rethrow</h3><p>Nested <code>try</code>/<code>catch</code>/<code>finally</code> regions compose normally. Bare <code>throw;</code> rethrows the active exception while preserving its identity.</p></article>
 <article class="content-card reveal"><h3>Iterator integration</h3><p>Thrown exceptions, handler regions, cleanup, and managed roots remain valid across iterator suspension/resume and <code>yield</code>-generated state machines.</p></article>
-<article class="content-card reveal"><h3>Delegates &amp; events</h3><p>Delegate, multicast-delegate, and event invocation propagate exceptions through the ordinary call/unwinding model while preserving managed targets.</p></article>
+<article class="content-card reveal"><h3>Delegates &amp; events</h3><p>Delegate, multicast-delegate, and event invocation propagate exceptions through the ordinary call/unwinding model while preserving managed targets.</p></article><article class="content-card reveal"><h3>Worker-thread handoff</h3><p>An unhandled exception escaping a managed worker is retained as a GC root, delivered by <code>Thread.Join()</code> after native join completion, and preserves its managed type, message, payload, and ordinary <code>finally</code>/<code>using</code>/<code>lock</code> cleanup.</p></article>
 <article class="content-card reveal"><h3>Native &amp; library boundaries</h3><p>Exception behavior is defined at native and reusable-library boundaries instead of allowing uncontrolled raw unwinding through C ABI frames. Boundary misuse receives focused diagnostics.</p></article>
 <article class="content-card reveal"><h3>Recovery-safe type initialization</h3><p>If static initialization throws, VOID restores the type-initialization state and GC-root checkpoint before rethrowing, allowing later use to retry through a clean runtime state.</p></article>
 </div>
@@ -157,7 +157,7 @@ catch (Exception error)
 }</code></pre>
 </div>
 <div class="page-actions reveal">
-<a class="primary-button" href="../examples/">Browse Exception Examples</a>
+<a class="primary-button" href="../examples/">Browse Exception Examples</a><a class="outline-button" href="../threading/">Threading</a>
 <a class="outline-button" href="../features/">All Features</a>
 <a class="outline-button" href="../lifetime/">Lifetime &amp; Using</a><a class="outline-button" href="../compiler/">Compiler</a>
 <a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../roadmap/">Roadmap</a>
