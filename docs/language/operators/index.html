@@ -1,5 +1,46 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>VOID Language Operators &amp; Generic Operator Contracts</title><meta content="VOID Language operator support: user-defined unary and binary operators, static interface operator contracts, constrained generic operator dispatch, compound paths, and iterator-safe generic operator provenance." name="description"/><meta content="#07060b" name="theme-color"/><link href="https://voidengine.net/language/operators/" rel="canonical"/><link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/><link href="../../assets/css/home.css?v=17" rel="stylesheet"/></head>
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>VOID Language Operators &amp; Generic Operator Contracts</title><meta content="VOID Language operator support: user-defined unary and binary operators, static interface operator contracts, constrained generic operator dispatch, compound paths, and iterator-safe generic operator provenance." name="description"/><meta content="#07060b" name="theme-color"/><link href="https://voidengine.net/language/operators/" rel="canonical"/><link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/><link href="../../assets/css/home.css?v=17" rel="stylesheet"/><meta property="og:type" content="website">
+<meta property="og:site_name" content="VOID">
+<meta property="og:title" content="VOID Language Operators &amp; Generic Operator Contracts">
+<meta property="og:description" content="VOID Language operator support: user-defined unary and binary operators, static interface operator contracts, constrained generic operator dispatch, compound paths, and iterator-safe generic operator provenance.">
+<meta property="og:url" content="https://voidengine.net/language/operators/">
+<meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
+<meta property="og:image:type" content="image/webp">
+<meta property="og:image:width" content="1672">
+<meta property="og:image:height" content="941">
+<meta property="og:image:alt" content="VOID Language">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VOID Language Operators &amp; Generic Operator Contracts">
+<meta name="twitter:description" content="VOID Language operator support: user-defined unary and binary operators, static interface operator contracts, constrained generic operator dispatch, compound paths, and iterator-safe generic operator provenance.">
+<meta name="twitter:image:alt" content="VOID Language">
+<meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://voidengine.net/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Language",
+      "item": "https://voidengine.net/language/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Operators",
+      "item": "https://voidengine.net/language/operators/"
+    }
+  ]
+}
+</script>
+</head>
 <body class="has-subnav has-tiered-subnav"><a class="skip-link" href="#main">Skip to content</a><header class="site-header" id="site-header"><div class="shell nav-wrap"><a aria-label="VOID home" class="brand" href="../../"><img alt="VOID" src="../../assets/images/void-logo.webp"/></a><button aria-expanded="false" aria-label="Open navigation" class="menu-button" type="button">☰</button><nav aria-label="Main navigation" class="nav-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a class="active" href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav></div></header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a class="active" href="../operators/">Operators</a><a href="../getting-started/">Getting Started</a></nav></div>
 <main id="main"><section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language operators</p><h1>Operators that compose.<br/>Generic math without runtime magic.</h1><p>VOID completes user-defined unary and binary operators through its normal overload/conversion machinery, then carries those contracts into static interfaces and constrained generic code that specializes to ordinary concrete operations.</p></div></section><section class="content-page"><div class="shell"><div class="section-heading reveal"><p class="kicker">Completed operator foundation</p><h2>One operator model from concrete types to constrained generics.</h2><p>Concrete operator declarations, static-interface requirements, constrained generic dispatch, compound targets, nullable/value interaction, and iterator lowering all reuse existing semantic binding. The compiler does not introduce a runtime generic operator dispatcher.</p></div>

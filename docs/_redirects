@@ -1,0 +1,13 @@
+# Legacy VOID Engine routes moved under /engine/.
+/features /engine/features/ 301
+/features/ /engine/features/ 301
+/features/* /engine/features/:splat 301
+/install /engine/install/ 301
+/install/ /engine/install/ 301
+/install/* /engine/install/:splat 301
+/philosophy /engine/philosophy/ 301
+/philosophy/ /engine/philosophy/ 301
+/philosophy/* /engine/philosophy/:splat 301
+/rendering /engine/rendering/ 301
+/rendering/ /engine/rendering/ 301
+/rendering/* /engine/rendering/:splat 301
