@@ -4,16 +4,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>VOID Language Examples</title>
-<meta content="Browse highlighted VOID Language examples for managed threading and synchronization, coordinated GC, structured lock, unified conversion semantics, constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, native interop, reusable libraries, and compiler tooling." name="description"/>
+<title>VOID Language Examples - Syntax, Threading &amp; Native Interop</title>
+<meta content="Browse focused VOID Language examples for everyday syntax, threading, synchronization, patterns, exceptions, native interop, libraries, and compiler tooling." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/examples/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
-<meta property="og:title" content="VOID Language Examples">
-<meta property="og:description" content="Browse highlighted VOID Language examples for managed threading and synchronization, coordinated GC, structured lock, unified conversion semantics, constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, native interop, reusable libraries, and compiler tooling.">
+<meta property="og:title" content="VOID Language Examples - Syntax, Threading &amp; Native Interop">
+<meta property="og:description" content="Browse focused VOID Language examples for everyday syntax, threading, synchronization, patterns, exceptions, native interop, libraries, and compiler tooling.">
 <meta property="og:url" content="https://voidengine.net/language/examples/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,8 +21,8 @@
 <meta property="og:image:height" content="941">
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="VOID Language Examples">
-<meta name="twitter:description" content="Browse highlighted VOID Language examples for managed threading and synchronization, coordinated GC, structured lock, unified conversion semantics, constrained generic conversions, operators, patterns, deterministic lifetime, structured exceptions, native interop, reusable libraries, and compiler tooling.">
+<meta name="twitter:title" content="VOID Language Examples - Syntax, Threading &amp; Native Interop">
+<meta name="twitter:description" content="Browse focused VOID Language examples for everyday syntax, threading, synchronization, patterns, exceptions, native interop, libraries, and compiler tooling.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -63,9 +63,9 @@
 </header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a href="../library/">Reference</a><a class="active" href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language</p><h1>Pick an example.<br/>See the language and tooling.</h1><p>The example browser covers the working language through completed managed threading, timed monitor waiting, atomic memory semantics, conversion/generic-dispatch, operator/iterator, pattern, deterministic-lifetime, exception/control-flow, surface-completion, object-model, value/control-flow, project-output, native interop, and compiler-tooling phases.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language</p><h1>Pick an example.<br/>See the language and tooling.</h1><p>The example browser is organized around focused behaviors rather than compiler milestones. Pick a topic, see a small piece of VOID code, and inspect how the language looks in practice.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Code browser</p><h2>One selector. One focused example at a time.</h2><p>Choose a threading/timed-wait/atomic, conversion/generic-dispatch, operator/iterator, pattern/switch-expression, lifetime/abstraction, exception/control-flow, surface-completion, object-model, value/control-flow, project/library, native, diagnostic, or compiler-tooling example. Examples reflect the public feature surface without exposing internal milestone numbering.</p></div>
+<div class="section-heading reveal"><p class="kicker">Code browser</p><h2>One selector. One focused example at a time.</h2><p>Use the selector to move between everyday language features, concurrency, native interop, project/library output, diagnostics, and compiler tooling. Each example stays narrow enough to show one idea clearly.</p></div>
 <div class="example-browser reveal" data-example-browser="">
 <div class="example-browser-bar"><div class="example-picker"><label for="void-example-select">Example</label><div class="example-select-wrap"><select class="example-select" data-example-select="" id="void-example-select"><optgroup label="Threading &amp; synchronization"><option value="managed-thread-lifecycle">Managed Thread start + join</option><option value="thread-closure-capture">Worker closure capture</option><option value="monitor-enter-exit">Monitor Enter / Exit</option><option value="lock-statement">Structured lock statement</option><option value="worker-exception-join">Worker exception handoff</option><option value="monitor-wait-pulse">Monitor Wait + PulseAll</option><option value="thread-sleep">Thread.Sleep</option><option value="timed-monitor-wait">Timed Monitor.Wait</option><option value="interlocked-integer">Interlocked integer operations</option><option value="volatile-read-write">Volatile Read / Write</option><option selected="" value="advanced-sync-integration">Waiting + atomics integration</option><option value="threading-integration">Threading + GC + lock integration</option></optgroup><optgroup label="Conversion semantics &amp; generic conversions"><option value="standard-conversion-classification">Standard conversion classification</option><option value="user-defined-conversion-resolution">User-defined conversion resolution</option><option value="lifted-nullable-conversions">Lifted nullable conversions</option><option value="conversion-site-integration">Target-typed conversion sites</option><option value="static-interface-conversions">Static interface conversion contracts</option><option value="constrained-implicit-conversions">Constrained generic implicit conversion</option><option value="constrained-explicit-conversions">Constrained generic explicit conversion</option><option value="generic-conversion-provenance">Generic conversion provenance</option><option value="conversion-iterator-closure-gc">Conversions through iterator, closure &amp; GC</option><option value="conversion-integration">Conversion semantics integration</option></optgroup><optgroup label="Iterator lifetime &amp; generic operators"><option value="iterator-pattern-capture">Iterator declaration-pattern capture</option><option value="iterator-switch-capture">Iterator switch/guard capture</option><option value="iterator-pattern-gc">Iterator pattern lifetime + GC</option><option value="iterator-state-audit">Iterator state-machine integration</option><option value="stable-diagnostics">Stable diagnostics</option><option value="unary-operators">Unary operators</option><option value="binary-operators">Binary operators</option><option value="static-interface-operators">Static interface operator contracts</option><option value="constrained-generic-operators">Constrained generic operator dispatch</option><option value="operator-integration">Iterator + generic operator integration</option></optgroup><optgroup label="Pattern matching &amp; control-flow expressions">
 <option value="declaration-patterns">Declaration patterns</option>
@@ -181,6 +181,6 @@ Console.WriteLine(counter.Value == 2);</code></pre></div>
 <div class="page-actions reveal"><a class="outline-button" href="../features/">All Features</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../conversions/">Conversions</a><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
 </div></section></main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/examples.js?v=13"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/examples.js?v=13"></script><script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>

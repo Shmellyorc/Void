@@ -29,6 +29,33 @@
     });
   }
 
+  const scrollingElement = document.scrollingElement || document.documentElement;
+  const scrollCue = document.createElement('button');
+  scrollCue.type = 'button';
+  scrollCue.className = 'page-scroll-cue';
+  scrollCue.setAttribute('aria-label', 'More content below');
+  scrollCue.title = 'More content below';
+  document.body.appendChild(scrollCue);
+
+  const updateScrollCue = () => {
+    const pageHeight = scrollingElement.scrollHeight;
+    const viewportBottom = window.scrollY + window.innerHeight;
+    const hasMore = pageHeight > window.innerHeight + 140 && viewportBottom < pageHeight - 90;
+    scrollCue.classList.toggle('visible', hasMore);
+  };
+
+  scrollCue.addEventListener('click', () => {
+    window.scrollBy({
+      top: Math.max(320, window.innerHeight * 0.72),
+      behavior: reduceMotion ? 'auto' : 'smooth'
+    });
+  });
+
+  updateScrollCue();
+  window.addEventListener('scroll', updateScrollCue, { passive: true });
+  window.addEventListener('resize', updateScrollCue, { passive: true });
+  window.addEventListener('load', updateScrollCue, { once: true });
+
   document.querySelectorAll('[data-copy]').forEach((button) => {
     button.addEventListener('click', async () => {
       const target = document.getElementById(button.dataset.copy);
@@ -53,7 +80,6 @@
     privacy.dataset.privacyLink = '';
     footer.appendChild(privacy);
   });
-
 
   if (script && !document.querySelector('script[data-void-preferences]')) {
     const preferences = document.createElement('script');

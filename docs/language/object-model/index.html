@@ -5,15 +5,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Object Model</title>
-<meta content="VOID Language object model: constructor chaining/delegation, interface inheritance, struct interfaces, static interface properties/events/methods, constrained static dispatch, default interface methods, virtual properties, events, delegates, generics, and conditional expressions." name="description"/>
+<meta content="Explore VOID&#x27;s object model: classes, structs, interfaces, constructor chaining, virtual properties, delegates, events, generics, and interface contracts." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/object-model/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Object Model">
-<meta property="og:description" content="VOID Language object model: constructor chaining/delegation, interface inheritance, struct interfaces, static interface properties/events/methods, constrained static dispatch, default interface methods, virtual properties, events, delegates, generics, and conditional expressions.">
+<meta property="og:description" content="Explore VOID&#x27;s object model: classes, structs, interfaces, constructor chaining, virtual properties, delegates, events, generics, and interface contracts.">
 <meta property="og:url" content="https://voidengine.net/language/object-model/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Object Model">
-<meta name="twitter:description" content="VOID Language object model: constructor chaining/delegation, interface inheritance, struct interfaces, static interface properties/events/methods, constrained static dispatch, default interface methods, virtual properties, events, delegates, generics, and conditional expressions.">
+<meta name="twitter:description" content="Explore VOID&#x27;s object model: classes, structs, interfaces, constructor chaining, virtual properties, delegates, events, generics, and interface contracts.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -63,9 +63,9 @@
 </header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a class="active" href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../threading/">Threading</a><a href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language object model</p><h1>Familiar object semantics.<br/>One coherent model.</h1><p>VOID’s object model now composes constructor chaining, inherited interface contracts, value types through interfaces, virtual properties, events, delegates, static interface method contracts, constrained static calls, default interface methods, and target-typed conditional expressions in normal multi-file programs.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language object model</p><h1>Familiar object semantics.<br/>One coherent model.</h1><p>VOID&apos;s object model is designed to behave like one system. Construction, inheritance, interfaces, virtual dispatch, delegates, events, and generic contracts are resolved by the same compiler rules and continue to work when value types and GC enter the picture.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Completed object-model foundation</p><h2>Built to work together, not as isolated syntax.</h2><p>The object-model completion pass was closed with a multi-file integration project that exercised construction, dispatch, interfaces, events, delegates, conditional expressions, boxing, and GC behavior together through the normal check/build/run/publish path.</p></div>
+<div class="section-heading reveal"><p class="kicker">Completed object-model foundation</p><h2>Built to work together, not as isolated syntax.</h2><p>Rather than validating each feature in isolation, the compiler is exercised through normal multi-file programs where construction, dispatch, generic contracts, value/reference boundaries, and GC all interact. The goal is predictable composition, not a syntax checklist.</p></div>
 <div class="content-grid">
 <article class="content-card reveal"><h3>Constructor chains</h3><p>Derived constructors can select base constructors with <code>: base(...)</code>, while same-type constructors can delegate through <code>: this(...)</code>. Delegation preserves the intended initializer and constructor ordering.</p></article>
 <article class="content-card reveal"><h3>Interface inheritance</h3><p>Interfaces can inherit other interfaces, and a concrete value exposes the combined inherited contract through normal assignment and dispatch.</p></article><article class="content-card reveal"><h3>Static interface contracts</h3><p>Interfaces can require public static properties and events without owning storage. Classes or structs satisfy those contracts with matching static members, including inherited and diamond-interface cases, while access remains through the implementing type.</p></article>
@@ -78,11 +78,11 @@
 <article class="content-card reveal"><h3>Static interface methods</h3><p>Interfaces can require public static methods as compile-time contracts. Concrete classes and structs provide ordinary static implementations without interface-owned storage.</p></article>
 <article class="content-card reveal"><h3>Constrained static dispatch</h3><p>Generic code can call required static interface members through a constrained type parameter, then monomorphization resolves the call to the concrete static implementation.</p></article>
 <article class="content-card reveal"><h3>Default interface methods</h3><p>Interface methods may provide bodies. Concrete implementations win; inherited defaults act as fallbacks; ambiguous inherited defaults receive focused diagnostics.</p></article></div>
-<section class="editorial-block reveal"><div><p class="kicker">Representative composition</p><h2>One object can participate in the whole model.</h2></div><p>A derived actor can delegate one constructor into another, chain into a base constructor, dispatch a property through a base reference, satisfy inherited instance/static interface contracts, publish field-like or custom-accessor events, use expression-bodied members, obey generic constraints, perform explicit generic calls through normal receivers, and participate in target-typed conditionals next to value types implementing the same interfaces.</p></section>
+<section class="editorial-block reveal"><div><p class="kicker">Representative composition</p><h2>One object can participate in the whole model.</h2></div><p>A real type rarely uses one language feature at a time. A game object might inherit behavior, satisfy interfaces, publish events, use generic helpers, and cross interface/value boundaries in the same frame. VOID&apos;s object model is tested around that kind of composition so adding one abstraction does not silently change another.</p></section>
 <div class="page-actions reveal"><a class="primary-button" href="../examples/">Browse Object-Model Examples</a><a class="outline-button" href="../features/">All Features</a><a class="outline-button" href="../value-types/">Value Types</a><a class="outline-button" href="../patterns/">Patterns</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../conversions/">Conversions</a><a class="outline-button" href="../roadmap/">Roadmap</a><a class="outline-button" href="../exceptions/">Exceptions</a><a class="outline-button" href="../lifetime/">Lifetime</a></div>
 </div></section>
 </main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>

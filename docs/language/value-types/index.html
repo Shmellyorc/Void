@@ -4,16 +4,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>VOID Language Value Types &amp; Control Flow</title>
-<meta content="VOID Language value types and control flow: nested/readonly structs, jagged and rectangular arrays with explicit or inferred initializer shapes, null-conditional array access, closure frames, iterator control flow, compound targets, and GC-aware value semantics." name="description"/>
+<title>VOID Language Value Types, Arrays &amp; Control Flow</title>
+<meta content="Learn how VOID handles nested and readonly structs, jagged and rectangular arrays, closures, iterators, compound targets, and GC-aware value semantics." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/value-types/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
-<meta property="og:title" content="VOID Language Value Types &amp; Control Flow">
-<meta property="og:description" content="VOID Language value types and control flow: nested/readonly structs, jagged and rectangular arrays with explicit or inferred initializer shapes, null-conditional array access, closure frames, iterator control flow, compound targets, and GC-aware value semantics.">
+<meta property="og:title" content="VOID Language Value Types, Arrays &amp; Control Flow">
+<meta property="og:description" content="Learn how VOID handles nested and readonly structs, jagged and rectangular arrays, closures, iterators, compound targets, and GC-aware value semantics.">
 <meta property="og:url" content="https://voidengine.net/language/value-types/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,8 +21,8 @@
 <meta property="og:image:height" content="941">
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="VOID Language Value Types &amp; Control Flow">
-<meta name="twitter:description" content="VOID Language value types and control flow: nested/readonly structs, jagged and rectangular arrays with explicit or inferred initializer shapes, null-conditional array access, closure frames, iterator control flow, compound targets, and GC-aware value semantics.">
+<meta name="twitter:title" content="VOID Language Value Types, Arrays &amp; Control Flow">
+<meta name="twitter:description" content="Learn how VOID handles nested and readonly structs, jagged and rectangular arrays, closures, iterators, compound targets, and GC-aware value semantics.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -66,13 +66,13 @@
 <section class="subpage-hero language-hero"><div class="shell subpage-copy reveal">
 <p class="kicker">VOID Language value types &amp; control flow</p>
 <h1>Value types that compose.<br/>Control flow that holds up.</h1>
-<p>VOID now handles nested and readonly value layouts, jagged and rectangular arrays, null-conditional indexing, explicit and inferred rectangular initializers, escaped closures, richer iterator state machines, compound targets, and managed references across those features as one coherent language/runtime surface.</p>
+<p>VOID keeps value semantics predictable even when structs become part of larger managed systems. Nested and readonly values can move through arrays, closures, iterators, nullable storage, and GC-traced layouts without turning into special cases.</p>
 </div></section>
 <section class="content-page"><div class="shell">
 <div class="section-heading reveal">
 <p class="kicker">Completed value-type &amp; control-flow foundation</p>
 <h2>Everyday game code without the old deferred walls.</h2>
-<p>The completed integration pass combines value layouts, arrays, closures, iterators, unsafe members, compound targets, and forced GC in one normal multi-file project through check, build, run, and publish.</p>
+<p>Value types are easy in isolation; the difficult part is preserving copying, mutability, lifetime, and managed references when they pass through the rest of the language. VOID&apos;s integration work focuses on those crossings.</p>
 </div>
 <div class="content-grid">
 <article class="content-card reveal"><h3>Nested value structs</h3><p>Structs can contain other value structs normally. Layout, default values, copying, generics, arrays, nullable wrappers, static storage, and recursive GC tracing all understand nested value layouts.</p></article>
@@ -89,7 +89,7 @@
 <section class="editorial-block reveal"><div>
 <p class="kicker">Integrated behavior</p>
 <h2>The hard part is the composition.</h2></div>
-<p>A readonly struct can sit inside a nested mutable value layout that contains a managed object, move through jagged or rectangular arrays, escape through a closure, survive iterator suspension and forced GC, then participate in compound indexer updates in the same project. The completed integration pass proves those paths together rather than as isolated syntax demos.</p>
+<p>The compiler has to preserve value semantics even when a struct is nested, captured, suspended by an iterator, stored in arrays, or contains managed references. Those combinations are exercised together because that is where hidden copying and rooting mistakes tend to appear.</p>
 </section>
 <div class="page-actions reveal">
 <a class="primary-button" href="../examples/">Browse Value-Type Examples</a>
@@ -100,6 +100,6 @@
 </div></section>
 </main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>

@@ -4,15 +4,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Pattern Matching &amp; Switch Expressions</title>
-<meta content="VOID Language pattern matching: declaration, constant/null, relational, logical, property and recursive patterns, pattern switch statements, when guards, deterministic first-match ordering, and switch expressions." name="description"/>
+<meta content="Explore VOID pattern matching with declaration, relational, logical, property, and recursive patterns, guarded switch cases, and switch expressions." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/patterns/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Pattern Matching &amp; Switch Expressions">
-<meta property="og:description" content="VOID Language pattern matching: declaration, constant/null, relational, logical, property and recursive patterns, pattern switch statements, when guards, deterministic first-match ordering, and switch expressions.">
+<meta property="og:description" content="Explore VOID pattern matching with declaration, relational, logical, property, and recursive patterns, guarded switch cases, and switch expressions.">
 <meta property="og:url" content="https://voidengine.net/language/patterns/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Pattern Matching &amp; Switch Expressions">
-<meta name="twitter:description" content="VOID Language pattern matching: declaration, constant/null, relational, logical, property and recursive patterns, pattern switch statements, when guards, deterministic first-match ordering, and switch expressions.">
+<meta name="twitter:description" content="Explore VOID pattern matching with declaration, relational, logical, property, and recursive patterns, guarded switch cases, and switch expressions.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -60,9 +60,9 @@
 </div></header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../threading/">Threading</a><a href="../lifetime/">Lifetime</a><a class="active" href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language patterns</p><h1>Match structure.<br/>Keep control flow readable.</h1><p>VOID pattern matching now covers type/declaration, constant/null, relational, logical, property, and recursive patterns, then carries the same semantics into switch cases, guarded cases, and expression-form switch.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language patterns</p><h1>Match structure.<br/>Keep control flow readable.</h1><p>Pattern matching extends ordinary type and property semantics into readable control flow. The same matcher powers <code>is</code>, switch cases, guards, and switch expressions so the rules do not change with the syntax.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Completed pattern-matching foundation</p><h2>Flow-sensitive matching built on the type system already underneath VOID.</h2><p>Patterns reuse normal type relationships, conversions, property access, definite assignment, short-circuiting, interface/value semantics, and GC-safe temporaries. Switch patterns and switch expressions build on the same matcher instead of introducing separate pattern rules.</p></div>
+<div class="section-heading reveal"><p class="kicker">Completed pattern-matching foundation</p><h2>Flow-sensitive matching built on the type system already underneath VOID.</h2><p>Patterns are flow-sensitive, but they do not get a separate type system. They reuse ordinary type relationships, property access, definite assignment, and short-circuiting, while switch forms build on the same matcher.</p></div>
 <div class="content-grid">
 <article class="content-card reveal"><h3>Declaration patterns</h3><p><code>value is Type name</code> narrows the matched value and introduces a pattern local only where the match establishes it as definitely assigned.</p></article>
 <article class="content-card reveal"><h3>Constant &amp; null patterns</h3><p>Constants and <code>null</code> flow through the same pattern machinery, so they compose naturally with logical and switch patterns.</p></article>
@@ -113,5 +113,5 @@ string state = actor switch
 </div></section>
 </main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=11"></script>
 </body></html>

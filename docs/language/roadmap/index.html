@@ -5,15 +5,15 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Roadmap</title>
-<meta content="VOID Language roadmap: timed synchronization, wait primitives, and cooperative cancellation are complete. The active phase builds a managed ThreadPool, Task and Task&lt;T&gt;, scheduling, waiting, cancellation, continuations, and completion sources before async/await lowering." name="description"/>
+<meta content="Follow the VOID Language roadmap from completed synchronization and cancellation work into the active ThreadPool and Task foundation before async/await lowering." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/roadmap/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Roadmap">
-<meta property="og:description" content="VOID Language roadmap: timed synchronization, wait primitives, and cooperative cancellation are complete. The active phase builds a managed ThreadPool, Task and Task&lt;T&gt;, scheduling, waiting, cancellation, continuations, and completion sources before async/await lowering.">
+<meta property="og:description" content="Follow the VOID Language roadmap from completed synchronization and cancellation work into the active ThreadPool and Task foundation before async/await lowering.">
 <meta property="og:url" content="https://voidengine.net/language/roadmap/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Roadmap">
-<meta name="twitter:description" content="VOID Language roadmap: timed synchronization, wait primitives, and cooperative cancellation are complete. The active phase builds a managed ThreadPool, Task and Task&lt;T&gt;, scheduling, waiting, cancellation, continuations, and completion sources before async/await lowering.">
+<meta name="twitter:description" content="Follow the VOID Language roadmap from completed synchronization and cancellation work into the active ThreadPool and Task foundation before async/await lowering.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -96,6 +96,6 @@
 <section class="editorial-block reveal"><div><p class="kicker">What changed</p><h2>Timing and cancellation now sit underneath the scheduler.</h2></div><p>VOID now has monotonic timed waits, managed sleep, reset events, semaphores, and cooperative cancellation on the same runtime foundation as threads, monitors, atomics, exceptions, cleanup, and GC. The next block can build ThreadPool and Tasks as ordinary managed abstractions, then let future <code>async</code>/<code>await</code> lowering target those mechanisms instead of inventing a separate scheduler or lifetime model.</p></section>
 </div></section></main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>

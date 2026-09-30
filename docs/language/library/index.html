@@ -4,16 +4,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>VOID Language Libraries</title>
-<meta content="VOID Language libraries: standard-library generic collections plus reusable native static-library project output with exported C symbols, reachability, static initialization, GC roots, and VOID/C consumers." name="description"/>
+<title>VOID Language Libraries &amp; Native Library Output</title>
+<meta content="Explore VOID libraries and collections, including generic standard-library types, reusable native static-library output, exported C symbols, and consumer linking." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/library/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
-<meta property="og:title" content="VOID Language Libraries">
-<meta property="og:description" content="VOID Language libraries: standard-library generic collections plus reusable native static-library project output with exported C symbols, reachability, static initialization, GC roots, and VOID/C consumers.">
+<meta property="og:title" content="VOID Language Libraries &amp; Native Library Output">
+<meta property="og:description" content="Explore VOID libraries and collections, including generic standard-library types, reusable native static-library output, exported C symbols, and consumer linking.">
 <meta property="og:url" content="https://voidengine.net/language/library/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,8 +21,8 @@
 <meta property="og:image:height" content="941">
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="VOID Language Libraries">
-<meta name="twitter:description" content="VOID Language libraries: standard-library generic collections plus reusable native static-library project output with exported C symbols, reachability, static initialization, GC roots, and VOID/C consumers.">
+<meta name="twitter:title" content="VOID Language Libraries &amp; Native Library Output">
+<meta name="twitter:description" content="Explore VOID libraries and collections, including generic standard-library types, reusable native static-library output, exported C symbols, and consumer linking.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -71,7 +71,7 @@
 <main id="main">
 <section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Libraries</p><h1>Use the library.<br/>Build your own.</h1><p>The standard library is written in VOID, and project library output can now package your own VOID code as a native static archive with stable exported C entry points.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Collections built on the language, not hidden compiler magic.</h2><p>The standard library uses VOID generics, interfaces, hashing/equality, enumeration, GC-managed references, and ordinary method binding. Collection initializer syntax lowers through normal <code>Add(...)</code> calls rather than a separate runtime path.</p></div>
+<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Collections built on the language, not hidden compiler magic.</h2><p>The collections are ordinary VOID code. They depend on the same generics, interfaces, enumeration, equality, and GC semantics available to user projects, so the standard library proves the language instead of hiding special compiler behavior.</p></div>
 <div class="library-grid">
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>List&lt;T&gt;</code></h3><p>Resizable generic sequence with indexing, enumeration, managed-element tracing, and collection initializer support.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Queue&lt;T&gt;</code></h3><p>FIFO storage built as normal generic library code.</p></article>
@@ -92,7 +92,7 @@
     [Native("void_math_add")]
     public static unsafe extern int Add(int left, int right);
 }</code></pre></div></div>
-<section class="editorial-block reveal" id="project-libraries"><div><p class="kicker">Project libraries</p><h2>VOID projects can ship as native archives.</h2></div><p>Set a project to <code>"output": "library"</code> and <code>voidc build</code> produces <code>bin/lib&lt;ProjectName&gt;.a</code>; publish produces the matching archive under <code>publish/</code>. Public static methods marked with <code>[Export("symbol")]</code> seed normal reachability, keep their stable native symbol, and reuse the existing scalar/string/pointer/native-struct and <code>ref/out/in</code> ABI. Library static initialization and managed static GC roots persist across repeated exported calls.</p></section><section class="editorial-block reveal"><div><p class="kicker">Initialization &amp; GC</p><h2>Collections participate in the completed initialization model.</h2></div><p>Arrays and collections can be populated inline, stored in initialized instance/static members, contain nullable or managed values, and remain reachable through managed static GC roots. The language-completion integration regression exercises these paths together rather than as isolated syntax tests.</p></section>
+<section class="editorial-block reveal" id="project-libraries"><div><p class="kicker">Project libraries</p><h2>VOID projects can ship as native archives.</h2></div><p>Setting <code>"output": "library"</code> turns the normal build pipeline into a native static archive. <code>[Export]</code> gives selected public static methods stable C entry points, while initialization and managed static roots continue to use normal VOID runtime rules across repeated calls.</p></section><section class="editorial-block reveal"><div><p class="kicker">Initialization &amp; GC</p><h2>Collections participate in the completed initialization model.</h2></div><p>Arrays and collections can be populated inline, stored in initialized instance/static members, contain nullable or managed values, and remain reachable through managed static GC roots. The language-completion integration regression exercises these paths together rather than as isolated syntax tests.</p></section>
 <div class="code-block-preview reveal"><div class="code-head">Collection initializer</div><pre><code class="void-syntax" data-void-code="">Dictionary&lt;string, int&gt; scores = new()
 {
     { "Alpha", 10 },
@@ -115,6 +115,6 @@ List&lt;Node&gt; nodes = new()
 </footer>
 <script src="../../assets/js/home.js?v=3"></script>
 <script src="../../assets/js/syntax.js?v=2"></script>
-<script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>

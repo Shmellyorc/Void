@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>VOID Language Deterministic Lifetime &amp; Advanced Abstractions</title>
-<meta content="VOID Language deterministic lifetime and advanced abstractions: IDisposable, iterator and foreach disposal, using statements/declarations, generic method inference, extension methods, static interface contracts, constrained static calls, and default interface methods." name="description"/>
+<title>VOID Language Lifetime, IDisposable &amp; Using</title>
+<meta content="Learn how VOID combines IDisposable, using, iterator cleanup, exceptions, generic inference, extension methods, and interface abstractions through shared semantics." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/lifetime/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
-<meta property="og:title" content="VOID Language Deterministic Lifetime &amp; Advanced Abstractions">
-<meta property="og:description" content="VOID Language deterministic lifetime and advanced abstractions: IDisposable, iterator and foreach disposal, using statements/declarations, generic method inference, extension methods, static interface contracts, constrained static calls, and default interface methods.">
+<meta property="og:title" content="VOID Language Lifetime, IDisposable &amp; Using">
+<meta property="og:description" content="Learn how VOID combines IDisposable, using, iterator cleanup, exceptions, generic inference, extension methods, and interface abstractions through shared semantics.">
 <meta property="og:url" content="https://voidengine.net/language/lifetime/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -20,8 +20,8 @@
 <meta property="og:image:height" content="941">
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="VOID Language Deterministic Lifetime &amp; Advanced Abstractions">
-<meta name="twitter:description" content="VOID Language deterministic lifetime and advanced abstractions: IDisposable, iterator and foreach disposal, using statements/declarations, generic method inference, extension methods, static interface contracts, constrained static calls, and default interface methods.">
+<meta name="twitter:title" content="VOID Language Lifetime, IDisposable &amp; Using">
+<meta name="twitter:description" content="Learn how VOID combines IDisposable, using, iterator cleanup, exceptions, generic inference, extension methods, and interface abstractions through shared semantics.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -60,7 +60,7 @@
 </div></header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../threading/">Threading</a><a class="active" href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language lifetime &amp; abstractions</p><h1>Deterministic cleanup.<br/>Powerful abstractions.</h1><p>VOID now combines <code>IDisposable</code>, iterator and foreach disposal, using statements/declarations, generic method inference, extension methods, static interface contracts, constrained static calls, and default interface methods without adding a second lifetime or dispatch system.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language lifetime &amp; abstractions</p><h1>Deterministic cleanup.<br/>Powerful abstractions.</h1><p>VOID treats resource cleanup as structured control flow. <code>IDisposable</code>, <code>using</code>, iterator disposal, exceptions, and <code>finally</code> share one cleanup model, while inference and interface abstractions reuse the same call and dispatch machinery already underneath the language.</p></div></section>
 <section class="content-page"><div class="shell">
 <div class="section-heading reveal"><p class="kicker">Completed lifetime &amp; abstraction foundation</p><h2>Cleanup and abstraction reuse the machinery already underneath VOID.</h2><p>Disposal lowers through the same structured cleanup model built for exceptions and <code>finally</code>. Generic inference and extension methods reuse normal overload resolution. Static/default interface methods extend the existing interface model rather than introducing a parallel runtime representation.</p></div>
 <div class="content-grid">
@@ -121,5 +121,5 @@ public static T Build&lt;T, TFactory&gt;()
 </div></section>
 </main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=2"></script><script src="../../assets/js/site.js?v=11"></script>
 </body></html>

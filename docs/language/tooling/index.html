@@ -4,16 +4,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>VOID Language Compiler Tooling</title>
-<meta content="VOID compiler tooling includes ranged and live diagnostics, voidc check, semantic queries, native debug/source mapping, hover, signature help, semantic completion, navigation, references, document/workspace symbols, and synchronized multi-file LSP state." name="description"/>
+<title>VOID Language Tooling &amp; LSP</title>
+<meta content="Explore VOID compiler tooling: source-only checking, precise diagnostics, hover, completion, navigation, references, symbols, and synchronized multi-file LSP state." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/tooling/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
-<link href="../../assets/css/home.css?v=17" rel="stylesheet"/>
+<link href="../../assets/css/home.css?v=18" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
-<meta property="og:title" content="VOID Language Compiler Tooling">
-<meta property="og:description" content="VOID compiler tooling includes ranged and live diagnostics, voidc check, semantic queries, native debug/source mapping, hover, signature help, semantic completion, navigation, references, document/workspace symbols, and synchronized multi-file LSP state.">
+<meta property="og:title" content="VOID Language Tooling &amp; LSP">
+<meta property="og:description" content="Explore VOID compiler tooling: source-only checking, precise diagnostics, hover, completion, navigation, references, symbols, and synchronized multi-file LSP state.">
 <meta property="og:url" content="https://voidengine.net/language/tooling/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,8 +21,8 @@
 <meta property="og:image:height" content="941">
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="VOID Language Compiler Tooling">
-<meta name="twitter:description" content="VOID compiler tooling includes ranged and live diagnostics, voidc check, semantic queries, native debug/source mapping, hover, signature help, semantic completion, navigation, references, document/workspace symbols, and synchronized multi-file LSP state.">
+<meta name="twitter:title" content="VOID Language Tooling &amp; LSP">
+<meta name="twitter:description" content="Explore VOID compiler tooling: source-only checking, precise diagnostics, hover, completion, navigation, references, symbols, and synchronized multi-file LSP state.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -63,7 +63,7 @@
 </header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language reference pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Reference</span><a href="../library/">Library</a><a href="../compiler/">Compiler</a><a href="../diagnostics/">Diagnostics</a><a class="active" href="../tooling/">Tooling</a><a href="../native/">Native</a><a href="../design/">Design</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Tooling</p><h1>Compiler-owned intelligence.<br/>A complete language-server foundation.</h1><p><code>voidc</code> now carries the same compiler semantics from command-line checking into live editor diagnostics, hover, signature help, completion, navigation, references, symbols, and synchronized multi-file unsaved state.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Tooling</p><h1>Compiler-owned intelligence.</h1><p><code>voidc</code> is the source of truth for both builds and editor features. The language server asks the compiler for types, symbols, calls, and diagnostics, so unsaved editor state is analyzed with the same rules as real source.</p></div></section>
 <section class="content-page"><div class="shell">
 <div class="section-heading reveal"><p class="kicker">Tooling block complete</p><h2>The editor-facing stack lives inside <code>voidc</code>.</h2><p>The language server does not duplicate parsing, type checking, overload resolution, access rules, or project discovery. It asks the compiler the same questions normal compilation already knows how to answer.</p></div>
 <div class="status-list">
@@ -89,10 +89,10 @@ definition
 references
 documentSymbol
 workspace/symbol</code></pre></div>
-<section class="editorial-block reveal"><div><p class="kicker">What comes next</p><h2>Tooling is stable enough to return to the language.</h2></div><p>The next public roadmap phase closes remaining object-model and language gaps: constructor chaining/delegation, interface inheritance, struct interface implementation, virtual properties, event/delegate completion, and the conditional expression. A future VS Code extension can stay thin because the language intelligence already lives in <code>voidc lsp</code>.</p></section>
+<section class="editorial-block reveal"><div><p class="kicker">Why this matters</p><h2>Editor clients can stay thin.</h2></div><p>Because the language intelligence already lives in <code>voidc lsp</code>, an editor extension only needs to handle connection, language registration, UI integration, and packaging. It does not need its own parser, binder, or project model.</p></section>
 <div class="page-actions reveal"><a class="outline-button" href="../diagnostics/">Diagnostics</a><a class="outline-button" href="../examples/">Tooling Examples</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
 </div></section></main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=10"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>
