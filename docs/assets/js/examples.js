@@ -34,6 +34,34 @@ window.VOID_EXAMPLES = {
     "caption": "An uncaught managed worker exception is preserved across worker teardown and rethrown by Join on the joining thread.",
     "code": "using Void;\nusing Void.Threading;\n\nThread worker = new Thread(() =>\n{\n    throw new Exception(\"worker failed\");\n});\n\nworker.Start();\n\ntry\n{\n    worker.Join();\n}\ncatch (Exception error)\n{\n    Console.WriteLine(error.Message);\n}"
   },
+  "monitor-wait-pulse": {
+    "title": "Monitor Wait + PulseAll",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Monitor.Wait fully releases recursive ownership while blocked, stays GC-safe, and reacquires the same recursion depth; Pulse/PulseAll notify waiters without transferring ownership immediately.",
+    "code": "using Void;\nusing Void.Threading;\n\npublic sealed class Gate\n{\n    public bool Ready;\n}\n\nGate gate = new Gate();\nThread worker = new Thread(() =>\n{\n    lock (gate)\n    {\n        while (!gate.Ready)\n            Monitor.Wait(gate);\n    }\n});\n\nworker.Start();\nlock (gate)\n{\n    gate.Ready = true;\n    Monitor.PulseAll(gate);\n}\nworker.Join();"
+  },
+  "interlocked-integer": {
+    "title": "Interlocked integer operations",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Interlocked increment, decrement, add, exchange, and compare-exchange use true runtime-owned atomics rather than hidden monitor locks.",
+    "code": "using Void;\nusing Void.Threading;\n\nint value = 0;\nInterlocked.Increment(ref value);\nInterlocked.Add(ref value, 4);\nint old = Interlocked.Exchange(ref value, 10);\nint seen = Interlocked.CompareExchange(ref value, 20, 10);\n\nConsole.WriteLine(old == 5);\nConsole.WriteLine(seen == 10);\nConsole.WriteLine(value == 20);"
+  },
+  "volatile-read-write": {
+    "title": "Volatile Read / Write",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Volatile.Read provides acquire semantics and Volatile.Write provides release semantics for supported primitive and managed-reference values.",
+    "code": "using Void;\nusing Void.Threading;\n\nint published = 0;\nVolatile.Write(ref published, 1);\nint observed = Volatile.Read(ref published);\n\nConsole.WriteLine(observed == 1);"
+  },
+  "advanced-sync-integration": {
+    "title": "Waiting + atomics integration",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Condition waiting, Interlocked, Volatile, managed workers, closures, structured lock cleanup, and forced GC compose through the same runtime instead of parallel synchronization paths.",
+    "code": "using Void;\nusing Void.Threading;\n\npublic sealed class Shared\n{\n    public bool Ready;\n    public int Completed;\n}\n\nShared shared = new Shared();\nThread worker = new Thread(() =>\n{\n    lock (shared)\n    {\n        while (!shared.Ready)\n            Monitor.Wait(shared);\n    }\n\n    Interlocked.Increment(ref shared.Completed);\n    GC.Collect();\n});\n\nworker.Start();\nlock (shared)\n{\n    shared.Ready = true;\n    Monitor.PulseAll(shared);\n}\nworker.Join();\n\nConsole.WriteLine(shared.Completed == 1);"
+  },
   "threading-integration": {
     "title": "Threading + GC + lock integration",
     "category": "Threading & synchronization",
