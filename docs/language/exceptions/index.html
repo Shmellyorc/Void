@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Exceptions &amp; Runtime Control Flow</title>
-<meta content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, native/library boundaries, and recovery-safe static initialization." name="description"/>
+<meta content="VOID Language exceptions and runtime control flow: managed Exception types, OperationCanceledException, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, cancellation wakeups, native/library boundaries, and recovery-safe static initialization." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/exceptions/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Exceptions &amp; Runtime Control Flow">
-<meta property="og:description" content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, native/library boundaries, and recovery-safe static initialization.">
+<meta property="og:description" content="VOID Language exceptions and runtime control flow: managed Exception types, OperationCanceledException, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, cancellation wakeups, native/library boundaries, and recovery-safe static initialization.">
 <meta property="og:url" content="https://voidengine.net/language/exceptions/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Exceptions &amp; Runtime Control Flow">
-<meta name="twitter:description" content="VOID Language exceptions and runtime control flow: managed Exception types, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, native/library boundaries, and recovery-safe static initialization.">
+<meta name="twitter:description" content="VOID Language exceptions and runtime control flow: managed Exception types, OperationCanceledException, throw, typed and catch-all handlers, cross-call propagation, GC-safe unwinding, finally, structured exits, rethrow, iterator/delegate integration, worker-thread exception handoff, cancellation wakeups, native/library boundaries, and recovery-safe static initialization.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -78,13 +78,13 @@
 </div>
 <div class="content-grid">
 <article class="content-card reveal"><h3>Managed exception objects</h3><p>The standard <code>Exception</code> class is an ordinary managed type with default/message constructors, inheritance, runtime type identity, and GC tracing. User exceptions derive from it normally.</p></article>
-<article class="content-card reveal"><h3>Throw &amp; catch</h3><p><code>throw expression;</code>, typed catches, catch variables, catch-all handlers, and derived-to-base handler ordering are supported through normal semantic validation.</p></article>
+<article class="content-card reveal"><h3>Throw &amp; catch</h3><p><code>throw expression;</code>, typed catches, catch variables, catch-all handlers, and derived-to-base handler ordering are supported through normal semantic validation. Cooperative cancellation uses managed <code>OperationCanceledException</code> rather than a separate error channel.</p></article>
 <article class="content-card reveal"><h3>Propagation &amp; GC unwinding</h3><p>Exceptions propagate across call frames while unwinding restores managed-root checkpoints and preserves the thrown exception object for the selected handler.</p></article>
 <article class="content-card reveal"><h3>Finally semantics</h3><p><code>finally</code> runs on normal completion and exceptional exits. Required cleanup is not skipped when control leaves a protected region.</p></article>
 <article class="content-card reveal"><h3>Structured exits</h3><p><code>return</code>, <code>break</code>, and <code>continue</code> cross one or more finally regions through the same structured cleanup machinery.</p></article>
 <article class="content-card reveal"><h3>Nested handlers &amp; rethrow</h3><p>Nested <code>try</code>/<code>catch</code>/<code>finally</code> regions compose normally. Bare <code>throw;</code> rethrows the active exception while preserving its identity.</p></article>
 <article class="content-card reveal"><h3>Iterator integration</h3><p>Thrown exceptions, handler regions, cleanup, and managed roots remain valid across iterator suspension/resume and <code>yield</code>-generated state machines.</p></article>
-<article class="content-card reveal"><h3>Delegates &amp; events</h3><p>Delegate, multicast-delegate, and event invocation propagate exceptions through the ordinary call/unwinding model while preserving managed targets.</p></article><article class="content-card reveal"><h3>Worker-thread handoff</h3><p>An unhandled exception escaping a managed worker is retained as a GC root, delivered by <code>Thread.Join()</code> after native join completion, and preserves its managed type, message, payload, and ordinary <code>finally</code>/<code>using</code>/<code>lock</code> cleanup.</p></article><article class="content-card reveal"><h3>Synchronization cleanup</h3><p><code>Monitor.Wait</code>/<code>Pulse</code>, <code>Interlocked</code>, and <code>Volatile</code> have been integrated with worker exceptions, nested <code>try/finally</code>, <code>using</code>, nested <code>lock</code>, native callbacks, forced collection, and thread shutdown so exceptional control flow does not strand monitor ownership or runtime thread state.</p></article>
+<article class="content-card reveal"><h3>Delegates &amp; events</h3><p>Delegate, multicast-delegate, and event invocation propagate exceptions through the ordinary call/unwinding model while preserving managed targets.</p></article><article class="content-card reveal"><h3>Worker-thread handoff</h3><p>An unhandled exception escaping a managed worker is retained as a GC root, delivered by <code>Thread.Join()</code> after native join completion, and preserves its managed type, message, payload, and ordinary <code>finally</code>/<code>using</code>/<code>lock</code> cleanup.</p></article><article class="content-card reveal"><h3>Synchronization cleanup</h3><p>Timed <code>Monitor.Wait</code>, reset-event/semaphore waits, cooperative cancellation, <code>Interlocked</code>, and <code>Volatile</code> are integrated with worker exceptions, nested <code>try/finally</code>, <code>using</code>, nested <code>lock</code>, native callbacks, forced collection, and thread shutdown so timeout/cancellation/exceptional control flow does not strand monitor ownership or runtime thread state.</p></article>
 <article class="content-card reveal"><h3>Native &amp; library boundaries</h3><p>Exception behavior is defined at native and reusable-library boundaries instead of allowing uncontrolled raw unwinding through C ABI frames. Boundary misuse receives focused diagnostics.</p></article>
 <article class="content-card reveal"><h3>Recovery-safe type initialization</h3><p>If static initialization throws, VOID restores the type-initialization state and GC-root checkpoint before rethrowing, allowing later use to retry through a clean runtime state.</p></article>
 </div>

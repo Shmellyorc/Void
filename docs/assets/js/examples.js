@@ -41,6 +41,20 @@ window.VOID_EXAMPLES = {
     "caption": "Monitor.Wait fully releases recursive ownership while blocked, stays GC-safe, and reacquires the same recursion depth; Pulse/PulseAll notify waiters without transferring ownership immediately.",
     "code": "using Void;\nusing Void.Threading;\n\npublic sealed class Gate\n{\n    public bool Ready;\n}\n\nGate gate = new Gate();\nThread worker = new Thread(() =>\n{\n    lock (gate)\n    {\n        while (!gate.Ready)\n            Monitor.Wait(gate);\n    }\n});\n\nworker.Start();\nlock (gate)\n{\n    gate.Ready = true;\n    Monitor.PulseAll(gate);\n}\nworker.Join();"
   },
+  "thread-sleep": {
+    "title": "Thread.Sleep",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Managed sleep uses VOID's monotonic timed-wait runtime while the sleeping worker remains coordinated with the managed runtime and GC.",
+    "code": "using Void;\nusing Void.Threading;\n\nThread worker = new Thread(() =>\n{\n    Thread.Sleep(10);\n    Console.WriteLine(\"awake\");\n});\n\nworker.Start();\nworker.Join();"
+  },
+  "timed-monitor-wait": {
+    "title": "Timed Monitor.Wait",
+    "category": "Threading & synchronization",
+    "language": "VOID",
+    "caption": "Timed Monitor.Wait releases recursive ownership while blocked, restores the exact depth before returning, and reports notification versus timeout with a bool result.",
+    "code": "using Void;\nusing Void.Threading;\n\npublic sealed class Gate {}\n\nGate gate = new Gate();\nlock (gate)\n{\n    bool notified = Monitor.Wait(gate, 25);\n    Console.WriteLine(notified);\n}"
+  },
   "interlocked-integer": {
     "title": "Interlocked integer operations",
     "category": "Threading & synchronization",

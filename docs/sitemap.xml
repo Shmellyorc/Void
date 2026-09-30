@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://voidengine.net/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/engine/</loc>
@@ -26,11 +26,11 @@
   </url>
   <url>
     <loc>https://voidengine.net/language/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/features/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/object-model/</loc>
@@ -42,11 +42,11 @@
   </url>
   <url>
     <loc>https://voidengine.net/language/exceptions/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/threading/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/lifetime/</loc>
@@ -70,7 +70,7 @@
   </url>
   <url>
     <loc>https://voidengine.net/language/compiler/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/diagnostics/</loc>
@@ -82,7 +82,7 @@
   </url>
   <url>
     <loc>https://voidengine.net/language/native/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/getting-started/</loc>
@@ -90,7 +90,7 @@
   </url>
   <url>
     <loc>https://voidengine.net/language/examples/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/language/design/</loc>
@@ -98,7 +98,7 @@
   </url>
   <url>
     <loc>https://voidengine.net/language/roadmap/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-09-30</lastmod>
   </url>
   <url>
     <loc>https://voidengine.net/articles/</loc>
