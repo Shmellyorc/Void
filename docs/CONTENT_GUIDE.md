@@ -289,3 +289,20 @@ Current approved Language overview icons:
 Avoid reusing the same icon for distinct compiler/tooling concepts when the cards are adjacent in the same grid.
 
 Reference sheet: `assets/images/language-overview-icons.png`. Keep these approved assets and reuse them for future Language overview/tooling cards when the meaning fits.
+
+## Why VOID page
+
+`why-void/index.html` is a top-level explanation of why VOID Engine and VOID Language exist. Keep it in the main navigation between Language and Articles.
+
+The page is intentionally FAQ-shaped and uses native `<details>` / `<summary>` elements so the questions are scannable without becoming a wall of text. Keep answers collapsed by default.
+
+When updating this page:
+
+- Explain the design reason before listing implementation details.
+- Do not frame C#, .NET, MonoGame, SFML, NativeAOT, Blazor, or other tools as bad. Acknowledge what they solve, then explain why VOID chooses different tradeoffs.
+- Do not claim that native code is automatically faster than .NET. Explain which runtime layers or behaviors VOID removes or owns, and leave performance claims to measurements.
+- Say that VOID does not depend on the CLR or an external managed VM. Do not say VOID has no runtime at all; GC, exceptions, threading, synchronization, reflection metadata, and related features require VOID-owned runtime support.
+- C does not provide reflection. Describe VOID reflection as compiler-generated native metadata designed around AOT from the start.
+- Web support is a whole-stack target. Do not claim that C# cannot run in browsers. Explain that browser deployment requires the application and its platform/native dependencies to support the browser environment.
+- Keep Microsoft documentation links beside claims about .NET behavior that may change over time.
+- Avoid em dashes in page copy.
