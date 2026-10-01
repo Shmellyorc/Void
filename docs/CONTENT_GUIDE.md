@@ -88,7 +88,7 @@ The small kicker should identify the section or context. It should not repeat th
 Prefer:
 
 > `Current direction`  
-> **The runtime is ready for a scheduler.**
+> **Tasks now give async somewhere to land.**
 
 Avoid:
 
@@ -96,6 +96,8 @@ Avoid:
 > **Timed synchronization and cooperative cancellation are complete.**
 
 A heading does not need to contain every SEO keyword on the page.
+
+Roadmap examples in this guide demonstrate writing style, not permanent project state. When the active phase changes, update the public page from the current live architecture instead of copying an older example literally.
 
 ## SEO rules
 

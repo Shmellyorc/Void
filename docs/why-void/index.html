@@ -263,7 +263,7 @@
               <div class="faq-answer">
                 <p>.NET already has a mature threading system and ThreadPool. VOID is not rebuilding those ideas because .NET lacks them. It is doing so because workers interact with nearly every other part of a managed runtime.</p>
                 <p>A VOID worker can allocate memory, participate in garbage collection, enter monitors, wait on synchronization primitives, observe cancellation, propagate exceptions, and eventually execute higher-level task work. Building the model inside VOID keeps those behaviors under the same runtime contract.</p>
-                <p>The order is deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations. Higher-level syntax should sit on top of a scheduler and runtime that already know how to behave correctly.</p>
+                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations. Those Task foundations are now complete, so higher-level async syntax can target a scheduler and runtime that already know how to handle GC, faults, cancellation, and completion correctly.</p>
               </div>
             </details>
 
@@ -286,8 +286,8 @@
             <details class="faq-item">
               <summary><span class="faq-number">22</span><span>Why build Task after ThreadPool instead of starting with async/await?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Because async syntax is the top of the stack, not the foundation. Before a task system can behave predictably, VOID needs somewhere to execute work, ways to wait and signal, cancellation rules, exception propagation, synchronization primitives, and worker threads that cooperate correctly with the garbage collector.</p>
-                <p>Building those pieces first means a future async model can sit on runtime machinery that was designed for it instead of using syntax to hide missing foundations.</p>
+                <p>Because async syntax is the top of the stack, not the foundation. VOID first needed somewhere to execute work, ways to wait and signal, cancellation rules, exception propagation, synchronization primitives, and worker threads that cooperate correctly with the garbage collector.</p>
+                <p>Those pieces, including ThreadPool and Task, are now in place. The compiler can move into <code>async</code>/<code>await</code> lowering knowing that suspension, resumption, completion, faults, and cancellation already have runtime machinery underneath them.</p>
               </div>
             </details>
 
