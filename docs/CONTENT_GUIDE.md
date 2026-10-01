@@ -76,6 +76,7 @@ Examples:
 - Managed threading matters because workers participate in GC, exceptions, cleanup, and synchronization instead of living beside the runtime.
 - Deterministic disposal matters because `using`, `finally`, iterator cleanup, and structured exits share one cleanup model.
 - Generic operators and conversions matter because legality is proven before specialization instead of being rediscovered during code generation.
+- Async matters because compiler-generated state machines target the ordinary Task runtime, GC, exception, cancellation, and cleanup contracts instead of creating a second scheduler.
 
 That is more useful than listing every class or syntax form involved.
 
@@ -88,7 +89,7 @@ The small kicker should identify the section or context. It should not repeat th
 Prefer:
 
 > `Current direction`  
-> **Tasks now give async somewhere to land.**
+> **Async works. Now make it compose everywhere.**
 
 Avoid:
 
@@ -152,6 +153,10 @@ The tooling pages are strongest when they explain that `voidc` owns the semantic
 ### Engine renderer explanation
 
 The renderer pages work well when they explain the boundary: OpenGL is included, but higher-level engine systems are renderer-neutral. Preserve that architecture-first voice.
+
+### Async lowering explanation
+
+Describe <code>async</code>/<code>await</code> as compiler lowering over the existing Task runtime, not as a separate runtime subsystem. When asynchronous iterators are added, preserve the architectural rule that iterator lowering and async lowering should share/factor state-machine machinery rather than creating a third independent state-machine system.
 
 ## Before / after examples
 

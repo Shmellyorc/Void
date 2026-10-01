@@ -1,6 +1,6 @@
 (() => {
   const KEYWORDS = new Set([
-    'abstract','add','and','as','base','break','case','catch','class','const','continue','default','delegate','do','else','enum','event','explicit','extern','finally','for','foreach','get','if','implicit','in','interface','internal','is','namespace','new','not','operator','or','out','override','params','private','protected','public','readonly','ref','remove','return','sealed','set','sizeof','stackalloc','static','struct','switch','this','throw','try','typeof','unsafe','using','var','virtual','when','where','while','yield'
+    'abstract','add','and','as','async','await','base','break','case','catch','class','const','continue','default','delegate','do','else','enum','event','explicit','extern','finally','for','foreach','get','if','implicit','in','interface','internal','is','namespace','new','not','operator','or','out','override','params','private','protected','public','readonly','ref','remove','return','sealed','set','sizeof','stackalloc','static','struct','switch','this','throw','try','typeof','unsafe','using','var','virtual','when','where','while','yield'
   ]);
   const BUILTIN_TYPES = new Set([
     'bool','byte','char','decimal','double','float','int','long','nint','nuint','object','sbyte','short','string','uint','ulong','ushort','void'
