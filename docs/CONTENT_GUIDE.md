@@ -77,6 +77,7 @@ Examples:
 - Deterministic disposal matters because `using`, `finally`, iterator cleanup, and structured exits share one cleanup model.
 - Generic operators and conversions matter because legality is proven before specialization instead of being rediscovered during code generation.
 - Async matters because compiler-generated state machines target the ordinary Task runtime, GC, exception, cancellation, and cleanup contracts instead of creating a second scheduler.
+- By-reference safety matters because ordinary refs should carry provenance and escape rules instead of collapsing into unchecked raw pointers.
 
 That is more useful than listing every class or syntax form involved.
 
@@ -89,7 +90,7 @@ The small kicker should identify the section or context. It should not repeat th
 Prefer:
 
 > `Current direction`  
-> **Async works. Now make it compose everywhere.**
+> **Make references first-class without making them raw pointers.**
 
 Avoid:
 
@@ -156,7 +157,20 @@ The renderer pages work well when they explain the boundary: OpenGL is included,
 
 ### Async lowering explanation
 
-Describe <code>async</code>/<code>await</code> as compiler lowering over the existing Task runtime, not as a separate runtime subsystem. When asynchronous iterators are added, preserve the architectural rule that iterator lowering and async lowering should share/factor state-machine machinery rather than creating a third independent state-machine system.
+Describe <code>async</code>/<code>await</code> as compiler lowering over the existing Task runtime, not as a separate runtime subsystem. Async iterators should keep sharing/factoring iterator and async state-machine machinery rather than becoming a third independent state-machine system.
+
+### By-reference and Span explanation
+
+Treat safe byrefs as a compiler-tracked language concept, not as prettier pointer syntax. A managed interior reference may need to keep its owner alive, while a stack-backed reference must not escape the storage it points into.
+
+When this area becomes public capability:
+
+- explain provenance and escape safety before listing ref syntax
+- keep safe <code>ref</code> semantics distinct from <code>unsafe</code> pointers
+- describe <code>ref struct</code> as stack-only/ref-like storage constrained by those lifetime rules
+- describe <code>Span&lt;T&gt;</code> / <code>ReadOnlySpan&lt;T&gt;</code> as ordinary standard-library ref structs built on the by-reference foundation, not as compiler magic
+- do not frame VOID as adding a Rust-style ownership or borrow-checker model
+- keep unimplemented by-reference or Span work on the Roadmap until the corresponding milestone is complete
 
 ## Before / after examples
 
