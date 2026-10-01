@@ -205,7 +205,7 @@ Keep the icon system intentional. Reuse the existing circular VOID icon style an
 
 When a page or section can fill a viewport so neatly that it looks finished, preserve the layout and use the global continuation cue rather than adding filler copy or forcing the next section into view. The cue should remain subtle, fixed outside document flow, and disappear near the real bottom of the page.
 
-Future icon additions should match the established system: circular purple treatment, purple-forward line art with only subtle light highlights, transparent background, and enough contrast to stay legible at the small feature-card size. Avoid white-dominant glyphs that make newer icons look like a separate set. Reuse an existing icon when the concept is genuinely the same instead of creating near-duplicates.
+Future icon additions should match the established system: circular purple treatment, simple readable line art, transparent background, and enough contrast to stay legible at the small feature-card size. Reuse an existing icon when the concept is genuinely the same instead of creating near-duplicates.
 
 ## Final check
 
@@ -219,3 +219,73 @@ Before shipping a content update, read each changed page once as a new visitor a
 - Did a new milestone get integrated into the story instead of appended to a list?
 
 If the answer to those is good, the site is probably still speaking in the intended VOID voice.
+
+
+## Icon implementation
+
+### Canonical website icon assets
+
+Feature-card icons are stored as individual transparent PNG files in `assets/images`. Do not use SVG placeholders or alternate `-gen1` / `-house` variants on the site. When an icon is approved, replace the canonical PNG itself and reference that file directly. The current homepage set is `icon-native-output.png`, `icon-simplicity.png`, `icon-native-interop.png`, and `icon-tooling.png`.
+
+- when icon families need to match the established site artwork, prefer house-style raster PNG assets over mismatched generic SVG placeholders
+
+### Replacing raster icon artwork
+
+When replacing an existing icon with substantially different generated artwork, use a new asset filename (for example `icon-tooling-gen2.png`) and update the HTML reference. Do not overwrite an old filename and assume local browsers will invalidate it; the static site may keep the previous image cached during review.
+
+## VOID icon generation
+
+The established icon family is a strict visual system. Use `assets/images/feature-icons.png` as the primary reference and `assets/images/feature-icons-extra.png` as the extended reference set. Do not improvise a new badge style.
+
+### Visual rules
+
+- Transparent PNG canvas.
+- Transparent center/interior except for the ring and glyph.
+- No filled dark disc behind the icon.
+- Thin segmented circular frame matching the existing icons.
+- Crisp violet/lavender line art with a pale-lavender core.
+- Glow stays tight to the strokes. Almost no outer halo.
+- Never add purple fog, a large bloom, a soft cloudy background, or a thick luminous coin edge.
+- The outer glow should disappear into transparency within roughly 2–5% of the icon diameter.
+- Keep the ring proportions, segment positions, line thickness, brightness, and overall scale consistent with the reference spritesheets.
+- The center glyph should be simple geometric line art that remains readable at small card-icon sizes.
+- Reuse an existing icon when its meaning already fits. Create a new one only when the page introduces a genuinely different concept.
+
+### Base generation prompt
+
+Use the existing VOID icon spritesheet as a strict image reference, not loose inspiration. Create a single square transparent PNG icon from the same visual family. Keep the circular frame nearly identical to the reference and change only the center glyph. Use a transparent center, thin segmented ring, crisp violet/lavender strokes, pale-lavender stroke cores, and an extremely tight purple glow. Do not add a solid inner disc, fog, haze, a large bloom, or a wide outer halo. Outside the ring should return to full transparency almost immediately. The result must look like another icon from the same original VOID set, not a separate neon badge style.
+
+Then append only the requested center-glyph description.
+
+### Review check before publishing
+
+Compare the new icon directly beside `icon-engine.png` and `icon-language.png` at the actual website card size. If the outer glow is visibly wider, the center is filled, or the ring looks like a different badge family, reject it before wiring it into the site.
+
+
+
+### Approved growth/control icon concepts
+
+For the homepage card **"Keep control as you grow"**, keep these approved PNG concepts stored in `assets/images`:
+
+- `icon-control.png` — active icon in use (modular swap / replaceable piece)
+- `icon-growth-merge-flow.png` — alternate concept (merge flow / guided growth)
+- `icon-growth-network-control.png` — alternate concept (structured node network / controlled architecture)
+
+Use the active `icon-control.png` on the homepage unless a later visual review replaces it.
+
+
+### Language overview icon mapping
+
+Current approved Language overview icons:
+
+- `icon-nullability-new.png` — Nullability & initialization
+- `icon-source-checking-new.png` — Source-only checking
+- `icon-semantic-queries-new.png` — Semantic queries
+- `icon-precise-diagnostics-new.png` — Precise diagnostics
+- `icon-debug-source-mapping-new.png` — Debug source mapping
+- `icon-compiler-lsp-new.png` — Compiler-backed LSP
+- `icon-native-interop.png` — Native C integration
+
+Avoid reusing the same icon for distinct compiler/tooling concepts when the cards are adjacent in the same grid.
+
+Reference sheet: `assets/images/language-overview-icons.png`. Keep these approved assets and reuse them for future Language overview/tooling cards when the meaning fits.
