@@ -403,8 +403,8 @@
             <details class="faq-item">
               <summary><span class="faq-number">35</span><span>Will VOID support <code>Span&lt;T&gt;</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Yes, it is part of the active by-reference roadmap rather than a completed feature today. The compiler is first building the lifetime rules underneath spans: ref locals and returns, readonly refs, escape analysis, and stack-only ref-like values.</p>
-                <p>The goal is for <code>Span&lt;T&gt;</code> and <code>ReadOnlySpan&lt;T&gt;</code> to be ordinary standard-library <code>ref struct</code> types built on those rules, not unrelated compiler magic. They are intended to connect arrays, stack storage, valid native memory, slicing, and ref-based iteration while preserving managed-owner lifetime where necessary.</p>
+                <p>Yes. The by-reference foundation and the <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> foundations are now in place. They are ordinary standard-library <code>ref struct</code> types built on compiler-tracked refs, readonly rules, escape analysis, and stack-only ref-like lifetime semantics rather than unrelated compiler magic.</p>
+                <p>The active roadmap now completes the surrounding contiguous-memory model: first-class Index and Range values, reusable consumer semantics, array and Span range behavior, managed array-backed <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code>, suspension and GC integration, Span enumeration and ref foreach, overlap-safe memory operations, and a final cross-feature audit.</p>
               </div>
             </details>
           </div>
