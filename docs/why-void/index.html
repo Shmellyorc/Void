@@ -169,11 +169,11 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">09</span><span>Is VOID faster because it does not use the CLR or JIT?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">09</span><span>Is VOID designed to outperform C#?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>VOID native builds do not require the CLR, a bytecode virtual machine, or a JIT compiler to execute application code. VOID source is lowered to C and compiled into native machine code before the program starts.</p>
-                <p>That removes categories of runtime work such as JIT compilation and gives VOID direct control over its own garbage collector, metadata, threading, exception handling, and native ABI. It does <strong>not</strong> mean every VOID program will automatically outperform an equivalent .NET program. Modern .NET is highly optimized, and performance still has to be measured.</p>
-                <p>What VOID gains is a shorter, more controlled execution path where native compilation is the normal model rather than an alternate publishing mode.</p>
+                <p>Performance matters to VOID, but the architecture is not a promise that every VOID program will beat an equivalent C# or .NET program. Modern .NET and NativeAOT are highly optimized, and performance still has to be measured workload by workload.</p>
+                <p>VOID does make choices that are useful to measure in game code: native compilation is the normal path, the runtime owns its garbage collector and metadata model, and native interoperability does not have to cross the CLR boundary. Those choices give the project control over where runtime work happens, but they do not make benchmark results automatic.</p>
+                <p>Comparisons should come from repeatable measurements such as execution time, allocation behavior, GC pauses, startup time, memory use, binary size, and frame-time consistency rather than from the language name or compilation model alone.</p>
               </div>
             </details>
 
@@ -197,10 +197,11 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">12</span><span>How does reflection work if VOID compiles to native code?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">12</span><span>Does VOID have reflection?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>C itself does not provide reflection, so VOID does not get reflection merely because it generates C. The reflection system is compiler-owned. The compiler already knows the program's types, members, attributes, and metadata, so it can emit the reflection information VOID needs into the generated native program.</p>
-                <p>That means reflection can be designed around native compilation from the start. In NativeAOT, reflection is supported when the required targets can be preserved, while unconstrained reflection, dynamic assembly loading, and runtime code generation have restrictions. VOID does not need to recover reflection from CLR metadata after trimming because its own compiler decides what native metadata exists.</p>
+                <p>Yes. VOID already has the foundation for native reflection through compiler-generated metadata. The compiler knows the program's types, members, attributes, and related metadata and can emit the information that needs to remain available in the compiled native program.</p>
+                <p>C itself does not provide reflection, and VOID does not depend on IL, a JIT, or the .NET reflection runtime to recover that information later. The reflection API is still a focused surface and should not be treated as equivalent to the entire <code>System.Reflection</code> API today.</p>
+                <p>NativeAOT also supports reflection when the required targets can be preserved, with restrictions around some dynamic patterns. VOID's difference is architectural: its metadata format is owned by the compiler and designed around native output from the beginning.</p>
                 <p class="faq-source">Reference: <a href="https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/security" rel="noopener">Microsoft Native AOT reflection notes</a>.</p>
               </div>
             </details>
@@ -223,11 +224,11 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">15</span><span>Why does VOID care so much about the C ABI and native interop?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">15</span><span>Can VOID call native C libraries directly?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Games depend on native libraries constantly. VOID treats that boundary as part of the language design instead of an unusual escape hatch. ABI-compatible primitives, pointers, handles, and native structures can cross a simple native boundary without first being represented as CLR objects.</p>
-                <p>That does not make every native call free. Strings, managed objects, arrays, ownership, callbacks, and other complex values still need explicit representation rules. The goal is to make the simple cases genuinely simple and keep the complicated cases visible.</p>
-                <p>.NET supports native interoperability well, including source-generated <code>LibraryImport</code>. Microsoft documents that source generation can avoid runtime-generated P/Invoke IL stubs and move marshalling work to compile time. VOID starts from the other side of that boundary because its output is already native.</p>
+                <p>Yes. Native interoperability is part of the language rather than a separate bridge layered on later. VOID can declare compatible C functions through its native/extern surface and call them through the platform C ABI.</p>
+                <p>Simple ABI-compatible values such as primitives, pointers, handles, and native structures can cross that boundary directly. Strings, managed objects, arrays, ownership, callbacks, and other complex values still need deliberate representation and lifetime rules, so native interop does not pretend every value is automatically ABI-safe.</p>
+                <p>.NET also has strong native interoperability support, including source-generated <code>LibraryImport</code>. VOID starts from a different implementation point because its normal output is already native code.</p>
                 <p class="faq-source">Reference: <a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation" rel="noopener">Microsoft P/Invoke source generation</a>.</p>
               </div>
             </details>
@@ -235,8 +236,8 @@
             <details class="faq-item">
               <summary><span class="faq-number">16</span><span>Can VOID code become a native library too?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>That is part of the direction. Native interop should work both ways. VOID libraries can expose stable native entry points so other native programs and tools can call into code built with VOID.</p>
-                <p>That matters because a language intended for native game development should be able to participate in an existing native codebase rather than requiring the rest of the program to move into VOID first.</p>
+                <p>Yes. VOID projects can produce reusable native library output and expose selected public static methods through stable C symbols. Native interop is intended to work in both directions instead of requiring the rest of a program to move into VOID first.</p>
+                <p>The compiler and runtime still preserve the language contracts that library code depends on, including static initialization and managed roots, while the exported boundary remains understandable to native callers.</p>
               </div>
             </details>
 
@@ -284,11 +285,11 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">22</span><span>Why did VOID build Task before async/await?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">22</span><span>Does VOID support async/await, and why is it built on Task?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Because async syntax is the top of the stack, not the foundation. VOID first needed somewhere to execute work, ways to wait and signal, cancellation rules, exception propagation, synchronization primitives, and worker threads that cooperate correctly with the garbage collector.</p>
-                <p>That ordering now pays off. <code>async</code>/<code>await</code> is implemented as compiler-generated state machines over the existing Task system. Pending Tasks register normal continuations, completed Tasks can continue directly, typed results stay inside <code>Task&lt;T&gt;</code>, and faults, cancellation, cleanup, generics, closures, GC, virtual dispatch, and library boundaries reuse rules that already existed.</p>
-                <p>That composition work is now complete too. Await can participate through ordinary expression and control-flow positions, synchronous <code>foreach</code> can suspend, <code>await using</code> and <code>await foreach</code> use Task-based contracts, and async iterators combine the existing iterator and async lowering machinery rather than creating a third state-machine system.</p>
+                <p>Yes. VOID supports <code>Task</code>, <code>Task&lt;T&gt;</code>, <code>async</code>, <code>await</code>, cancellation, fault propagation, asynchronous disposal and enumeration, and async iterators through compiler-generated state machines.</p>
+                <p>The order was deliberate. VOID first built the execution and lifetime machinery underneath async: worker threads, synchronization, cancellation, ThreadPool scheduling, Task completion, exceptions, GC coordination, and continuations. The compiler then lowers async methods onto that existing runtime instead of creating a second scheduler or a separate async object model.</p>
+                <p>General await expressions, <code>await using</code>, <code>await foreach</code>, and async iterators continue to share the same Task, cleanup, iterator, and GC contracts.</p>
               </div>
             </details>
 
@@ -378,6 +379,32 @@
               <div class="faq-answer">
                 <p>VOID is for game developers who like useful defaults but still want to understand and control the systems underneath them. It is also for developers who like the feel of modern managed code but are interested in a native-first compiler and runtime model.</p>
                 <p>You do not need to want every part of VOID. Use the engine, the language, or both. The point is to provide a foundation you can grow from without making the foundation own your project.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">33</span><span>Will VOID support LINQ-style APIs?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>The language already has most of the machinery needed for LINQ-style collection APIs: generics, delegates, lambdas, closures, <code>IEnumerable&lt;T&gt;</code>, <code>IEnumerator&lt;T&gt;</code>, extension methods, and iterator methods using <code>yield return</code>.</p>
+                <p>That means method-style operations such as <code>Where</code>, <code>Select</code>, <code>Any</code>, <code>First</code>, <code>Take</code>, and <code>Skip</code> can be ordinary standard-library APIs rather than compiler features. A complete built-in operator set is not being claimed as current functionality yet.</p>
+                <p>C#-style query syntax such as <code>from</code>, <code>where</code>, and <code>select</code> is a separate language feature because it would require parser and lowering support.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">34</span><span>Will VOID have source generators or macros?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Source-generator-style tooling is a possible future direction. VOID already has compiler-owned metadata, semantic queries, source spans, and a normal source compilation pipeline, so generated code could be built around stable compiler information instead of text scraping.</p>
+                <p>A likely model would inspect declarations or metadata and emit ordinary VOID source that then goes through the same parser, semantic analysis, diagnostics, and native compilation path as handwritten code.</p>
+                <p>A general-purpose macro system is not a current goal. The preference is to keep generated code understandable and avoid creating a second, less predictable language inside the language.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">35</span><span>Will VOID support <code>Span&lt;T&gt;</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Yes, it is part of the active by-reference roadmap rather than a completed feature today. The compiler is first building the lifetime rules underneath spans: ref locals and returns, readonly refs, escape analysis, and stack-only ref-like values.</p>
+                <p>The goal is for <code>Span&lt;T&gt;</code> and <code>ReadOnlySpan&lt;T&gt;</code> to be ordinary standard-library <code>ref struct</code> types built on those rules, not unrelated compiler magic. They are intended to connect arrays, stack storage, valid native memory, slicing, and ref-based iteration while preserving managed-owner lifetime where necessary.</p>
               </div>
             </details>
           </div>
