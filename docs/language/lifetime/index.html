@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Lifetime, IDisposable &amp; Async Disposal</title>
-<meta content="Learn how VOID combines deterministic cleanup, async disposal, ref-like lifetimes, managed Memory, scoped pinning, exceptions, and suspension through shared semantics." name="description"/>
+<meta content="Learn how VOID combines deterministic cleanup, async disposal, ref-like lifetimes, managed Memory, scoped pinning, manual native heap ownership, and suspension." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/lifetime/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Lifetime, IDisposable &amp; Async Disposal">
-<meta property="og:description" content="Learn how VOID combines deterministic cleanup, async disposal, ref-like lifetimes, managed Memory, scoped pinning, exceptions, and suspension through shared semantics.">
+<meta property="og:description" content="Learn how VOID combines deterministic cleanup, async disposal, ref-like lifetimes, managed Memory, scoped pinning, manual native heap ownership, and suspension.">
 <meta property="og:url" content="https://voidengine.net/language/lifetime/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Lifetime, IDisposable &amp; Async Disposal">
-<meta name="twitter:description" content="Learn how VOID combines deterministic cleanup, async disposal, ref-like lifetimes, managed Memory, scoped pinning, exceptions, and suspension through shared semantics.">
+<meta name="twitter:description" content="Learn how VOID combines deterministic cleanup, async disposal, ref-like lifetimes, managed Memory, scoped pinning, manual native heap ownership, and suspension.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -76,8 +76,9 @@
 <article class="content-card reveal"><h3>Default interface methods</h3><p>Interface methods may provide bodies. Concrete implementations take precedence, inherited defaults provide fallback behavior, and ambiguous inherited defaults are diagnosed.</p></article>
 <article class="content-card reveal"><h3>Ref-like views vs managed Memory</h3><p><code>Span&lt;T&gt;</code> and other ref-like values stay constrained by escape, capture, and suspension rules. <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code> are heap-storable managed array-backed values that retain their owner across async methods, iterators, Tasks, continuations, ThreadPool work, and GC without implying thread safety.</p></article>
 <article class="content-card reveal"><h3>Scoped managed pinning</h3><p><code>fixed</code> acquires a runtime pin, keeps the managed owner rooted, and releases the pin through the same structured cleanup machinery used by normal control flow and exceptions. The fixed pointer is scoped and cannot be captured or returned as though the managed backing were permanently pinned.</p></article>
+<article class="content-card reveal"><h3>Explicit native heap lifetime</h3><p><code>NativeMemory</code> allocations live outside the managed GC. Allocation, reallocation, alignment, and free are deliberately unsafe ownership operations, while Span views over that storage remain non-owning. VOID does not make unmanaged heap lifetime look managed when no managed owner exists.</p></article>
 </div>
-<section class="editorial-block reveal"><div><p class="kicker">One lifetime model</p><h2>Cleanup, suspension, refs, and pins share explicit boundaries.</h2></div><p>Structured exits, rethrow, GC-safe unwinding, iterator cleanup, async suspension, ref-like escape checks, and <code>fixed</code> pin release all feed compiler-visible lifetime rules. Heap-storable Memory can cross suspension because it retains a managed owner; Span and fixed pointers cannot silently acquire that longer lifetime.</p></section>
+<section class="editorial-block reveal"><div><p class="kicker">One lifetime model</p><h2>Cleanup, suspension, refs, pins, and native ownership keep explicit boundaries.</h2></div><p>Structured exits, rethrow, GC-safe unwinding, iterator cleanup, async suspension, ref-like escape checks, and <code>fixed</code> pin release all feed compiler-visible lifetime rules. Heap-storable Memory can cross suspension because it retains a managed owner; Span and fixed pointers cannot silently acquire that longer lifetime, and NativeMemory does not gain one because it is manually owned outside the GC.</p></section>
 <div class="native-code-pair reveal">
 <div class="code-block-preview"><div class="code-head">Deterministic disposal</div><pre><code class="void-syntax" data-void-code="">public sealed class GameFile : IDisposable
 {

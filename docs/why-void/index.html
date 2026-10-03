@@ -226,8 +226,8 @@
             <details class="faq-item">
               <summary><span class="faq-number">15</span><span>Can VOID call native C libraries directly?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Yes. Native interoperability is part of the language rather than a separate bridge layered on later. VOID can declare compatible C functions through its native/extern surface and call them through the platform C ABI.</p>
-                <p>Simple ABI-compatible values such as primitives, pointers, handles, and native structures can cross that boundary directly. Strings, managed objects, arrays, ownership, callbacks, and other complex values still need deliberate representation and lifetime rules, so native interop does not pretend every value is automatically ABI-safe.</p>
+                <p>Yes. Native interoperability is part of the language rather than a separate bridge layered on later. VOID can declare compatible C functions through its native/extern surface, call them through the platform C ABI, allocate explicitly owned unmanaged memory, and work with raw native function-pointer values and C function tables.</p>
+                <p>The boundary remains deliberate. <code>NativeMemory</code> allocations are manually owned rather than GC objects, Span views over native storage are non-owning, and raw native function pointers are distinct from managed delegates and captured closures. Strings, managed objects, arrays, and other complex values still need explicit representation and lifetime rules.</p>
                 <p>.NET also has strong native interoperability support, including source-generated <code>LibraryImport</code>. VOID starts from a different implementation point because its normal output is already native code.</p>
                 <p class="faq-source">Reference: <a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation" rel="noopener">Microsoft P/Invoke source generation</a>.</p>
               </div>
@@ -264,7 +264,7 @@
               <div class="faq-answer">
                 <p>.NET already has a mature threading system and ThreadPool. VOID is not rebuilding those ideas because .NET lacks them. It is doing so because workers interact with nearly every other part of a managed runtime.</p>
                 <p>A VOID worker can allocate memory, participate in garbage collection, enter monitors, wait on synchronization primitives, observe cancellation, propagate exceptions, and eventually execute higher-level task work. Building the model inside VOID keeps those behaviors under the same runtime contract.</p>
-                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now extends through general await expressions, asynchronous cleanup, <code>await foreach</code>, and async iterators without replacing the scheduler underneath them.</p>
+                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports Task-backed await expressions, asynchronous cleanup, <code>await foreach</code>, and async iterators without replacing the scheduler underneath them. The next async block generalizes what can be awaited while keeping that scheduler foundation intact.</p>
               </div>
             </details>
 
@@ -285,11 +285,11 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">22</span><span>Does VOID support async/await, and why is it built on Task?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">22</span><span>Does VOID support async/await, and why did it start with Task?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Yes. VOID supports <code>Task</code>, <code>Task&lt;T&gt;</code>, <code>async</code>, <code>await</code>, cancellation, fault propagation, asynchronous disposal and enumeration, and async iterators through compiler-generated state machines.</p>
-                <p>The order was deliberate. VOID first built the execution and lifetime machinery underneath async: worker threads, synchronization, cancellation, ThreadPool scheduling, Task completion, exceptions, GC coordination, and continuations. The compiler then lowers async methods onto that existing runtime instead of creating a second scheduler or a separate async object model.</p>
-                <p>General await expressions, <code>await using</code>, <code>await foreach</code>, and async iterators continue to share the same Task, cleanup, iterator, and GC contracts.</p>
+                <p>Yes. VOID supports <code>Task</code>, <code>Task&lt;T&gt;</code>, <code>async</code>, Task-backed <code>await</code>, cancellation, fault propagation, asynchronous disposal and enumeration, and async iterators through compiler-generated state machines.</p>
+                <p>The order was deliberate. VOID first built the execution and lifetime machinery underneath async: worker threads, synchronization, cancellation, ThreadPool scheduling, Task completion, exceptions, GC coordination, and continuations. The compiler then lowered async methods onto that existing runtime instead of creating a second scheduler or a separate async object model.</p>
+                <p>The remaining limitation is architectural rather than functional: <code>await</code> is still compiler-special-cased to Task shapes. The active roadmap replaces that special case with one structural awaiter protocol, moves Task onto it through <code>TaskAwaiter</code>, and then builds real value-type <code>ValueTask</code> support on the same mechanism.</p>
               </div>
             </details>
 
@@ -403,8 +403,32 @@
             <details class="faq-item">
               <summary><span class="faq-number">35</span><span>Will VOID support <code>Span&lt;T&gt;</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Yes. <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> are ordinary standard-library <code>ref struct</code> types built on compiler-tracked refs, readonly rules, escape analysis, and stack-only ref-like lifetime semantics. They now compose with Index/Range slicing, normal and ref foreach, overlap-safe memory operations, managed arrays, stack storage, and unsafe pointer+length views over externally owned unmanaged memory.</p>
-                <p>The surrounding ownership rules stay explicit. <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code> remain heap-storable managed array-backed values; a Span over native memory is only a view, never an owner. Scoped <code>fixed</code> pinning bridges managed buffers to pointer+length native calls. The active roadmap adds explicit native heap allocation and real raw native function-pointer types rather than hiding either concept inside Span, Memory, or managed delegates.</p>
+                <p>Yes. <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> are ordinary standard-library <code>ref struct</code> types built on compiler-tracked refs, readonly rules, escape analysis, and stack-only ref-like lifetime semantics. They compose with Index/Range slicing, normal and ref foreach, overlap-safe memory operations, managed arrays, stack storage, and unsafe pointer+length views over unmanaged memory.</p>
+                <p>The ownership rules stay explicit even now that VOID has native heap allocation. <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code> remain heap-storable managed array-backed values; <code>NativeMemory</code> allocations are manually owned outside the GC; and a Span over either kind of storage is still only a view. Scoped <code>fixed</code> pinning remains the lifetime-aware bridge from managed buffers to pointer+length native calls.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">36</span><span>Why keep native heap ownership explicit?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because allocation and ownership are different concerns from viewing memory. VOID can now allocate, reallocate, align, and free unmanaged storage, but that storage is not a managed object and the garbage collector does not own its lifetime.</p>
+                <p>Keeping <code>NativeMemory</code> explicitly unsafe makes that responsibility visible. A Span can provide safe indexing rules over a valid native region, but it does not become an owner and cannot make a freed allocation valid again.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">37</span><span>Why keep native function pointers separate from managed delegates?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>They represent different lifetime and runtime contracts. A raw native function pointer is an unmanaged code address with an ABI-compatible signature. A managed delegate can carry managed target state, participate in GC lifetime, and represent closures or multicast behavior.</p>
+                <p>VOID supports both, but it does not pretend they are interchangeable. That keeps C function tables and indirect native calls explicit without making captured managed state look like a permanently valid C callback address.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">38</span><span>Why generalize await before adding scheduler or context features?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because the semantic boundary comes first. Today VOID already has the scheduler, Task runtime, continuations, cancellation, exceptions, GC coordination, and async state-machine machinery, but the compiler still recognizes Task specially when it sees <code>await</code>.</p>
+                <p>The next step is to make awaiting structural so Task, custom awaitables, and ValueTask can share one mechanism. Features such as synchronization contexts, <code>ConfigureAwait</code>, or scheduler customization make more sense only after there is a general awaiter model with a real context or scheduler abstraction to configure.</p>
               </div>
             </details>
           </div>

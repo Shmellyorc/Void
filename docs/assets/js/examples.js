@@ -525,7 +525,7 @@ window.VOID_EXAMPLES = {
     "title": "Native callbacks",
     "category": "Unsafe & native",
     "language": "VOID",
-    "caption": "Compatible static methods can cross the ABI as raw native function pointers.",
+    "caption": "Compatible static methods can cross the ABI as managed callback entry points; raw native function-pointer values are a separate low-level representation.",
     "code": "public delegate int Transform(int value);\n\npublic static class NativeFixture\n{\n    [Native(\"game_apply\")]\n    public static unsafe extern int Apply(\n        int value,\n        Transform callback);\n}\n\npublic static int Double(int value)\n{\n    return value * 2;\n}"
   },
   "memory": {

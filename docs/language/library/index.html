@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Libraries &amp; Native Library Output</title>
-<meta content="Explore VOID libraries and collections, including Index, Range, Span, managed Memory, generic standard-library types, native static-library output, and consumer linking." name="description"/>
+<meta content="Explore VOID libraries including collections, Index and Range, Span, managed Memory, explicit NativeMemory allocation, native library output, and consumer linking." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/library/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta property="og:description" content="Explore VOID libraries and collections, including Index, Range, Span, managed Memory, generic standard-library types, native static-library output, and consumer linking.">
+<meta property="og:description" content="Explore VOID libraries including collections, Index and Range, Span, managed Memory, explicit NativeMemory allocation, native library output, and consumer linking.">
 <meta property="og:url" content="https://voidengine.net/language/library/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta name="twitter:description" content="Explore VOID libraries and collections, including Index, Range, Span, managed Memory, generic standard-library types, native static-library output, and consumer linking.">
+<meta name="twitter:description" content="Explore VOID libraries including collections, Index and Range, Span, managed Memory, explicit NativeMemory allocation, native library output, and consumer linking.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -71,7 +71,7 @@
 <main id="main">
 <section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Libraries</p><h1>Use the library.<br/>Build your own.</h1><p>The standard library is written in VOID, and project library output can now package your own VOID code as a native static archive with stable exported C entry points.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Collections built on the language, not hidden compiler magic.</h2><p>The collections are ordinary VOID code. They depend on the same generics, interfaces, enumeration, equality, and GC semantics available to user projects, so the standard library proves the language instead of hiding special compiler behavior.</p></div>
+<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Library types expose the same ownership and runtime rules as user code.</h2><p>Collections remain ordinary generic VOID code, while memory APIs make their lifetime boundary explicit. Managed Memory retains a GC owner; NativeMemory exposes deliberately unsafe manual allocation instead of pretending unmanaged storage belongs to the collector.</p></div>
 <div class="library-grid">
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>List&lt;T&gt;</code></h3><p>Resizable generic sequence with indexing, enumeration, managed-element tracing, and collection initializer support.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Queue&lt;T&gt;</code></h3><p>FIFO storage built as normal generic library code.</p></article>
@@ -82,6 +82,7 @@
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Index</code> / <code>Range</code></h3><p>First-class position and slice values with from-end forms and reusable consumer semantics. Arrays use them to produce copies; Span consumers preserve view semantics.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Span&lt;T&gt;</code> / <code>ReadOnlySpan&lt;T&gt;</code></h3><p>Stack-only library ref structs built on VOID's safe by-reference and escape model, with slicing, normal/ref/ref-readonly enumeration, overlap-safe memory operations, and unsafe pointer+length construction for non-owning unmanaged views.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Memory&lt;T&gt;</code> / <code>ReadOnlyMemory&lt;T&gt;</code></h3><p>Heap-storable managed array-backed memory using array + start + length. It slices without losing its owner, bridges explicitly to Span through <code>.Span</code>, survives suspension and GC, and remains deliberately separate from arbitrary native-memory ownership.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>NativeMemory</code></h3><p>Explicit <code>unsafe</code> unmanaged allocation, free, reallocation, aligned allocation, and typed allocation for <code>where T : unmanaged</code>. Native allocations never become GC objects, and Span views over them remain non-owning.</p></article>
 </div>
 <div class="native-code-pair reveal"><div class="code-block-preview"><div class="code-head">VOID library export</div><pre><code class="void-syntax" data-void-code="">public static class MathApi
 {
