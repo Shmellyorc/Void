@@ -264,7 +264,7 @@
               <div class="faq-answer">
                 <p>.NET already has a mature threading system and ThreadPool. VOID is not rebuilding those ideas because .NET lacks them. It is doing so because workers interact with nearly every other part of a managed runtime.</p>
                 <p>A VOID worker can allocate memory, participate in garbage collection, enter monitors, wait on synchronization primitives, observe cancellation, propagate exceptions, and eventually execute higher-level task work. Building the model inside VOID keeps those behaviors under the same runtime contract.</p>
-                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports Task-backed await expressions, asynchronous cleanup, <code>await foreach</code>, and async iterators without replacing the scheduler underneath them. The next async block generalizes what can be awaited while keeping that scheduler foundation intact.</p>
+                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports structural awaiters, Task and ValueTask, allocation-free yielding, <code>await foreach</code>, and async iterators without replacing the scheduler underneath them. The next async block builds language and composition features on that same scheduler foundation.</p>
               </div>
             </details>
 
@@ -285,11 +285,11 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">22</span><span>Does VOID support async/await, and why did it start with Task?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">22</span><span>Does VOID support generalized async/await, and why did it start with Task?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Yes. VOID supports <code>Task</code>, <code>Task&lt;T&gt;</code>, <code>async</code>, Task-backed <code>await</code>, cancellation, fault propagation, asynchronous disposal and enumeration, and async iterators through compiler-generated state machines.</p>
-                <p>The order was deliberate. VOID first built the execution and lifetime machinery underneath async: worker threads, synchronization, cancellation, ThreadPool scheduling, Task completion, exceptions, GC coordination, and continuations. The compiler then lowered async methods onto that existing runtime instead of creating a second scheduler or a separate async object model.</p>
-                <p>The remaining limitation is architectural rather than functional: <code>await</code> is still compiler-special-cased to Task shapes. The active roadmap replaces that special case with one structural awaiter protocol, moves Task onto it through <code>TaskAwaiter</code>, and then builds real value-type <code>ValueTask</code> support on the same mechanism.</p>
+                <p>Yes. VOID now has one structural await mechanism based on <code>GetAwaiter()</code>, <code>IsCompleted</code>, <code>OnCompleted(Action)</code>, and <code>GetResult()</code>. Task participates through <code>TaskAwaiter</code> rather than a private compiler-only await path, and the same binder works with custom class, struct, generic, and extension awaiters.</p>
+                <p><code>Task.Yield()</code> provides an allocation-free yield awaitable, while <code>ValueTask</code>/<code>ValueTask&lt;T&gt;</code> provide true value-type completed paths plus Task-backed asynchronous paths. <code>async ValueTask</code> methods reuse the existing state-machine and completion machinery.</p>
+                <p>The order was deliberate. VOID first built threads, synchronization, cancellation, ThreadPool scheduling, Task completion, exceptions, GC coordination, continuations, and Task-backed state machines. Generalizing the await contract after those pieces existed removed the Task special case without creating a second scheduler or async runtime.</p>
               </div>
             </details>
 
@@ -425,10 +425,34 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">38</span><span>Why generalize await before adding scheduler or context features?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">38</span><span>Why did VOID generalize await before adding scheduler or context features?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Because the semantic boundary comes first. Today VOID already has the scheduler, Task runtime, continuations, cancellation, exceptions, GC coordination, and async state-machine machinery, but the compiler still recognizes Task specially when it sees <code>await</code>.</p>
-                <p>The next step is to make awaiting structural so Task, custom awaitables, and ValueTask can share one mechanism. Features such as synchronization contexts, <code>ConfigureAwait</code>, or scheduler customization make more sense only after there is a general awaiter model with a real context or scheduler abstraction to configure.</p>
+                <p>Because the semantic boundary had to come first. VOID now treats awaiting as a structural language protocol, so Task, custom awaitables, and ValueTask all use one compiler path while continuation scheduling still rests on the existing runtime.</p>
+                <p>That makes later scheduler or context features meaningful instead of cosmetic. A future synchronization-context or scheduler abstraction can influence a general await mechanism rather than being bolted onto a Task-only compiler special case.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">39</span><span>Why add async lambdas without adding <code>async void</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Async lambdas are useful because VOID already has delegates, closures, generalized awaiters, Task/ValueTask results, and mature async state machines. The missing piece is letting those existing systems compose when the lambda itself suspends.</p>
+                <p><code>async void</code> changes the observability contract because there is no returned Task or ValueTask through which normal code can observe completion or faults. VOID is keeping async lambda targets awaitable for now and leaving fire-and-forget error policy to a later design instead of making unobserved failure behavior implicit.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">40</span><span>Why should <code>await using</code> use the structural awaiter model?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because asynchronous disposal should not create a private Task-only cleanup rule. VOID already has <code>IAsyncDisposable</code>, generalized await binding, and structured cleanup; <code>await using</code> can connect those systems by resolving <code>DisposeAsync()</code> and awaiting its result through the same binder used everywhere else.</p>
+                <p>That keeps Task, ValueTask, and valid custom disposal awaitables on one semantic path while preserving the ordinary cleanup requirements: LIFO order, exceptions, early exits, GC lifetime, and suspension.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">41</span><span>Why add Task composition before timers or scheduler customization?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p><code>Task.Run</code> unwrapping, <code>WhenAll</code>, and <code>WhenAny</code> are composition problems over a continuation system VOID already owns. They can remain nonblocking and reuse existing Task completion, cancellation, fault, GC, and ThreadPool rules.</p>
+                <p><code>Task.Delay</code> is different because a good implementation needs a real monotonic timer service rather than sleeping a worker or creating a thread per delay. Synchronization contexts and scheduler customization also need a meaningful runtime abstraction to configure. Keeping those for a later block avoids pretending the infrastructure already exists.</p>
               </div>
             </details>
           </div>
