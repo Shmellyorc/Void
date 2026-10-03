@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Libraries &amp; Native Library Output</title>
-<meta content="Explore VOID libraries and collections, including Span foundations, generic standard-library types, reusable native static-library output, exported C symbols, and consumer linking." name="description"/>
+<meta content="Explore VOID libraries and collections, including Index, Range, Span, managed Memory, generic standard-library types, native static-library output, and consumer linking." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/library/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta property="og:description" content="Explore VOID libraries and collections, including Span foundations, generic standard-library types, reusable native static-library output, exported C symbols, and consumer linking.">
+<meta property="og:description" content="Explore VOID libraries and collections, including Index, Range, Span, managed Memory, generic standard-library types, native static-library output, and consumer linking.">
 <meta property="og:url" content="https://voidengine.net/language/library/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta name="twitter:description" content="Explore VOID libraries and collections, including Span foundations, generic standard-library types, reusable native static-library output, exported C symbols, and consumer linking.">
+<meta name="twitter:description" content="Explore VOID libraries and collections, including Index, Range, Span, managed Memory, generic standard-library types, native static-library output, and consumer linking.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -79,7 +79,9 @@
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Dictionary&lt;TKey,TValue&gt;</code></h3><p>Generic hash lookup with resizing, removal, enumeration, and multi-argument collection initializer entries through <code>Add(key, value)</code>.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>HashSet&lt;T&gt;</code></h3><p>Generic set semantics using the dictionary-compatible hashing/equality model and collection initializer syntax.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>IEnumerable&lt;T&gt;</code> / <code>IEnumerator&lt;T&gt;</code></h3><p>The shared iteration contract used by collections, <code>foreach</code>, and compiler-generated iterator state machines.</p></article>
-<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Span&lt;T&gt;</code> / <code>ReadOnlySpan&lt;T&gt;</code></h3><p>Stack-only library ref structs built on VOID's safe by-reference and escape model. They provide the contiguous-view foundation that the active Index, Range, enumeration, and memory-operation milestones extend.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Index</code> / <code>Range</code></h3><p>First-class position and slice values with from-end forms and reusable consumer semantics. Arrays use them to produce copies; Span consumers preserve view semantics.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Span&lt;T&gt;</code> / <code>ReadOnlySpan&lt;T&gt;</code></h3><p>Stack-only library ref structs built on VOID's safe by-reference and escape model, with slicing, normal/ref/ref-readonly enumeration, overlap-safe memory operations, and unsafe pointer+length construction for non-owning unmanaged views.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Memory&lt;T&gt;</code> / <code>ReadOnlyMemory&lt;T&gt;</code></h3><p>Heap-storable managed array-backed memory using array + start + length. It slices without losing its owner, bridges explicitly to Span through <code>.Span</code>, survives suspension and GC, and remains deliberately separate from arbitrary native-memory ownership.</p></article>
 </div>
 <div class="native-code-pair reveal"><div class="code-block-preview"><div class="code-head">VOID library export</div><pre><code class="void-syntax" data-void-code="">public static class MathApi
 {

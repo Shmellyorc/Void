@@ -403,8 +403,8 @@
             <details class="faq-item">
               <summary><span class="faq-number">35</span><span>Will VOID support <code>Span&lt;T&gt;</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Yes. The by-reference foundation and the <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> foundations are now in place. They are ordinary standard-library <code>ref struct</code> types built on compiler-tracked refs, readonly rules, escape analysis, and stack-only ref-like lifetime semantics rather than unrelated compiler magic.</p>
-                <p>The active roadmap now completes the surrounding contiguous-memory model: first-class Index and Range values, reusable consumer semantics, array and Span range behavior, managed array-backed <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code>, suspension and GC integration, Span enumeration and ref foreach, overlap-safe memory operations, and a final cross-feature audit.</p>
+                <p>Yes. <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> are ordinary standard-library <code>ref struct</code> types built on compiler-tracked refs, readonly rules, escape analysis, and stack-only ref-like lifetime semantics. They now compose with Index/Range slicing, normal and ref foreach, overlap-safe memory operations, managed arrays, stack storage, and unsafe pointer+length views over externally owned unmanaged memory.</p>
+                <p>The surrounding ownership rules stay explicit. <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code> remain heap-storable managed array-backed values; a Span over native memory is only a view, never an owner. Scoped <code>fixed</code> pinning bridges managed buffers to pointer+length native calls. The active roadmap adds explicit native heap allocation and real raw native function-pointer types rather than hiding either concept inside Span, Memory, or managed delegates.</p>
               </div>
             </details>
           </div>
