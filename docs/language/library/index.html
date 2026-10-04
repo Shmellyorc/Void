@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Libraries &amp; Native Library Output</title>
-<meta content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, async timing and cancellation, native output, and consumer linking." name="description"/>
+<meta content="Explore VOID libraries including managed UTF-8 strings, collections, Span and Memory, NativeMemory, Task/ValueTask, async timing, native output, and consumer linking." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/library/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta property="og:description" content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, async timing and cancellation, native output, and consumer linking.">
+<meta property="og:description" content="Explore VOID libraries including managed UTF-8 strings, collections, Span and Memory, NativeMemory, Task/ValueTask, async timing, native output, and consumer linking.">
 <meta property="og:url" content="https://voidengine.net/language/library/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta name="twitter:description" content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, async timing and cancellation, native output, and consumer linking.">
+<meta name="twitter:description" content="Explore VOID libraries including managed UTF-8 strings, collections, Span and Memory, NativeMemory, Task/ValueTask, async timing, native output, and consumer linking.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -71,7 +71,7 @@
 <main id="main">
 <section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Libraries</p><h1>Use the library.<br/>Build your own.</h1><p>The standard library is written in VOID, and project library output can now package your own VOID code as a native static archive with stable exported C entry points.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Library types expose the same ownership and runtime rules as user code.</h2><p>Collections remain ordinary generic VOID code, while memory APIs make their lifetime boundary explicit. Managed Memory retains a GC owner; NativeMemory exposes deliberately unsafe manual allocation instead of pretending unmanaged storage belongs to the collector.</p></div>
+<div class="section-heading reveal"><p class="kicker">Standard library surface</p><h2>Library types expose the same ownership and runtime rules as user code.</h2><p>Managed strings, collections, async primitives, and memory APIs all keep their representation and lifetime boundaries explicit. <code>string</code> is GC-managed UTF-8 text, managed Memory retains a GC owner, and NativeMemory stays deliberately manual rather than pretending unmanaged storage belongs to the collector.</p></div>
 <div class="library-grid">
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>List&lt;T&gt;</code></h3><p>Resizable generic sequence with indexing, enumeration, managed-element tracing, and collection initializer support.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Queue&lt;T&gt;</code></h3><p>FIFO storage built as normal generic library code.</p></article>
@@ -83,6 +83,7 @@
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Span&lt;T&gt;</code> / <code>ReadOnlySpan&lt;T&gt;</code></h3><p>Stack-only library ref structs built on VOID's safe by-reference and escape model, with slicing, normal/ref/ref-readonly enumeration, overlap-safe memory operations, and unsafe pointer+length construction for non-owning unmanaged views.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Memory&lt;T&gt;</code> / <code>ReadOnlyMemory&lt;T&gt;</code></h3><p>Heap-storable managed array-backed memory using array + start + length. It slices without losing its owner, bridges explicitly to Span through <code>.Span</code>, survives suspension and GC, and remains deliberately separate from arbitrary native-memory ownership.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>NativeMemory</code></h3><p>Explicit <code>unsafe</code> unmanaged allocation, free, reallocation, aligned allocation, and typed allocation for <code>where T : unmanaged</code>. Native allocations never become GC objects, and Span views over them remain non-owning.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>string</code></h3><p>One immutable GC-managed, length-aware UTF-8 reference type for ordinary VOID text. Embedded NUL remains content, while native C-string, pointer+length, return ownership, retention, and export forms are handled by explicit ABI contracts rather than alternate text types.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>TaskAwaiter</code> / <code>TaskAwaiter&lt;T&gt;</code></h3><p><code>Task.GetAwaiter()</code> moves ordinary Task awaiting onto the same structural protocol used by custom awaitables. The awaiter can register directly with Task completion rather than manufacturing another continuation Task.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>YieldAwaitable</code></h3><p><code>Task.Yield()</code> returns a small value-type awaitable whose continuation queues through the existing ThreadPool. It proves generalized await can suspend without allocating a Task merely to represent the yield point.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>ValueTask</code> / <code>ValueTask&lt;T&gt;</code></h3><p>True value-type awaitables with inline synchronous completion and typed-result paths, plus Task-backed asynchronous, faulted, and canceled paths. They share the generalized await mechanism without adding pooling or a separate value-task runtime.</p></article>

@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Lifetime, Disposal &amp; Suspension</title>
-<meta content="Learn how VOID combines deterministic cleanup, await using, IAsyncDisposable, ref-like lifetimes, managed Memory, native ownership, and async suspension." name="description"/>
+<meta content="Learn how VOID combines deterministic cleanup, managed string/native text lifetimes, ref-like safety, managed Memory, native ownership, and async suspension." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/lifetime/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Lifetime, Disposal &amp; Suspension">
-<meta property="og:description" content="Learn how VOID combines deterministic cleanup, await using, IAsyncDisposable, ref-like lifetimes, managed Memory, native ownership, and async suspension.">
+<meta property="og:description" content="Learn how VOID combines deterministic cleanup, managed string/native text lifetimes, ref-like safety, managed Memory, native ownership, and async suspension.">
 <meta property="og:url" content="https://voidengine.net/language/lifetime/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Lifetime, Disposal &amp; Suspension">
-<meta name="twitter:description" content="Learn how VOID combines deterministic cleanup, await using, IAsyncDisposable, ref-like lifetimes, managed Memory, native ownership, and async suspension.">
+<meta name="twitter:description" content="Learn how VOID combines deterministic cleanup, managed string/native text lifetimes, ref-like safety, managed Memory, native ownership, and async suspension.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -77,6 +77,7 @@
 <article class="content-card reveal"><h3>Ref-like views vs managed Memory</h3><p><code>Span&lt;T&gt;</code> and other ref-like values stay constrained by escape, capture, and suspension rules. <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code> are heap-storable managed array-backed values that retain their owner across async methods, iterators, Tasks, continuations, ThreadPool work, and GC without implying thread safety.</p></article>
 <article class="content-card reveal"><h3>Scoped managed pinning</h3><p><code>fixed</code> acquires a runtime pin, keeps the managed owner rooted, and releases the pin through the same structured cleanup machinery used by normal control flow and exceptions. The fixed pointer is scoped and cannot be captured or returned as though the managed backing were permanently pinned.</p></article>
 <article class="content-card reveal"><h3>Explicit native heap lifetime</h3><p><code>NativeMemory</code> allocations live outside the managed GC. Allocation, reallocation, alignment, and free are deliberately unsafe ownership operations, while Span views over that storage remain non-owning. VOID does not make unmanaged heap lifetime look managed when no managed owner exists.</p></article>
+<article class="content-card reveal"><h3>Managed string &amp; native text lifetime</h3><p>Ordinary <code>string</code> values are GC-managed references, while native text ownership remains a boundary contract. Borrowed pointers expire according to their declared lifetime, owned native returns are released exactly once after conversion, retained native pointers require explicit representation, and exported strings never expose the GC object layout as a public C ABI.</p></article>
 </div>
 <section class="editorial-block reveal"><div><p class="kicker">One lifetime model</p><h2>Cleanup, suspension, registrations, refs, pins, and native ownership keep explicit boundaries.</h2></div><p>Structured exits, rethrow, GC-safe unwinding, iterator cleanup, <code>await using</code>, generalized await suspension, cancellation/timer registration cleanup, ref-like escape checks, and <code>fixed</code> pin release all feed compiler-visible lifetime rules. Heap-storable Memory and ValueTask state can cross legal suspension points because their managed references remain rooted; Span and fixed pointers cannot silently acquire that longer lifetime, CancellationTokenSource disposal tears down owned registrations, and NativeMemory remains manually owned outside the GC.</p></section>
 <div class="native-code-pair reveal">

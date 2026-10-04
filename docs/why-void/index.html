@@ -227,7 +227,7 @@
               <summary><span class="faq-number">15</span><span>Can VOID call native C libraries directly?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Yes. Native interoperability is part of the language rather than a separate bridge layered on later. VOID can declare compatible C functions through its native/extern surface, call them through the platform C ABI, allocate explicitly owned unmanaged memory, and work with raw native function-pointer values and C function tables.</p>
-                <p>The boundary remains deliberate. <code>NativeMemory</code> allocations are manually owned rather than GC objects, Span views over native storage are non-owning, and raw native function pointers are distinct from managed delegates and captured closures. Strings, managed objects, arrays, and other complex values still need explicit representation and lifetime rules.</p>
+                <p>The boundary remains deliberate. <code>NativeMemory</code> allocations are manually owned rather than GC objects, Span views over native storage are non-owning, and raw native function pointers are distinct from managed delegates and captured closures. Managed <code>string</code> now crosses that boundary through explicit UTF-8 ABI contracts for borrowing, pointer+length forms, ownership, retention, returns, callbacks, and exports instead of pretending a GC string is a raw C pointer.</p>
                 <p>.NET also has strong native interoperability support, including source-generated <code>LibraryImport</code>. VOID starts from a different implementation point because its normal output is already native code.</p>
                 <p class="faq-source">Reference: <a href="https://learn.microsoft.com/en-us/dotnet/standard/native-interop/pinvoke-source-generation" rel="noopener">Microsoft P/Invoke source generation</a>.</p>
               </div>
@@ -469,7 +469,7 @@
               <summary><span class="faq-number">43</span><span>Why should VOID have only one <code>string</code> type instead of adding <code>cstring</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because C's text representations describe an ABI contract, not a second meaning of text inside VOID. Ordinary VOID code should work with one managed <code>string</code> type whose lifetime and semantics belong to the language, while a native declaration describes whether that value crosses the boundary as borrowed NUL-terminated UTF-8, pointer plus length, an owned return, or another explicit representation.</p>
-                <p>The active roadmap therefore keeps <code>string</code> as the only user-facing text type and moves native ownership, borrowing, retention, release, and length into native-boundary metadata. That avoids teaching normal game code to carry C lifetime conventions everywhere just because one API happens to use them.</p>
+                <p>VOID now keeps <code>string</code> as the only user-facing text type and moves native ownership, borrowing, retention, release, and length into native-boundary metadata. That avoids teaching normal game code to carry C lifetime conventions everywhere just because one API happens to use them.</p>
               </div>
             </details>
 
@@ -478,6 +478,14 @@
               <div class="faq-answer">
                 <p>Because C output is an implementation path, not the semantic definition of a VOID string. A managed length-aware UTF-8 representation can preserve embedded NUL bytes, participate in GC like other managed references, and make equality, hashing, output, closures, generics, async state, exceptions, and arrays follow VOID rules instead of accidentally inheriting <code>strlen</code>-style termination rules.</p>
                 <p>A trailing NUL can still be useful as an interop optimization, but it should not define string length. At an actual native boundary, the ABI contract can reject embedded NUL for a borrowed C-string parameter, preserve it with pointer-plus-length forms, or copy an owned/borrowed native return into an ordinary managed <code>string</code>. The boundary chooses the representation; the language keeps one text model.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">45</span><span>Why should string positions count Unicode scalar values instead of UTF-8 bytes?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because raw UTF-8 byte offsets are useful for storage and native boundaries, but they are a poor default for ordinary language-level text operations. VOID already has a 32-bit <code>char</code>, so treating indexing, enumeration, ranges, and search positions as Unicode scalar positions gives those APIs one coherent meaning without exposing partial UTF-8 code units.</p>
+                <p>The active roadmap keeps the byte count explicit through <code>ByteLength</code>. It also deliberately stops short of claiming grapheme-cluster, culture, case-folding, or normalization behavior; those require separate text policies rather than changing what core <code>Length</code> and indexing mean later.</p>
               </div>
             </details>
           </div>

@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Native C Interop &amp; Unsafe Code</title>
-<meta content="Explore VOID native C interop: unmanaged generics, scoped pinning, NativeMemory allocation, native-backed Span views, raw function pointers, callbacks, and native libraries." name="description"/>
+<meta content="Explore VOID native C interop: unmanaged storage, pinning, NativeMemory, native Span views, function pointers, managed UTF-8 string ABI contracts, callbacks, and libraries." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/native/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Native C Interop &amp; Unsafe Code">
-<meta property="og:description" content="Explore VOID native C interop: unmanaged generics, scoped pinning, NativeMemory allocation, native-backed Span views, raw function pointers, callbacks, and native libraries.">
+<meta property="og:description" content="Explore VOID native C interop: unmanaged storage, pinning, NativeMemory, native Span views, function pointers, managed UTF-8 string ABI contracts, callbacks, and libraries.">
 <meta property="og:url" content="https://voidengine.net/language/native/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Native C Interop &amp; Unsafe Code">
-<meta name="twitter:description" content="Explore VOID native C interop: unmanaged generics, scoped pinning, NativeMemory allocation, native-backed Span views, raw function pointers, callbacks, and native libraries.">
+<meta name="twitter:description" content="Explore VOID native C interop: unmanaged storage, pinning, NativeMemory, native Span views, function pointers, managed UTF-8 string ABI contracts, callbacks, and libraries.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -69,7 +69,7 @@
 </header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language reference pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Reference</span><a href="../library/">Library</a><a href="../compiler/">Compiler</a><a href="../diagnostics/">Diagnostics</a><a href="../tooling/">Tooling</a><a class="active" href="../native/">Native</a><a href="../design/">Design</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Native Interop</p><h1>High-level code.<br/>A real C boundary.</h1><p>VOID can stay high level for normal game code while exposing explicit unsafe control over C libraries, unmanaged generic storage, scoped managed pinning, native heap ownership, non-owning Span views, managed callbacks, and raw native function pointers.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Native Interop</p><h1>High-level code.<br/>A real C boundary.</h1><p>VOID can stay high level for normal game code while exposing explicit unsafe control over C libraries, unmanaged storage, scoped managed pinning, native heap ownership, non-owning Span views, managed callbacks, raw native function pointers, and string ABI contracts that keep ordinary VOID text managed.</p></div></section>
 <section class="content-page"><div class="shell">
 <div class="section-heading reveal"><p class="kicker">Native foundation</p><h2>The low-level pieces work together through one ABI path.</h2><p>The native layer is project-controlled and explicit. The compiler emits ordinary C declarations/calls and lets the platform compiler/linker finish the job.</p></div>
 <div class="status-list">
@@ -81,6 +81,7 @@
 <article class="feature-row-page reveal"><h2>Native-backed Span views</h2><p><span class="status-chip current">Current</span> Unsafe pointer+length construction creates non-owning <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> views over unmanaged storage. Those views reuse normal indexing, Range slicing, ref foreach, copy, fill, and clear behavior; there is no parallel NativeSpan type.</p></article>
 <article class="feature-row-page reveal"><h2>Native by-reference parameters</h2><p><span class="status-chip current">Current</span> Native <code>ref</code>, <code>out</code>, and <code>in</code> lower to the pointer forms required by C APIs.</p></article>
 <article class="feature-row-page reveal"><h2>Bindings &amp; aliases</h2><p><span class="status-chip current">Current</span> Type-qualified native bindings and <code>[Native("symbol")]</code> aliases keep VOID-facing names readable.</p></article>
+<article class="feature-row-page reveal"><h2>Managed string ABI contracts</h2><p><span class="status-chip current">Current</span> Native declarations keep <code>string</code> as the VOID semantic type while ABI metadata defines borrowed NUL-terminated UTF-8, pointer+length parameters, borrowed/static returns, owned returns with explicit release, retained lifetimes, callbacks, and exports. Native results become managed strings before ordinary VOID code sees them, and writable native buffers stay separate from immutable string storage.</p></article>
 <article class="feature-row-page reveal"><h2>Libraries &amp; managed callbacks</h2><p><span class="status-chip current">Current</span> Projects declare native libraries/search paths; unsafe delegates can carry pointer returns/parameters and <code>ref/out/in</code> pointer forms; compatible static methods cross the ABI as managed callback entry points; and callback parameters reuse the same ABI-safe by-reference lowering. Managed delegates remain the managed callback abstraction.</p></article>
 <article class="feature-row-page reveal"><h2>Raw native function pointers</h2><p><span class="status-chip current">Current</span> Native function-pointer values are unmanaged, nullable, comparable, storable in unmanaged structures, and restricted to ABI-compatible signatures. VOID can take compatible native function addresses, invoke them indirectly through the existing GC-safe native-call transition, pass them through extern parameters/returns, and consume C function tables without treating captured managed closures as permanent native pointers.</p></article>
 <article class="feature-row-page reveal"><h2>Unsafe conversion boundary</h2><p><span class="status-chip current">Current</span> Existing pointer/unsafe conversions participate in the shared conversion classifier without silently widening safe language conversions or the C ABI boundary.</p></article>
