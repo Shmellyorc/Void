@@ -118,6 +118,7 @@ a{color:inherit}
 .library-card h3{margin:15px 0 8px;font-size:1.06rem}.library-card p{margin:0}
 .editorial-block{display:grid;grid-template-columns:minmax(260px,.75fr) minmax(0,1.25fr);gap:52px;align-items:start;margin-top:70px;padding:44px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .editorial-block h2{margin:0}.editorial-block>p{margin:30px 0 0;font-size:1.06rem}
+.editorial-copy-stack{display:grid;gap:18px}.editorial-copy-stack p{margin:0;font-size:1.06rem}
 .compiler-pipeline{display:grid;grid-template-columns:1fr 28px 1fr 28px 1fr 28px 1fr 28px 1fr;gap:8px;align-items:center;margin-top:42px}
 .compiler-pipeline>div{min-height:112px;padding:20px 16px;border:1px solid var(--line);border-radius:9px;background:linear-gradient(180deg,rgba(255,255,255,.024),rgba(255,255,255,.009));display:flex;flex-direction:column;justify-content:center;text-align:center}
 .compiler-pipeline strong{font-size:.98rem}.compiler-pipeline span{margin-top:7px;color:var(--muted-2);font-size:.77rem}
@@ -126,7 +127,7 @@ a{color:inherit}
 .compiler-feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:54px}
 .native-code-pair{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:34px}.native-code-pair .code-block-preview{margin:0}.native-principles{margin-top:34px}.native-next{margin-top:76px}
 @media(max-width:980px){.library-grid,.compiler-feature-grid{grid-template-columns:1fr 1fr}.compiler-pipeline{grid-template-columns:1fr}.compiler-pipeline>i{width:1px;height:24px;margin:auto}.compiler-pipeline>i::after{right:-3px;top:auto;bottom:0;transform:rotate(135deg)}}
-@media(max-width:780px){.language-link-grid,.library-grid,.compiler-feature-grid,.native-code-pair,.editorial-block{grid-template-columns:1fr}.editorial-block{gap:10px}.editorial-block>p{margin-top:0}}
+@media(max-width:780px){.language-link-grid,.library-grid,.compiler-feature-grid,.native-code-pair,.editorial-block{grid-template-columns:1fr}.editorial-block{gap:10px}.editorial-block>p{margin-top:0}.editorial-copy-stack{gap:12px}}
 
 /* VOID Language example browser */
 .example-browser{margin-top:40px;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.024),rgba(255,255,255,.009));overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,.2)}

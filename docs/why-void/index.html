@@ -264,7 +264,7 @@
               <div class="faq-answer">
                 <p>.NET already has a mature threading system and ThreadPool. VOID is not rebuilding those ideas because .NET lacks them. It is doing so because workers interact with nearly every other part of a managed runtime.</p>
                 <p>A VOID worker can allocate memory, participate in garbage collection, enter monitors, wait on synchronization primitives, observe cancellation, propagate exceptions, and eventually execute higher-level task work. Building the model inside VOID keeps those behaviors under the same runtime contract.</p>
-                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports structural awaiters, Task and ValueTask, allocation-free yielding, async lambdas, <code>await using</code>, <code>await foreach</code>, async iterators, and nonblocking Task composition without replacing the scheduler underneath them. The active timing work continues that pattern by building delays and cancellation timeouts on the existing monotonic runtime rather than sleeping workers.</p>
+                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports structural awaiters, Task and ValueTask, allocation-free yielding, async lambdas, <code>await using</code>, <code>await foreach</code>, async iterators, nonblocking Task composition, timer-backed <code>Task.Delay</code>, delayed/linked cancellation, and <code>Task.WaitAsync</code> without replacing the scheduler underneath them or sleeping workers for asynchronous deadlines.</p>
               </div>
             </details>
 
@@ -298,7 +298,7 @@
               <summary><span class="faq-number">23</span><span>Why build async timing around one shared timer service?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because delays, delayed cancellation, and timeout waiting are the same runtime problem at the bottom: schedule work against a monotonic deadline, then resolve a race exactly once. Giving each API its own timer thread or sleeping a ThreadPool worker would duplicate lifetime, shutdown, GC, and race handling while consuming execution resources that should stay available for real work.</p>
-                <p>The active roadmap therefore builds one cancellable timer queue for <code>Task.Delay</code>, <code>CancellationTokenSource.CancelAfter</code>, and <code>Task.WaitAsync</code> timeouts. Linked cancellation stays registration-based, and a timed or canceled <code>WaitAsync</code> affects only the proxy wait, not the antecedent Task itself.</p>
+                <p>VOID now uses one cancellable timer queue for <code>Task.Delay</code>, <code>CancellationTokenSource.CancelAfter</code>, and <code>Task.WaitAsync</code> timeouts. Linked cancellation stays registration-based, source disposal removes retained registrations deterministically, and a timed or canceled <code>WaitAsync</code> affects only the proxy wait, not the antecedent Task itself.</p>
               </div>
             </details>
 
@@ -461,7 +461,23 @@
               <summary><span class="faq-number">42</span><span>Why did Task composition come before timer-backed async waits?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p><code>Task.Run</code> unwrapping, <code>WhenAll</code>, and <code>WhenAny</code> are composition problems over a continuation system VOID already owns. They remain nonblocking and reuse existing Task completion, cancellation, fault, GC, and ThreadPool rules.</p>
-                <p><code>Task.Delay</code> is different because a good implementation needs a real monotonic timer service rather than sleeping a worker or creating a thread per delay. That timer infrastructure is now the active roadmap work, while synchronization contexts and scheduler customization remain separate because neither is required to make timing and cancellation composition correct.</p>
+                <p><code>Task.Delay</code> is different because a good implementation needs a real monotonic timer service rather than sleeping a worker or creating a thread per delay. VOID now has that shared timer infrastructure, and it also powers <code>CancelAfter</code> and <code>WaitAsync</code> timeouts. Synchronization contexts and scheduler customization remain separate because neither was required to make timing and cancellation composition correct.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">43</span><span>Why should VOID have only one <code>string</code> type instead of adding <code>cstring</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because C's text representations describe an ABI contract, not a second meaning of text inside VOID. Ordinary VOID code should work with one managed <code>string</code> type whose lifetime and semantics belong to the language, while a native declaration describes whether that value crosses the boundary as borrowed NUL-terminated UTF-8, pointer plus length, an owned return, or another explicit representation.</p>
+                <p>The active roadmap therefore keeps <code>string</code> as the only user-facing text type and moves native ownership, borrowing, retention, release, and length into native-boundary metadata. That avoids teaching normal game code to carry C lifetime conventions everywhere just because one API happens to use them.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">44</span><span>Why make managed strings length-aware if VOID already emits C?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because C output is an implementation path, not the semantic definition of a VOID string. A managed length-aware UTF-8 representation can preserve embedded NUL bytes, participate in GC like other managed references, and make equality, hashing, output, closures, generics, async state, exceptions, and arrays follow VOID rules instead of accidentally inheriting <code>strlen</code>-style termination rules.</p>
+                <p>A trailing NUL can still be useful as an interop optimization, but it should not define string length. At an actual native boundary, the ABI contract can reject embedded NUL for a borrowed C-string parameter, preserve it with pointer-plus-length forms, or copy an owned/borrowed native return into an ordinary managed <code>string</code>. The boundary chooses the representation; the language keeps one text model.</p>
               </div>
             </details>
           </div>

@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Libraries &amp; Native Library Output</title>
-<meta content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, Task composition, native output, and consumer linking." name="description"/>
+<meta content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, async timing and cancellation, native output, and consumer linking." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/library/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta property="og:description" content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, Task composition, native output, and consumer linking.">
+<meta property="og:description" content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, async timing and cancellation, native output, and consumer linking.">
 <meta property="og:url" content="https://voidengine.net/language/library/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Libraries &amp; Native Library Output">
-<meta name="twitter:description" content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, Task composition, native output, and consumer linking.">
+<meta name="twitter:description" content="Explore VOID libraries including collections, Span and Memory, NativeMemory, Task awaiters, ValueTask, async timing and cancellation, native output, and consumer linking.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -87,7 +87,9 @@
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>YieldAwaitable</code></h3><p><code>Task.Yield()</code> returns a small value-type awaitable whose continuation queues through the existing ThreadPool. It proves generalized await can suspend without allocating a Task merely to represent the yield point.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>ValueTask</code> / <code>ValueTask&lt;T&gt;</code></h3><p>True value-type awaitables with inline synchronous completion and typed-result paths, plus Task-backed asynchronous, faulted, and canceled paths. They share the generalized await mechanism without adding pooling or a separate value-task runtime.</p></article>
 <article class="library-card reveal"><span class="status-chip current">Current</span><h3>Task completion &amp; async scheduling</h3><p><code>CompletedTask</code>, <code>FromResult&lt;T&gt;</code>, and faulted/canceled completion factories create already-terminal Tasks without worker work. Task-returning delegates passed to <code>Task.Run</code> are unwrapped through continuations so callers observe one Task rather than a nested Task or a blocked worker.</p></article>
-<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Task.WhenAll</code> / <code>Task.WhenAny</code></h3><p>Nonblocking Task aggregation and first-completion composition reuse the existing continuation machinery. <code>WhenAll</code> preserves typed result order, while <code>WhenAny</code> completes with the winning Task regardless of that Task's final state.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Task.WhenAll</code> / <code>Task.WhenAny</code></h3><p>Nonblocking Task aggregation and first-completion composition reuse the existing continuation machinery. <code>WhenAll</code> preserves typed result order, while <code>WhenAny</code> completes with the winning Task regardless of that Task's final state.</p></article><article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Task.Delay</code></h3><p>Finite delays use the shared monotonic timer queue rather than sleeping workers or spawning per-delay threads. Zero can complete immediately, <code>Timeout.Infinite</code> remains pending by time, and cancellable delays resolve timer-vs-cancel races exactly once while cleaning up registrations.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>CancellationTokenSource</code> composition</h3><p>Sources own and dispose their timer/external registrations deterministically. <code>CancelAfter</code> schedules delayed cancellation through the same timer queue, while linked sources propagate parent cancellation through ordinary registrations and unregister from every parent when disposed.</p></article>
+<article class="library-card reveal"><span class="status-chip current">Current</span><h3><code>Task.WaitAsync</code></h3><p>Cancellation and timeout forms create nonblocking proxy waits over an existing Task. Antecedent completion, wait cancellation, and timeout race for one terminal result; losing registrations are cleaned up, and canceling or timing out the wait never cancels or otherwise mutates the antecedent Task.</p></article>
 </div>
 <div class="native-code-pair reveal"><div class="code-block-preview"><div class="code-head">VOID library export</div><pre><code class="void-syntax" data-void-code="">public static class MathApi
 {
