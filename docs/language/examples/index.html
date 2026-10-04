@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Examples - Async, Threading &amp; Native Interop</title>
-<meta content="Browse focused VOID Language examples for async/await, threading, synchronization, patterns, exceptions, native interop, libraries, and compiler tooling." name="description"/>
+<meta content="Browse focused VOID Language examples for async/await, async lambdas, await using, threading, synchronization, native interop, libraries, and tooling." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/examples/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Examples - Async, Threading &amp; Native Interop">
-<meta property="og:description" content="Browse focused VOID Language examples for async/await, threading, synchronization, patterns, exceptions, native interop, libraries, and compiler tooling.">
+<meta property="og:description" content="Browse focused VOID Language examples for async/await, async lambdas, await using, threading, synchronization, native interop, libraries, and tooling.">
 <meta property="og:url" content="https://voidengine.net/language/examples/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Examples - Async, Threading &amp; Native Interop">
-<meta name="twitter:description" content="Browse focused VOID Language examples for async/await, threading, synchronization, patterns, exceptions, native interop, libraries, and compiler tooling.">
+<meta name="twitter:description" content="Browse focused VOID Language examples for async/await, async lambdas, await using, threading, synchronization, native interop, libraries, and tooling.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -79,6 +79,8 @@
 <option value="async-foreach-suspension">foreach body across await</option>
 <option value="async-await-foreach">await foreach</option>
 <option value="async-iterator">Async iterator</option>
+<option value="async-lambda-task-run">Async lambda + Task.Run</option>
+<option value="async-await-using">await using</option>
 </optgroup><optgroup label="Threading &amp; synchronization"><option value="managed-thread-lifecycle">Managed Thread start + join</option><option value="thread-closure-capture">Worker closure capture</option><option value="monitor-enter-exit">Monitor Enter / Exit</option><option value="lock-statement">Structured lock statement</option><option value="worker-exception-join">Worker exception handoff</option><option value="monitor-wait-pulse">Monitor Wait + PulseAll</option><option value="thread-sleep">Thread.Sleep</option><option value="timed-monitor-wait">Timed Monitor.Wait</option><option value="interlocked-integer">Interlocked integer operations</option><option value="volatile-read-write">Volatile Read / Write</option><option value="advanced-sync-integration">Waiting + atomics integration</option><option value="threading-integration">Threading + GC + lock integration</option></optgroup><optgroup label="Conversion semantics &amp; generic conversions"><option value="standard-conversion-classification">Standard conversion classification</option><option value="user-defined-conversion-resolution">User-defined conversion resolution</option><option value="lifted-nullable-conversions">Lifted nullable conversions</option><option value="conversion-site-integration">Target-typed conversion sites</option><option value="static-interface-conversions">Static interface conversion contracts</option><option value="constrained-implicit-conversions">Constrained generic implicit conversion</option><option value="constrained-explicit-conversions">Constrained generic explicit conversion</option><option value="generic-conversion-provenance">Generic conversion provenance</option><option value="conversion-iterator-closure-gc">Conversions through iterator, closure &amp; GC</option><option value="conversion-integration">Conversion semantics integration</option></optgroup><optgroup label="Iterator lifetime &amp; generic operators"><option value="iterator-pattern-capture">Iterator declaration-pattern capture</option><option value="iterator-switch-capture">Iterator switch/guard capture</option><option value="iterator-pattern-gc">Iterator pattern lifetime + GC</option><option value="iterator-state-audit">Iterator state-machine integration</option><option value="stable-diagnostics">Stable diagnostics</option><option value="unary-operators">Unary operators</option><option value="binary-operators">Binary operators</option><option value="static-interface-operators">Static interface operator contracts</option><option value="constrained-generic-operators">Constrained generic operator dispatch</option><option value="operator-integration">Iterator + generic operator integration</option></optgroup><optgroup label="Pattern matching &amp; control-flow expressions">
 <option value="declaration-patterns">Declaration patterns</option>
 <option value="constant-null-patterns">Constant + null patterns</option>
@@ -173,6 +175,6 @@ public static async Task LoadAsync()
 <div class="page-actions reveal"><a class="outline-button" href="../features/">All Features</a><a class="outline-button" href="../operators/">Operators</a><a class="outline-button" href="../conversions/">Conversions</a><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
 </div></section></main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../why-void/">Why VOID</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
-<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=3"></script><script src="../../assets/js/examples.js?v=15"></script><script src="../../assets/js/site.js?v=11"></script>
+<script src="../../assets/js/home.js?v=3"></script><script src="../../assets/js/syntax.js?v=3"></script><script src="../../assets/js/examples.js?v=16"></script><script src="../../assets/js/site.js?v=11"></script>
 </body>
 </html>

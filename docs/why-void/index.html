@@ -264,7 +264,7 @@
               <div class="faq-answer">
                 <p>.NET already has a mature threading system and ThreadPool. VOID is not rebuilding those ideas because .NET lacks them. It is doing so because workers interact with nearly every other part of a managed runtime.</p>
                 <p>A VOID worker can allocate memory, participate in garbage collection, enter monitors, wait on synchronization primitives, observe cancellation, propagate exceptions, and eventually execute higher-level task work. Building the model inside VOID keeps those behaviors under the same runtime contract.</p>
-                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports structural awaiters, Task and ValueTask, allocation-free yielding, <code>await foreach</code>, and async iterators without replacing the scheduler underneath them. The next async block builds language and composition features on that same scheduler foundation.</p>
+                <p>The order was deliberate: native threads and managed thread state first, then synchronization and timed waits, then cancellation, then ThreadPool and Task foundations, and only then async state-machine lowering. That layering now supports structural awaiters, Task and ValueTask, allocation-free yielding, async lambdas, <code>await using</code>, <code>await foreach</code>, async iterators, and nonblocking Task composition without replacing the scheduler underneath them. The active timing work continues that pattern by building delays and cancellation timeouts on the existing monotonic runtime rather than sleeping workers.</p>
               </div>
             </details>
 
@@ -290,11 +290,20 @@
                 <p>Yes. VOID now has one structural await mechanism based on <code>GetAwaiter()</code>, <code>IsCompleted</code>, <code>OnCompleted(Action)</code>, and <code>GetResult()</code>. Task participates through <code>TaskAwaiter</code> rather than a private compiler-only await path, and the same binder works with custom class, struct, generic, and extension awaiters.</p>
                 <p><code>Task.Yield()</code> provides an allocation-free yield awaitable, while <code>ValueTask</code>/<code>ValueTask&lt;T&gt;</code> provide true value-type completed paths plus Task-backed asynchronous paths. <code>async ValueTask</code> methods reuse the existing state-machine and completion machinery.</p>
                 <p>The order was deliberate. VOID first built threads, synchronization, cancellation, ThreadPool scheduling, Task completion, exceptions, GC coordination, continuations, and Task-backed state machines. Generalizing the await contract after those pieces existed removed the Task special case without creating a second scheduler or async runtime.</p>
+                <p>That same mechanism now powers async lambdas and structured <code>await using</code>, while Task completion factories, async <code>Task.Run</code> unwrapping, <code>WhenAll</code>, and <code>WhenAny</code> compose work through continuations instead of adding another async execution model.</p>
               </div>
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">23</span><span>Why does the compiler power the editor too?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">23</span><span>Why build async timing around one shared timer service?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because delays, delayed cancellation, and timeout waiting are the same runtime problem at the bottom: schedule work against a monotonic deadline, then resolve a race exactly once. Giving each API its own timer thread or sleeping a ThreadPool worker would duplicate lifetime, shutdown, GC, and race handling while consuming execution resources that should stay available for real work.</p>
+                <p>The active roadmap therefore builds one cancellable timer queue for <code>Task.Delay</code>, <code>CancellationTokenSource.CancelAfter</code>, and <code>Task.WaitAsync</code> timeouts. Linked cancellation stays registration-based, and a timed or canceled <code>WaitAsync</code> affects only the proxy wait, not the antecedent Task itself.</p>
+              </div>
+            </details>
+
+            <details class="faq-item">
+              <summary><span class="faq-number">24</span><span>Why does the compiler power the editor too?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because the compiler already knows what the program means. Diagnostics, hover information, signatures, completion, definitions, references, and symbols should come from that same semantic model instead of being reimplemented by an editor extension.</p>
                 <p>That keeps tooling aligned with real builds. A thin editor client can ask the compiler questions instead of carrying a second, slightly different version of the language.</p>
@@ -302,7 +311,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">24</span><span>Why expose semantic queries?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">25</span><span>Why expose semantic queries?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Tooling should not have to scrape syntax and guess what a symbol means. VOID's compiler can expose answers about types, members, definitions, references, overloads, parameters, and source locations from an analyzed project session.</p>
                 <p>That makes editors and future tools easier to build correctly because semantic knowledge stays in one place.</p>
@@ -310,7 +319,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">25</span><span>Why build source mapping and diagnostics into the compiler?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">26</span><span>Why build source mapping and diagnostics into the compiler?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Generating C should not make developers debug generated C. The generated representation is an implementation detail. Errors, source ranges, native debug information, and editor tooling should still point back to the original VOID source wherever possible.</p>
                 <p>That is why source mapping, precise source spans, source-only checking, and compiler-backed diagnostics are part of the compiler architecture rather than separate convenience tools.</p>
@@ -318,7 +327,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">26</span><span>Why is AOT the normal model instead of a special publishing mode?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">27</span><span>Why is AOT the normal model instead of a special publishing mode?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because design assumptions spread. If native output is the default assumption, reflection, metadata, generics, native interop, exception handling, libraries, and runtime services can all be designed with that constraint visible from the beginning.</p>
                 <p>VOID is not managed-first and native-later. Native output is the ordinary path.</p>
@@ -326,7 +335,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">27</span><span>Is VOID just a C# transpiler?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">28</span><span>Is VOID just a C# transpiler?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>No. The surface is intentionally familiar, but VOID owns its own language semantics, compiler, runtime, garbage collector, reflection model, threading, exception system, standard library, diagnostics, and tooling.</p>
                 <p>The goal is not to accept arbitrary C# source and translate it to C. Familiarity lowers the learning cost, while the implementation underneath follows VOID's own rules.</p>
@@ -343,7 +352,7 @@
           </div>
           <div class="faq-list">
             <details class="faq-item">
-              <summary><span class="faq-number">28</span><span>Why is VOID deliberately game-focused?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">29</span><span>Why is VOID deliberately game-focused?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because focus makes tradeoffs easier to understand. VOID does not need to become an enterprise application platform, cloud stack, database framework, or replacement for every part of .NET.</p>
                 <p>It can still have networking, libraries, tooling, and general-purpose features. The difference is that game development and native applications remain the center of gravity when design choices compete.</p>
@@ -351,7 +360,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">29</span><span>Is VOID trying to replace C# or .NET?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">30</span><span>Is VOID trying to replace C# or .NET?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>No. VOID exists because I wanted a different set of tradeoffs, not because every C# developer should abandon .NET.</p>
                 <p>If .NET already fits a project, there is no reason for VOID to pretend otherwise. VOID is for developers who find value in its combination of familiar high-level code, native output, compiler and runtime ownership, and a game-focused scope.</p>
@@ -359,7 +368,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">30</span><span>What does VOID deliberately not want to become?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">31</span><span>What does VOID deliberately not want to become?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>It does not need to absorb every application model imaginable. More surface is not automatically more useful. Every major feature increases the amount of behavior the compiler, runtime, documentation, tooling, and users have to carry.</p>
                 <p>The goal is to grow where the project gains leverage, not to collect features simply because another ecosystem has them.</p>
@@ -367,7 +376,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">31</span><span>Can VOID evolve faster because it owns the stack?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">32</span><span>Can VOID evolve faster because it owns the stack?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>While the language is young, coordinated compiler and runtime changes are easier because VOID does not carry decades of CLR compatibility requirements. A change to metadata, threading, code generation, or tooling can be designed across the whole stack instead of fitting one layer around another.</p>
                 <p>That freedom still has to be balanced with stability. As people build real projects on VOID, compatibility becomes part of the design responsibility too.</p>
@@ -375,7 +384,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">32</span><span>Who is VOID for?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">33</span><span>Who is VOID for?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>VOID is for game developers who like useful defaults but still want to understand and control the systems underneath them. It is also for developers who like the feel of modern managed code but are interested in a native-first compiler and runtime model.</p>
                 <p>You do not need to want every part of VOID. Use the engine, the language, or both. The point is to provide a foundation you can grow from without making the foundation own your project.</p>
@@ -383,7 +392,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">33</span><span>Will VOID support LINQ-style APIs?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">34</span><span>Will VOID support LINQ-style APIs?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>The language already has most of the machinery needed for LINQ-style collection APIs: generics, delegates, lambdas, closures, <code>IEnumerable&lt;T&gt;</code>, <code>IEnumerator&lt;T&gt;</code>, extension methods, and iterator methods using <code>yield return</code>.</p>
                 <p>That means method-style operations such as <code>Where</code>, <code>Select</code>, <code>Any</code>, <code>First</code>, <code>Take</code>, and <code>Skip</code> can be ordinary standard-library APIs rather than compiler features. A complete built-in operator set is not being claimed as current functionality yet.</p>
@@ -392,7 +401,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">34</span><span>Will VOID have source generators or macros?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">35</span><span>Will VOID have source generators or macros?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Source-generator-style tooling is a possible future direction. VOID already has compiler-owned metadata, semantic queries, source spans, and a normal source compilation pipeline, so generated code could be built around stable compiler information instead of text scraping.</p>
                 <p>A likely model would inspect declarations or metadata and emit ordinary VOID source that then goes through the same parser, semantic analysis, diagnostics, and native compilation path as handwritten code.</p>
@@ -401,7 +410,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">35</span><span>Will VOID support <code>Span&lt;T&gt;</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">36</span><span>Will VOID support <code>Span&lt;T&gt;</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Yes. <code>Span&lt;T&gt;</code>/<code>ReadOnlySpan&lt;T&gt;</code> are ordinary standard-library <code>ref struct</code> types built on compiler-tracked refs, readonly rules, escape analysis, and stack-only ref-like lifetime semantics. They compose with Index/Range slicing, normal and ref foreach, overlap-safe memory operations, managed arrays, stack storage, and unsafe pointer+length views over unmanaged memory.</p>
                 <p>The ownership rules stay explicit even now that VOID has native heap allocation. <code>Memory&lt;T&gt;</code>/<code>ReadOnlyMemory&lt;T&gt;</code> remain heap-storable managed array-backed values; <code>NativeMemory</code> allocations are manually owned outside the GC; and a Span over either kind of storage is still only a view. Scoped <code>fixed</code> pinning remains the lifetime-aware bridge from managed buffers to pointer+length native calls.</p>
@@ -409,7 +418,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">36</span><span>Why keep native heap ownership explicit?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">37</span><span>Why keep native heap ownership explicit?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because allocation and ownership are different concerns from viewing memory. VOID can now allocate, reallocate, align, and free unmanaged storage, but that storage is not a managed object and the garbage collector does not own its lifetime.</p>
                 <p>Keeping <code>NativeMemory</code> explicitly unsafe makes that responsibility visible. A Span can provide safe indexing rules over a valid native region, but it does not become an owner and cannot make a freed allocation valid again.</p>
@@ -417,7 +426,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">37</span><span>Why keep native function pointers separate from managed delegates?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">38</span><span>Why keep native function pointers separate from managed delegates?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>They represent different lifetime and runtime contracts. A raw native function pointer is an unmanaged code address with an ABI-compatible signature. A managed delegate can carry managed target state, participate in GC lifetime, and represent closures or multicast behavior.</p>
                 <p>VOID supports both, but it does not pretend they are interchangeable. That keeps C function tables and indirect native calls explicit without making captured managed state look like a permanently valid C callback address.</p>
@@ -425,7 +434,7 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">38</span><span>Why did VOID generalize await before adding scheduler or context features?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">39</span><span>Why did VOID generalize await before adding scheduler or context features?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because the semantic boundary had to come first. VOID now treats awaiting as a structural language protocol, so Task, custom awaitables, and ValueTask all use one compiler path while continuation scheduling still rests on the existing runtime.</p>
                 <p>That makes later scheduler or context features meaningful instead of cosmetic. A future synchronization-context or scheduler abstraction can influence a general await mechanism rather than being bolted onto a Task-only compiler special case.</p>
@@ -433,26 +442,26 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">39</span><span>Why add async lambdas without adding <code>async void</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">40</span><span>Why does VOID support async lambdas without <code>async void</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Async lambdas are useful because VOID already has delegates, closures, generalized awaiters, Task/ValueTask results, and mature async state machines. The missing piece is letting those existing systems compose when the lambda itself suspends.</p>
-                <p><code>async void</code> changes the observability contract because there is no returned Task or ValueTask through which normal code can observe completion or faults. VOID is keeping async lambda targets awaitable for now and leaving fire-and-forget error policy to a later design instead of making unobserved failure behavior implicit.</p>
+                <p>Async lambdas now compose ordinary delegates and closures with the same async state-machine machinery used by named methods. Task- and ValueTask-returning delegate targets keep completion, results, cancellation, and faults observable through the awaitable value the caller receives.</p>
+                <p><code>async void</code> would change that observability contract because there is no returned Task or ValueTask through which normal code can observe completion or faults. VOID therefore keeps async lambda targets awaitable for now and leaves fire-and-forget error policy to a later design instead of making unobserved failure behavior implicit.</p>
               </div>
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">40</span><span>Why should <code>await using</code> use the structural awaiter model?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">41</span><span>Why does <code>await using</code> use the structural awaiter model?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Because asynchronous disposal should not create a private Task-only cleanup rule. VOID already has <code>IAsyncDisposable</code>, generalized await binding, and structured cleanup; <code>await using</code> can connect those systems by resolving <code>DisposeAsync()</code> and awaiting its result through the same binder used everywhere else.</p>
+                <p>Because asynchronous disposal should not create a private Task-only cleanup rule. VOID resolves <code>DisposeAsync()</code> structurally and awaits its result through the same generalized binder used everywhere else, then feeds disposal back into the existing structured cleanup state machine.</p>
                 <p>That keeps Task, ValueTask, and valid custom disposal awaitables on one semantic path while preserving the ordinary cleanup requirements: LIFO order, exceptions, early exits, GC lifetime, and suspension.</p>
               </div>
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">41</span><span>Why add Task composition before timers or scheduler customization?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">42</span><span>Why did Task composition come before timer-backed async waits?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p><code>Task.Run</code> unwrapping, <code>WhenAll</code>, and <code>WhenAny</code> are composition problems over a continuation system VOID already owns. They can remain nonblocking and reuse existing Task completion, cancellation, fault, GC, and ThreadPool rules.</p>
-                <p><code>Task.Delay</code> is different because a good implementation needs a real monotonic timer service rather than sleeping a worker or creating a thread per delay. Synchronization contexts and scheduler customization also need a meaningful runtime abstraction to configure. Keeping those for a later block avoids pretending the infrastructure already exists.</p>
+                <p><code>Task.Run</code> unwrapping, <code>WhenAll</code>, and <code>WhenAny</code> are composition problems over a continuation system VOID already owns. They remain nonblocking and reuse existing Task completion, cancellation, fault, GC, and ThreadPool rules.</p>
+                <p><code>Task.Delay</code> is different because a good implementation needs a real monotonic timer service rather than sleeping a worker or creating a thread per delay. That timer infrastructure is now the active roadmap work, while synchronization contexts and scheduler customization remain separate because neither is required to make timing and cancellation composition correct.</p>
               </div>
             </details>
           </div>

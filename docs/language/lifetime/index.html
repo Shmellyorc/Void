@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Lifetime, Disposal &amp; Suspension</title>
-<meta content="Learn how VOID combines deterministic cleanup, IAsyncDisposable, ref-like lifetimes, managed Memory, scoped pinning, native ownership, and async suspension." name="description"/>
+<meta content="Learn how VOID combines deterministic cleanup, await using, IAsyncDisposable, ref-like lifetimes, managed Memory, native ownership, and async suspension." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/lifetime/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -12,7 +12,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Lifetime, Disposal &amp; Suspension">
-<meta property="og:description" content="Learn how VOID combines deterministic cleanup, IAsyncDisposable, ref-like lifetimes, managed Memory, scoped pinning, native ownership, and async suspension.">
+<meta property="og:description" content="Learn how VOID combines deterministic cleanup, await using, IAsyncDisposable, ref-like lifetimes, managed Memory, native ownership, and async suspension.">
 <meta property="og:url" content="https://voidengine.net/language/lifetime/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,7 +21,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Lifetime, Disposal &amp; Suspension">
-<meta name="twitter:description" content="Learn how VOID combines deterministic cleanup, IAsyncDisposable, ref-like lifetimes, managed Memory, scoped pinning, native ownership, and async suspension.">
+<meta name="twitter:description" content="Learn how VOID combines deterministic cleanup, await using, IAsyncDisposable, ref-like lifetimes, managed Memory, native ownership, and async suspension.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -60,14 +60,14 @@
 </div></header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a class="active" href="../features/">Core</a><a href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language core pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Core</span><a href="../features/">Features</a><a href="../object-model/">Object Model</a><a href="../value-types/">Value Types</a><a href="../exceptions/">Exceptions</a><a href="../threading/">Threading</a><a class="active" href="../lifetime/">Lifetime</a><a href="../patterns/">Patterns</a><a href="../operators/">Operators</a><a href="../conversions/">Conversions</a><a href="../getting-started/">Getting Started</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language lifetime &amp; abstractions</p><h1>Structured cleanup.<br/>Suspension-aware lifetimes.</h1><p>VOID treats cleanup and suspension as compiler-visible lifetime concerns. <code>IDisposable</code>, <code>IAsyncDisposable</code>, <code>using</code>, iterator cleanup, ref-like escape rules, exceptions, and <code>finally</code> all share the same underlying control-flow and lifetime model; structured <code>await using</code> is the next integration step.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Language lifetime &amp; abstractions</p><h1>Structured cleanup.<br/>Suspension-aware lifetimes.</h1><p>VOID treats cleanup and suspension as compiler-visible lifetime concerns. <code>IDisposable</code>, <code>IAsyncDisposable</code>, <code>using</code>, <code>await using</code>, iterator cleanup, ref-like escape rules, exceptions, and <code>finally</code> all share the same underlying control-flow and lifetime model.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Completed lifetime &amp; abstraction foundation</p><h2>Cleanup and suspension keep explicit lifetime rules.</h2><p>Deterministic disposal, iterator cleanup, generalized awaiting, ref-like escape checks, managed Memory, scoped pins, and native ownership all remain visible to the compiler. The <code>IAsyncDisposable</code> contract exists today; the active roadmap adds <code>await using</code> so asynchronous disposal can participate in the same structured cleanup graph automatically.</p></div>
+<div class="section-heading reveal"><p class="kicker">Completed lifetime &amp; abstraction foundation</p><h2>Cleanup and suspension keep explicit lifetime rules.</h2><p>Deterministic disposal, iterator cleanup, generalized awaiting, structured <code>await using</code>, ref-like escape checks, managed Memory, scoped pins, and native ownership all remain visible to the compiler. Asynchronous disposal now participates in the same structured cleanup graph as synchronous <code>using</code> instead of introducing a separate cleanup state machine.</p></div>
 <div class="content-grid">
 <article class="content-card reveal"><h3>Structured <code>lock</code> release</h3><p><code>lock</code> uses the same structured-finally transfer stack as exceptions and deterministic disposal, so monitor release is not skipped by normal fallthrough, <code>return</code>, <code>break</code>, <code>continue</code>, or managed exceptions.</p></article><article class="content-card reveal"><h3><code>IDisposable</code> &amp; iterator disposal</h3><p><code>Void.IDisposable</code> is part of the root library contract. Collection enumerators and compiler-generated iterators can dispose deterministically, including pending iterator cleanup.</p></article>
 <article class="content-card reveal"><h3>Foreach disposal</h3><p>Non-array <code>foreach</code> disposes its enumerator on normal completion, early <code>break</code>, <code>return</code>, and exception paths through structured cleanup.</p></article>
 <article class="content-card reveal"><h3>Using statements</h3><p>C#-style <code>using (...)</code> works with disposable reference and value types, null resources, nesting, exceptions, and normal GC behavior.</p></article>
-<article class="content-card reveal"><h3>Using declarations</h3><p><code>using var</code> and typed using declarations dispose resources at scope exit in reverse declaration order across normal and exceptional exits.</p></article><article class="content-card reveal"><h3><code>IAsyncDisposable</code> contract</h3><p><code>IAsyncDisposable</code> provides the asynchronous cleanup contract, and its <code>DisposeAsync()</code> result can be awaited through the generalized awaiter mechanism. Automatic structured <code>await using</code> lowering remains active roadmap work.</p></article>
+<article class="content-card reveal"><h3>Using declarations</h3><p><code>using var</code> and typed using declarations dispose resources at scope exit in reverse declaration order across normal and exceptional exits.</p></article><article class="content-card reveal"><h3>Async disposal &amp; <code>await using</code></h3><p><code>IAsyncDisposable</code> provides the asynchronous cleanup contract, and <code>await using</code> resolves <code>DisposeAsync()</code> structurally through the generalized awaiter mechanism. Normal exit, early structured exits, faults, nested resources, and mixed synchronous/asynchronous cleanup stay inside the existing state-machine and LIFO cleanup model.</p></article>
 <article class="content-card reveal"><h3>Async iterator cleanup</h3><p><code>await foreach</code> and compiler-generated async iterators retain their enumerator and producer state across suspension, then dispose asynchronously on normal completion, early exit, faults, cancellation, or consumer teardown.</p></article>
 <article class="content-card reveal"><h3>Generic method inference and conversion provenance</h3><p>Generic calls can omit explicit type arguments when VOID can infer them through the existing overload resolver and monomorphizer, including constrained and by-reference cases where inference is well-defined.</p></article>
 <article class="content-card reveal"><h3>Extension methods</h3><p>Static methods with a <code>this</code> first parameter can participate in instance-style call syntax while preserving ordinary instance-member precedence and normal overload resolution.</p></article>
@@ -78,7 +78,7 @@
 <article class="content-card reveal"><h3>Scoped managed pinning</h3><p><code>fixed</code> acquires a runtime pin, keeps the managed owner rooted, and releases the pin through the same structured cleanup machinery used by normal control flow and exceptions. The fixed pointer is scoped and cannot be captured or returned as though the managed backing were permanently pinned.</p></article>
 <article class="content-card reveal"><h3>Explicit native heap lifetime</h3><p><code>NativeMemory</code> allocations live outside the managed GC. Allocation, reallocation, alignment, and free are deliberately unsafe ownership operations, while Span views over that storage remain non-owning. VOID does not make unmanaged heap lifetime look managed when no managed owner exists.</p></article>
 </div>
-<section class="editorial-block reveal"><div><p class="kicker">One lifetime model</p><h2>Cleanup, suspension, refs, pins, and native ownership keep explicit boundaries.</h2></div><p>Structured exits, rethrow, GC-safe unwinding, iterator cleanup, generalized await suspension, ref-like escape checks, and <code>fixed</code> pin release all feed compiler-visible lifetime rules. Heap-storable Memory and ValueTask state can cross legal suspension points because their managed references remain rooted; Span and fixed pointers cannot silently acquire that longer lifetime, and NativeMemory remains manually owned outside the GC.</p></section>
+<section class="editorial-block reveal"><div><p class="kicker">One lifetime model</p><h2>Cleanup, suspension, refs, pins, and native ownership keep explicit boundaries.</h2></div><p>Structured exits, rethrow, GC-safe unwinding, iterator cleanup, <code>await using</code>, generalized await suspension, ref-like escape checks, and <code>fixed</code> pin release all feed compiler-visible lifetime rules. Heap-storable Memory and ValueTask state can cross legal suspension points because their managed references remain rooted; Span and fixed pointers cannot silently acquire that longer lifetime, and NativeMemory remains manually owned outside the GC.</p></section>
 <div class="native-code-pair reveal">
 <div class="code-block-preview"><div class="code-head">Deterministic disposal</div><pre><code class="void-syntax" data-void-code="">public sealed class GameFile : IDisposable
 {
@@ -105,7 +105,7 @@ public static int Twice(this int value)
 int value = Identity(21);
 Console.WriteLine(value.Twice() == 42);</code></pre></div>
 </div>
-<div class="code-block-preview reveal"><div class="code-head">Explicit asynchronous disposal</div><pre><code class="void-syntax" data-void-code="">public sealed class AsyncResource : IAsyncDisposable
+<div class="code-block-preview reveal"><div class="code-head">Structured asynchronous disposal</div><pre><code class="void-syntax" data-void-code="">public sealed class AsyncResource : IAsyncDisposable
 {
     public async Task DisposeAsync()
     {
@@ -116,9 +116,8 @@ Console.WriteLine(value.Twice() == 42);</code></pre></div>
 
 public static async Task RunAsync()
 {
-    AsyncResource resource = new AsyncResource();
+    await using var resource = new AsyncResource();
     await UseAsync(resource);
-    await resource.DisposeAsync();
 }</code></pre></div>
 <div class="code-block-preview reveal"><div class="code-head">Constrained static + default interface behavior</div><pre><code class="void-syntax" data-void-code="">public interface IFactory&lt;T&gt;
 {
