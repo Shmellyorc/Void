@@ -4,16 +4,16 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
-<title>VOID Language Diagnostics &amp; Source Spans</title>
-<meta content="VOID Language diagnostics use precise end-exclusive ranges across lexer, parser, semantic analysis, voidc check, and live LSP diagnostics for unsaved editor buffers." name="description"/>
+<title>VOID Language Rich Diagnostics &amp; Diagnostic Codes</title>
+<meta content="VOID Language diagnostics show source excerpts, precise spans, notes, help, related locations, stable VOID codes, parser recovery, and optional JSON output." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/diagnostics/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
 <link href="../../assets/css/home.css?v=19" rel="stylesheet"/>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
-<meta property="og:title" content="VOID Language Diagnostics &amp; Source Spans">
-<meta property="og:description" content="VOID Language diagnostics use precise end-exclusive ranges across lexer, parser, semantic analysis, voidc check, and live LSP diagnostics for unsaved editor buffers.">
+<meta property="og:title" content="VOID Language Rich Diagnostics &amp; Diagnostic Codes">
+<meta property="og:description" content="VOID Language diagnostics show source excerpts, precise spans, notes, help, related locations, stable VOID codes, parser recovery, and optional JSON output.">
 <meta property="og:url" content="https://voidengine.net/language/diagnostics/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -21,8 +21,8 @@
 <meta property="og:image:height" content="941">
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="VOID Language Diagnostics &amp; Source Spans">
-<meta name="twitter:description" content="VOID Language diagnostics use precise end-exclusive ranges across lexer, parser, semantic analysis, voidc check, and live LSP diagnostics for unsaved editor buffers.">
+<meta name="twitter:title" content="VOID Language Rich Diagnostics &amp; Diagnostic Codes">
+<meta name="twitter:description" content="VOID Language diagnostics show source excerpts, precise spans, notes, help, related locations, stable VOID codes, parser recovery, and optional JSON output.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -63,27 +63,29 @@
 </header>
 <div class="section-nav-wrap language-nav"><nav aria-label="VOID Language categories" class="section-nav section-nav-main shell"><span class="section-nav-label">Language</span><a href="../">Overview</a><a href="../features/">Core</a><a class="active" href="../library/">Reference</a><a href="../examples/">Examples</a><a href="../roadmap/">Roadmap</a></nav><nav aria-label="VOID Language reference pages" class="section-nav section-nav-sub shell"><span class="section-nav-label">Reference</span><a href="../library/">Library</a><a href="../compiler/">Compiler</a><a class="active" href="../diagnostics/">Diagnostics</a><a href="../tooling/">Tooling</a><a href="../native/">Native</a><a href="../design/">Design</a></nav></div>
 <main id="main">
-<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Diagnostics</p><h1>Precise errors.<br/>Shared compiler ranges.</h1><p>Explicit start/end source spans flow through lexing and parsing, and lexer, parser, semantic analysis, and <code>voidc check</code> all report through the same ranged diagnostic model.</p></div></section>
+<section class="subpage-hero language-hero"><div class="shell subpage-copy reveal"><p class="kicker">VOID Diagnostics</p><h1>Show the source.<br/>Explain the rule.</h1><p>One compiler-owned diagnostic model carries severity, stable codes, messages, source spans, notes, help, and related locations. Terminal and JSON output are two presentations of the same compiler information.</p></div></section>
 <section class="content-page"><div class="shell">
-<div class="section-heading reveal"><p class="kicker">Source locations</p><h2>An error points at the source region that actually failed.</h2><p>Source spans retain byte offset, line, and column at both ends. Ranges are end-exclusive, matching the range model used by editor/LSP protocols while remaining useful to the normal command line today.</p></div>
-<div class="code-block-preview reveal"><div class="code-head">Semantic diagnostic</div><pre><code>error: Program.void:5:21-5:33: unknown identifier 'MissingValue'</code></pre></div>
+<div class="section-heading reveal"><p class="kicker">Structured diagnostics</p><h2>An error can point at the failure and explain the contract around it.</h2><p>Diagnostics retain half-open UTF-8 source spans and compiler-owned source snapshots, so terminal rendering can show the exact loaded source with insertion points, multiline excerpts, tabs, UTF-8 text, and related locations without rereading a file that may have changed.</p></div>
 <div class="content-grid">
-<article class="content-card reveal"><h3>Exact token spans</h3><p>Identifiers, literals, punctuation, operators, and EOF receive deterministic start/end ranges directly from the lexer.</p></article>
-<article class="content-card reveal"><h3>One diagnostic shape</h3><p>Lexer, parser, and semantic failures share source path, source span, and message instead of maintaining separate public error models.</p></article>
-<article class="content-card reveal"><h3>Multi-line ranges</h3><p>Failures such as unterminated block comments retain the complete offending source region.</p></article>
-<article class="content-card reveal"><h3>Syntax/type spans</h3><p>AST nodes and type references retain spans, including generic, nullable, pointer, and array suffixes.</p></article>
-<article class="content-card reveal"><h3><code>voidc check</code></h3><p>Front-end-only validation reports the same ranged parser and semantic diagnostics without generating C or invoking a native compiler.</p></article>
-<article class="content-card reveal"><h3>Live editor diagnostics</h3><p>The same diagnostic objects publish through LSP for unsaved text, carry document versions, convert UTF-8 source offsets to UTF-16 editor positions, and clear when source becomes valid or closes.</p></article><article class="content-card reveal"><h3>Stable diagnostic contracts</h3><p>User-facing messages describe the invalid or unsupported language construct itself rather than exposing historical internal milestone labels, so diagnostics remain meaningful as the compiler evolves.</p></article>
+<article class="content-card reveal"><h3>One structured model</h3><p>Lexer, parser, semantic, generic-specialization, and driver failures route through compiler-owned diagnostic records instead of separate terminal-only error paths.</p></article>
+<article class="content-card reveal"><h3>Source excerpts &amp; spans</h3><p>Primary and related locations render from compiler snapshots with precise markers, including zero-width insertions, multiline spans, tabs, UTF-8 source, CRLF, and final lines without trailing newlines.</p></article>
+<article class="content-card reveal"><h3>Notes &amp; related context</h3><p>Diagnostics can point to declarations, parameters, interface or base contracts, generic declarations, overload candidates, and other locations that explain why the primary source is invalid.</p></article>
+<article class="content-card reveal"><h3>Confident help</h3><p>Known missing quotes or delimiters, static-class misuse, and mutation of <code>in</code> parameters can receive first-class help. Unknown names do not get speculative spelling guesses.</p></article>
+<article class="content-card reveal"><h3>Parser recovery</h3><p>Common syntax failures keep one useful root diagnostic and recover conservatively at top-level boundaries so later syntax can still be inspected without accepting the invalid program.</p></article>
+<article class="content-card reveal"><h3>Stable <code>VOIDxxxx</code> codes</h3><p>Public diagnostic families have centralized stable identifiers for lexical, syntax, semantic, and driver/project/build failures. Existing broad fallback families remain intentional where a narrower code is not yet defined.</p></article>
+<article class="content-card reveal"><h3>Machine-readable diagnostics</h3><p><code>--diagnostics=json</code> emits schema-versioned JSON records with the same code, severity, message, spans, notes, help, related locations, and truncation state used by human-readable output.</p></article>
 </div>
-<section class="editorial-block reveal"><div><p class="kicker">Compiler to editor</p><h2>The same ranges now drive live editor feedback.</h2></div><p><code>voidc lsp</code> publishes lexer, parser, and semantic diagnostics directly from in-memory editor text. Changes replace stale errors, valid source clears them, closing a document clears its diagnostics, and dependent project documents are refreshed when another open file changes. Hover, completion, navigation, references, and symbols sit on the same source/semantic foundation.</p></section>
-<div class="code-block-preview reveal"><div class="code-head">Token ranges</div><pre><code>1:1-1:7 public             "public"
-1:8-1:13 class             "class"</code></pre></div>
-<section class="editorial-block reveal"><div><p class="kicker">Current direction</p><h2>Make diagnostics explain the problem, not just locate it.</h2></div><p>The compiler already shares precise source spans across lexer, parser, semantic analysis, checking, and LSP. The active roadmap builds on that foundation with structured severity and codes, source snippets, notes, confident help, parser recovery, related locations, and machine-readable output generated from the same compiler information.</p></section>
-<div class="code-block-preview reveal"><div class="code-head">Illustrative planned rich diagnostic</div><pre><code>int age = Console.ReadLine();
-          ^^^^^^^^^^^^^^^^^^
-error[VOID0201]: cannot convert 'string' to 'int'
-note: Console.ReadLine() returns 'string'</code></pre></div>
-<p class="local-note reveal">This shows the intended diagnostic shape for the active rich-diagnostics work. The exact <code>VOIDxxxx</code> assignment is illustrative until stable diagnostic codes are implemented.</p>
+<section class="editorial-block reveal"><div><p class="kicker">Human and machine output</p><h2>One diagnostic record. Multiple presentations.</h2></div><p>Terminal text and JSON are rendered from the same compiler information, so tooling does not need to scrape human-readable stderr to recover codes or source locations. Redirected terminal output remains readable without depending on ANSI color, while JSON safely escapes control bytes, Unicode, unusual paths, and multiline text.</p></section>
+<section class="editorial-block reveal"><div><p class="kicker">Compiler to editor</p><h2>Existing LSP diagnostics still come from the compiler.</h2></div><p><code>voidc lsp</code> continues to publish lexer, parser, and semantic diagnostics from synchronized in-memory source and uses the same compiler semantics as real builds. Full transport of every new rich note/help/related-location context through LSP is still a separate future step, as are code actions and automatic fixes.</p></section>
+<div class="code-block-preview reveal"><div class="code-head">Current terminal diagnostic</div><pre><code>./Program.void:8:20-8:38: error: cannot assign 'string' to local 'name' of type 'int'
+       code: VOID3002
+     8 |         int name = Console.ReadLine();
+       |                    ^~~~~~~~~~~~~~~~~~
+./Program.void:8:9-8:12: note: Target local type is declared here.
+     8 |         int name = Console.ReadLine();
+       |         ^~~
+note: Local initialization requires an implicit conversion; explicit conversions are not applied automatically.</code></pre></div>
+<p class="local-note reveal"><code>VOID3002</code> is a stable semantic diagnostic-family identifier for incompatible value conversion. Stable codes name diagnostic families; they do not imply that every individual message wording receives a unique code.</p>
 <div class="page-actions reveal"><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../compiler/">Compiler</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
 </div></section></main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../why-void/">Why VOID</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>

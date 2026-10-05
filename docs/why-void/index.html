@@ -323,7 +323,7 @@
               <summary><span class="faq-number">26</span><span>Why build source mapping and diagnostics into the compiler?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Generating C should not make developers debug generated C. The generated representation is an implementation detail. Errors, source ranges, native debug information, and editor tooling should still point back to the original VOID source wherever possible.</p>
-                <p>That is why source mapping, precise source spans, source-only checking, and compiler-backed diagnostics are part of the compiler architecture rather than separate convenience tools. The next diagnostics work extends that same ownership model so richer terminal output and machine-readable tooling data can come from one source of compiler truth instead of separate error systems.</p>
+                <p>That is why source mapping, precise source spans, source-only checking, and compiler-backed diagnostics are part of the compiler architecture rather than separate convenience tools. VOID now carries structured diagnostic information including stable codes, source excerpts, notes, confident help, and related locations, then renders terminal text or optional JSON from that same compiler-owned record. The existing LSP stays compiler-backed too, while full transport of every rich context entry through LSP remains a separate future layer.</p>
               </div>
             </details>
 
