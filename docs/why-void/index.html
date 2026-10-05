@@ -323,7 +323,7 @@
               <summary><span class="faq-number">26</span><span>Why build source mapping and diagnostics into the compiler?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Generating C should not make developers debug generated C. The generated representation is an implementation detail. Errors, source ranges, native debug information, and editor tooling should still point back to the original VOID source wherever possible.</p>
-                <p>That is why source mapping, precise source spans, source-only checking, and compiler-backed diagnostics are part of the compiler architecture rather than separate convenience tools.</p>
+                <p>That is why source mapping, precise source spans, source-only checking, and compiler-backed diagnostics are part of the compiler architecture rather than separate convenience tools. The next diagnostics work extends that same ownership model so richer terminal output and machine-readable tooling data can come from one source of compiler truth instead of separate error systems.</p>
               </div>
             </details>
 
@@ -493,7 +493,7 @@
               <summary><span class="faq-number">46</span><span>Why build Console on readers, writers, and streams instead of compiler hooks?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because standard input and output are library concerns until the program reaches the actual host boundary. Keeping buffering, redirection, text decoding, and the public Console surface in ordinary StandardLibrary code makes the behavior reusable and testable instead of hiding policy inside the compiler or generated C.</p>
-                <p>The active roadmap therefore layers <code>Console</code> over reusable <code>TextReader</code>, <code>TextWriter</code>, and <code>Stream</code> foundations, with native helpers reserved for byte transport and terminal operations that genuinely depend on the host platform. That preserves the same architecture VOID uses elsewhere: high-level semantics stay visible while the narrow native boundary does the platform-specific work.</p>
+                <p>Console now layers over reusable <code>TextReader</code>, <code>TextWriter</code>, and <code>Stream</code> foundations, with native helpers reserved for byte transport and terminal operations that genuinely depend on the host platform. That preserves the same architecture VOID uses elsewhere: high-level semantics stay visible while the narrow native boundary does the platform-specific work.</p>
               </div>
             </details>
           </div>
