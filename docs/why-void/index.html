@@ -134,6 +134,7 @@
                 <p>The phrase <strong>A foundation, not a cage.</strong> is not just branding. It is the test I keep applying to the architecture.</p>
               </div>
             </details>
+
           </div>
         </section>
 
@@ -485,7 +486,14 @@
               <summary><span class="faq-number">45</span><span>Why should string positions count Unicode scalar values instead of UTF-8 bytes?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because raw UTF-8 byte offsets are useful for storage and native boundaries, but they are a poor default for ordinary language-level text operations. VOID already has a 32-bit <code>char</code>, so treating indexing, enumeration, ranges, and search positions as Unicode scalar positions gives those APIs one coherent meaning without exposing partial UTF-8 code units.</p>
-                <p>The active roadmap keeps the byte count explicit through <code>ByteLength</code>. It also deliberately stops short of claiming grapheme-cluster, culture, case-folding, or normalization behavior; those require separate text policies rather than changing what core <code>Length</code> and indexing mean later.</p>
+                <p>VOID keeps the byte count explicit through <code>ByteLength</code>. Core string operations deliberately stop short of claiming grapheme-cluster, culture, case-folding, or normalization behavior; those require separate text policies rather than changing what <code>Length</code> and indexing mean.</p>
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary><span class="faq-number">46</span><span>Why build Console on readers, writers, and streams instead of compiler hooks?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because standard input and output are library concerns until the program reaches the actual host boundary. Keeping buffering, redirection, text decoding, and the public Console surface in ordinary StandardLibrary code makes the behavior reusable and testable instead of hiding policy inside the compiler or generated C.</p>
+                <p>The active roadmap therefore layers <code>Console</code> over reusable <code>TextReader</code>, <code>TextWriter</code>, and <code>Stream</code> foundations, with native helpers reserved for byte transport and terminal operations that genuinely depend on the host platform. That preserves the same architecture VOID uses elsewhere: high-level semantics stay visible while the narrow native boundary does the platform-specific work.</p>
               </div>
             </details>
           </div>
