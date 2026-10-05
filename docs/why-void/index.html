@@ -443,10 +443,10 @@
             </details>
 
             <details class="faq-item">
-              <summary><span class="faq-number">40</span><span>Why does VOID support async lambdas without <code>async void</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <summary><span class="faq-number">40</span><span>Why won’t VOID support <code>async void</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
-                <p>Async lambdas now compose ordinary delegates and closures with the same async state-machine machinery used by named methods. Task- and ValueTask-returning delegate targets keep completion, results, cancellation, and faults observable through the awaitable value the caller receives.</p>
-                <p><code>async void</code> would change that observability contract because there is no returned Task or ValueTask through which normal code can observe completion or faults. VOID therefore keeps async lambda targets awaitable for now and leaves fire-and-forget error policy to a later design instead of making unobserved failure behavior implicit.</p>
+                <p>VOID deliberately does not support <code>async void</code>. In C#, its main practical role is compatibility with <code>void</code>-returning event handlers, especially in UI frameworks built around that delegate shape. VOID is not trying to reproduce those application frameworks, so inheriting the unusual completion, exception, and lifetime behavior of <code>async void</code> would add complexity for little benefit.</p>
+                <p>Async APIs in VOID stay observable through <code>Task</code>, <code>Task&lt;T&gt;</code>, <code>ValueTask</code>, or <code>ValueTask&lt;T&gt;</code>. That keeps completion, failures, cancellation, and lifetime visible to the caller instead of creating a separate fire-and-forget rule.</p>
               </div>
             </details>
 
