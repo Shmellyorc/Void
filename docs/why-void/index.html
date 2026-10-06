@@ -496,6 +496,13 @@
                 <p>Console now layers over reusable <code>TextReader</code>, <code>TextWriter</code>, and <code>Stream</code> foundations, with native helpers reserved for byte transport and terminal operations that genuinely depend on the host platform. That preserves the same architecture VOID uses elsewhere: high-level semantics stay visible while the narrow native boundary does the platform-specific work.</p>
               </div>
             </details>
+            <details class="faq-item">
+              <summary><span class="faq-number">47</span><span>Why generalize type-qualified members instead of special-casing APIs like <code>int.Parse</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>Because <code>int.Parse</code> is really two problems: the language must understand that <code>int</code> is a type receiver, and the library must provide the parsing API. Hard-coding individual built-in methods into the compiler would solve one spelling at a time while leaving ordinary types, constructed generics, static properties, method groups, and generic defaults on different paths.</p>
+                <p>The active direction is to make type-qualified access a general language mechanism first. Built-in parsing and other familiar static surfaces can then live in StandardLibrary source and bind through the same rules as user-defined static members instead of becoming permanent compiler exceptions.</p>
+              </div>
+            </details>
           </div>
         </section>
 
