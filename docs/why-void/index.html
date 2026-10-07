@@ -500,7 +500,14 @@
               <summary><span class="faq-number">47</span><span>Why generalize type-qualified members instead of special-casing APIs like <code>int.Parse</code>?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
               <div class="faq-answer">
                 <p>Because <code>int.Parse</code> is really two problems: the language must understand that <code>int</code> is a type receiver, and the library must provide the parsing API. Hard-coding individual built-in methods into the compiler would solve one spelling at a time while leaving ordinary types, constructed generics, static properties, method groups, and generic defaults on different paths.</p>
-                <p>The active direction is to make type-qualified access a general language mechanism first. Built-in parsing and other familiar static surfaces can then live in StandardLibrary source and bind through the same rules as user-defined static members instead of becoming permanent compiler exceptions.</p>
+                <p>VOID now makes type-qualified access a general language mechanism. Built-in parsing, value-type static properties, constructed-generic static access, and generic defaults such as <code>EqualityComparer&lt;T&gt;.Default</code> can live in StandardLibrary source and bind through the same rules as user-defined static members instead of becoming permanent compiler exceptions.</p>
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary><span class="faq-number">48</span><span>Why show a runtime source diagnostic before the stack trace?</span><span class="faq-chevron" aria-hidden="true"></span></summary>
+              <div class="faq-answer">
+                <p>A stack trace answers how execution reached a failure, but the immediate source location usually answers what the developer should look at first. The planned runtime-diagnostics work therefore puts a readable VOID source excerpt and precise marker before the full synchronous call stack instead of making the root cause compete with a long trace.</p>
+                <p>The important constraint is truthfulness. VOID should preserve throw/rethrow origins and known VOID frames, but it should not fabricate source when files are unavailable or pretend native crashes, process exits, launch failures, and unresolved native boundaries are ordinary managed exceptions. Async logical ancestry also remains separate unless it can be represented accurately.</p>
               </div>
             </details>
           </div>
