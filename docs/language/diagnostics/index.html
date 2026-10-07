@@ -5,7 +5,7 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width,initial-scale=1" name="viewport"/>
 <title>VOID Language Rich Diagnostics &amp; Diagnostic Codes</title>
-<meta content="VOID Language diagnostics show source excerpts, precise spans, notes, help, related locations, stable VOID codes, parser recovery, and optional JSON output." name="description"/>
+<meta content="VOID diagnostics combine rich compiler errors with runtime source excerpts and truthful synchronous call stacks while keeping native boundaries explicit." name="description"/>
 <meta content="#07060b" name="theme-color"/>
 <link href="https://voidengine.net/language/diagnostics/" rel="canonical"/>
 <link href="../../assets/images/void-favicon.png" rel="icon" type="image/png"/>
@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="VOID">
 <meta property="og:title" content="VOID Language Rich Diagnostics &amp; Diagnostic Codes">
-<meta property="og:description" content="VOID Language diagnostics show source excerpts, precise spans, notes, help, related locations, stable VOID codes, parser recovery, and optional JSON output.">
+<meta property="og:description" content="VOID diagnostics combine rich compiler errors with runtime source excerpts and truthful synchronous call stacks while keeping native boundaries explicit.">
 <meta property="og:url" content="https://voidengine.net/language/diagnostics/">
 <meta property="og:image" content="https://voidengine.net/assets/images/void-language.webp">
 <meta property="og:image:type" content="image/webp">
@@ -22,7 +22,7 @@
 <meta property="og:image:alt" content="VOID Language">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="VOID Language Rich Diagnostics &amp; Diagnostic Codes">
-<meta name="twitter:description" content="VOID Language diagnostics show source excerpts, precise spans, notes, help, related locations, stable VOID codes, parser recovery, and optional JSON output.">
+<meta name="twitter:description" content="VOID diagnostics combine rich compiler errors with runtime source excerpts and truthful synchronous call stacks while keeping native boundaries explicit.">
 <meta name="twitter:image:alt" content="VOID Language">
 <meta name="twitter:image" content="https://voidengine.net/assets/images/void-language.webp">
 <script type="application/ld+json">
@@ -86,7 +86,7 @@
        |         ^~~
 note: Local initialization requires an implicit conversion; explicit conversions are not applied automatically.</code></pre></div>
 <p class="local-note reveal"><code>VOID3002</code> is a stable semantic diagnostic-family identifier for incompatible value conversion. Stable codes name diagnostic families; they do not imply that every individual message wording receives a unique code.</p>
-<section class="editorial-block reveal"><div><p class="kicker">Runtime direction</p><h2>Bring the same clarity to failures after launch.</h2></div><p>The next diagnostics phase extends developer-facing source context into runtime failures: a readable VOID source excerpt first, followed by a truthful synchronous VOID call stack. Throw, rethrow, nested handlers, constructors, properties, lambdas, static initialization, generics, and native boundaries must preserve what is actually known; missing source, published builds, native crashes, process exits, and launch failures remain distinct instead of being forced into one fake stack model.</p></section>
+<section class="editorial-block reveal"><div><p class="kicker">Runtime diagnostics</p><h2>The immediate failure stays visible before the stack.</h2></div><p>Runtime failures now use the same developer-first idea as compiler diagnostics: show the relevant VOID source excerpt and span first, then the complete synchronous VOID call stack. Throw, rethrow, nested handlers, constructors, properties, lambdas, static initialization, generics, and internal runtime failures preserve known source origins and frames, while unavailable source, published builds, native boundaries, native crashes, process exits, and launch failures remain truthfully distinct.</p></section>
 <div class="page-actions reveal"><a class="outline-button" href="../tooling/">Tooling</a><a class="outline-button" href="../compiler/">Compiler</a><a class="outline-button" href="../roadmap/">Roadmap</a></div>
 </div></section></main>
 <footer class="site-footer"><div class="shell footer-grid"><div class="footer-brand"><img alt="VOID" src="../../assets/images/void-logo.webp"/><p>A foundation, not a cage.</p></div><nav aria-label="Footer navigation" class="footer-links"><a href="../../">Home</a><a href="../../engine/">Engine</a><a href="../../language/">Language</a><a href="../../why-void/">Why VOID</a><a href="../../articles/">Articles</a><a href="https://github.com/Shmellyorc/Void">GitHub</a></nav><p class="footer-note">VOID Language is independently designed for game development.</p></div></footer>
