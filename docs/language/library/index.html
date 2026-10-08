@@ -113,18 +113,12 @@
     [Native("void_math_add")]
     public static unsafe extern int Add(int left, int right);
 }</code></pre></div></div>
-<section class="editorial-block reveal" id="project-libraries"><div><p class="kicker">Project libraries</p><h2>VOID projects can ship as native archives.</h2></div><p>Setting <code>"output": "library"</code> turns the normal build pipeline into a native static archive. <code>[Export]</code> gives selected public static methods stable C entry points, while initialization and managed static roots continue to use normal VOID runtime rules across repeated calls.</p></section><section class="editorial-block reveal"><div><p class="kicker">Initialization &amp; GC</p><h2>Collections participate in the completed initialization model.</h2></div><p>Arrays and collections can be populated inline, stored in initialized instance/static members, contain nullable or managed values, and remain reachable through managed static GC roots. The language-completion integration regression exercises these paths together rather than as isolated syntax tests.</p></section>
-<div class="code-block-preview reveal"><div class="code-head">Collection initializer</div><pre><code class="void-syntax" data-void-code="">Dictionary&lt;string, int&gt; scores = new()
-{
-    { "Alpha", 10 },
-    { "Beta", 20 }
-};
+<section class="editorial-block reveal" id="project-libraries"><div><p class="kicker">Project libraries</p><h2>VOID projects can ship as native archives.</h2></div><p>Setting <code>"output": "library"</code> turns the normal build pipeline into a native static archive. <code>[Export]</code> gives selected public static methods stable C entry points, while initialization and managed static roots continue to use normal VOID runtime rules across repeated calls.</p></section><section class="editorial-block reveal"><div><p class="kicker">Collection construction</p><h2>Collection expressions reuse existing collection contracts.</h2></div><p>Contextual array initializers and target-typed collection expressions flow through the same conversion, overload, Span, and collection-construction rules used elsewhere in the language. Empty expressions, spreads, List targets, and compatible custom collections do not introduce a parallel collection type system.</p></section>
+<div class="code-block-preview reveal"><div class="code-head">Collection expressions</div><pre><code class="void-syntax" data-void-code="">int[] baseValues = [1, 2, 3];
+int[] combined = [0, ..baseValues, 4];
 
-List&lt;Node&gt; nodes = new()
-{
-    new Node(10),
-    new Node(20) { Score = default }
-};</code></pre></div>
+ReadOnlySpan&lt;int&gt; view = [10, 20, 30];
+List&lt;int&gt; scores = [10, 20, 30];</code></pre></div>
 <div class="page-actions reveal"><a class="outline-button" href="../examples/">Library Examples</a><a class="outline-button" href="../features/">Language Features</a><a class="outline-button" href="../native/">Native ABI</a></div>
 </div></section></main>
 <footer class="site-footer">
