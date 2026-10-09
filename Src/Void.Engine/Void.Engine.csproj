@@ -18,53 +18,43 @@
     <PackageProjectUrl>https://github.com/Shmellyorc/Void</PackageProjectUrl>
     <Description>Modular 2D game framework for .NET with pluggable rendering, SDL3 platform support, OpenAL audio, asset management, pathfinding, coroutines, LDtk support, encrypted saving, and post-processing.</Description>
     <PackageTags>game-engine;2d;game-framework;game-development;dotnet;csharp;sdl3;silk-net;opengl;rendering;pluggable-renderer;renderer-api;pathfinding;coroutines;ldtk;asset-management;openal;audio;input;modding;encryption;shaders;post-processing;cross-platform;open-source</PackageTags>
-    <Version>2.2.0</Version>
+    <Version>2.2.1</Version>
   </PropertyGroup>
 
   <PropertyGroup>
     <PackageReleaseNotes>
-    VOID Engine 2.2.0
-
-    Beacons
-    - Added timed Beacon subscriptions using float lifetimes in seconds.
-    - Added TimeSpan subscription overloads through BeaconManager extensions.
-    - Added SubscribeOnce support for string and enum topics.
-    - Added timed SubscribeOnce overloads using float and TimeSpan lifetimes.
-    - Timed subscriptions expire lazily when their topic is published, subscribed to, or unsubscribed from.
-    - Timed subscription expiration uses Game.Instance.FrameTime.TotalTime.
-    - Preserved the existing multicast delegate publish path for normal Beacon dispatch.
-    - Timed Beacon subscriptions do not require a per-frame BeaconManager update.
-    - Timed subscriptions can still be manually removed using their original callback.
-
-    Input Actions
-    - Changed InputAction internal action and state dictionaries to cached 64-bit identifiers.
-    - InputAction names now use HashHelper.Cache64 for internal lookup.
-    - Changed InputActionState snapshots to use ulong action identifiers instead of string dictionary keys.
-    - Reduced repeated string-key lookup and comparison work for action state queries.
-    - Preserved the existing public string and enum InputAction APIs.
-    - Preserved retained InputActionState snapshot behavior and action transition semantics.
-    - Input action string identifiers are now case-sensitive and follow HashHelper caching behavior.
+    VOID Engine 2.2.1
 
     Hashing
-    - Optimized HashHelper cached lookups to avoid creating unused Lazy hash values on cache hits.
-    - Cache32 and Cache64 now create Lazy values only when a key is missing.
-    - Preserved existing FNV-1a hashing, cached results, and thread-safe initialization behavior.
-    - Reduced unnecessary allocations during repeated cached hash lookups.
+    - Added Cache32IgnoreCase() and Cache64IgnoreCase() for case-insensitive FNV-1a hashing.
+    - Added separate thread-safe caches with deterministic results regardless of capitalization.
+    - Preserved existing case-sensitive hashing methods.
 
-    Spritesheets
-    - Fixed Aseprite nine-patch slice center data being interpreted as border sizes.
-    - Nine-patch borders are now calculated correctly from the Aseprite center rectangle.
-    - Fixed incorrect nine-patch corner sizing when using smaller source patches such as 16x16 sprites.
+    Asset Management
+    - Fixed asset cache lookups to ignore filename capitalization.
+    - Prevented duplicate asset loads caused by differently capitalized paths.
+    - Preserved first-load-wins behavior and existing asset settings.
 
-    LDtk
-    - Fixed IntGrid instance world positions using layer grid dimensions instead of the layer tile size.
-    - IntGrid positions are now calculated from grid location and tile size.
+    Input Actions
+    - Made action registration, lookup, removal, and state queries case-insensitive.
+    - Updated string and enum-based action handling.
+    - Preserved existing input snapshots and transition behavior.
 
-    Collision
-    - Fixed MoveAndSlideCircle corner jitter and touching behavior.
-    - Circle-vs-rectangle and circle-vs-circle resolution now use penetration-only collision checks.
-    - Improved circle collision resolution using radial push-out behavior.
-    - Limited circle collision resolution to four passes to prevent unstable corner behavior.
+    Audio
+    - Fixed SoundInstancePool background worker tracking using Unwrap().
+    - Added safe audio shutdown that cancels and waits for the worker before releasing resources.
+    - Prevented sound instances from being disposed while the background worker is still running.
+
+    Rendering
+    - Added automatic cleanup of pooled render targets during game shutdown.
+    - Dispose VOID-owned render targets while their graphics device is active.
+    - Clear pool references without taking ownership of custom render targets.
+    - Preserved existing render-target pooling and reuse during gameplay.
+
+    Engine Lifecycle
+    - Integrated sound pool shutdown into Game.Dispose() before asset cleanup.
+    - Integrated render-target pool cleanup before window and renderer destruction.
+    - Preserved existing game-loop behavior and window-close safeguards.
     </PackageReleaseNotes>
   </PropertyGroup>
 
