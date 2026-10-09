@@ -34,12 +34,20 @@ public sealed class HashHelper
 
     private static readonly ConcurrentDictionary<string, Lazy<uint>> _cache32 = [];
     private static readonly ConcurrentDictionary<string, Lazy<ulong>> _cache64 = [];
+    private static readonly ConcurrentDictionary<string, Lazy<uint>> _cache32IgnoreCase = new(StringComparer.OrdinalIgnoreCase);
+    private static readonly ConcurrentDictionary<string, Lazy<ulong>> _cache64IgnoreCase = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Gets a cached 32-bit FNV-1a hash for a string.</summary>
     /// <param name="input">String to encode as UTF-8 and hash.</param>
     /// <returns>The cached 32-bit hash.</returns>
     public static uint Cache32(string input)
         => _cache32.GetOrAdd(input, static key => new Lazy<uint>(() => Hash32(key))).Value;
+
+    /// <summary>Gets a cached 32-bit FNV-1a hash for a string, ignoring ordinal case.</summary>
+    /// <param name="input">String to convert to invariant uppercase, encode as UTF-8, and hash.</param>
+    /// <returns>The cached case-insensitive 32-bit hash.</returns>
+    public static uint Cache32IgnoreCase(string input)
+        => _cache32IgnoreCase.GetOrAdd(input, static key => new Lazy<uint>(() => Hash32(key.ToUpperInvariant()))).Value;
 
     /// <summary>
     /// Computes a 32-bit FNV-1a hash for an enum's stable enum-string representation.
@@ -57,6 +65,12 @@ public sealed class HashHelper
     /// <returns>The cached 64-bit hash.</returns>
     public static ulong Cache64(string input)
         => _cache64.GetOrAdd(input, static key => new Lazy<ulong>(() => Hash64(key))).Value;
+
+    /// <summary>Gets a cached 64-bit FNV-1a hash for a string, ignoring ordinal case.</summary>
+    /// <param name="input">String to convert to invariant uppercase, encode as UTF-8, and hash.</param>
+    /// <returns>The cached case-insensitive 64-bit hash.</returns>
+    public static ulong Cache64IgnoreCase(string input)
+        => _cache64IgnoreCase.GetOrAdd(input, static key => new Lazy<ulong>(() => Hash64(key.ToUpperInvariant()))).Value;
 
     /// <summary>Gets a cached 64-bit FNV-1a hash for an enum's stable enum-string representation.</summary>
     /// <param name="input">Enum value to hash.</param>

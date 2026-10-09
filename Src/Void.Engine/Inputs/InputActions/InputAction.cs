@@ -106,7 +106,7 @@ public static class InputAction
                 nameof(name));
         }
 
-        ulong hash = HashHelper.Cache64(name);
+        ulong hash = HashHelper.Cache64IgnoreCase(name);
 
         if (_actions.TryGetValue(hash, out ActionBinding existing))
             return existing;
@@ -177,7 +177,7 @@ public static class InputAction
             return false;
         }
 
-        return _actions.TryGetValue(HashHelper.Cache64(name), out action);
+        return _actions.TryGetValue(HashHelper.Cache64IgnoreCase(name), out action);
     }
 
     /// <summary>
@@ -199,7 +199,7 @@ public static class InputAction
             return false;
         }
 
-        return _actions.TryGetValue(HashHelper.Cache64(name), out action);
+        return _actions.TryGetValue(HashHelper.Cache64IgnoreCase(name.ToEnumString()), out action);
     }
 
     /// <summary>
@@ -235,7 +235,7 @@ public static class InputAction
         if (name.IsEmpty())
             return false;
 
-        return RemoveAction(HashHelper.Cache64(name));
+        return RemoveAction(HashHelper.Cache64IgnoreCase(name));
     }
 
     /// <summary>
@@ -246,7 +246,7 @@ public static class InputAction
     /// <see langword="true"/> if an action was removed; otherwise, <see langword="false"/>.
     /// A <see langword="null"/> value is ignored and returns <see langword="false"/>.
     /// </returns>
-    public static bool RemoveAction(Enum name) => name is not null && RemoveAction(HashHelper.Cache64(name));
+    public static bool RemoveAction(Enum name) => name is not null && RemoveAction(HashHelper.Cache64IgnoreCase(name.ToEnumString()));
 
     private static bool RemoveAction(ulong hash)
     {

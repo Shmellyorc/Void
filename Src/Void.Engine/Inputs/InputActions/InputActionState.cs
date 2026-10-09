@@ -132,7 +132,7 @@ public readonly struct InputActionState
         if (string.IsNullOrEmpty(name))
             return ActionState.Up;
 
-        return GetState(HashHelper.Cache64(name));
+        return GetState(HashHelper.Cache64IgnoreCase(name));
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ public readonly struct InputActionState
     /// The action's <see cref="ActionState"/>, or <see cref="ActionState.Up"/> when
     /// <paramref name="name"/> is <see langword="null"/> or the action does not exist.
     /// </returns>
-    public ActionState GetState(Enum name) => name == null ? ActionState.Up : GetState(HashHelper.Cache64(name));
+    public ActionState GetState(Enum name) => name == null ? ActionState.Up : GetState(HashHelper.Cache64IgnoreCase(name.ToEnumString()));
 
     private ActionState GetState(ulong hash)
     {
@@ -202,7 +202,7 @@ public readonly struct InputActionState
         if (string.IsNullOrEmpty(name) || _states == null)
             return false;
 
-        return IsPressed(HashHelper.Cache64(name));
+        return IsPressed(HashHelper.Cache64IgnoreCase(name));
     }
 
     /// <summary>
@@ -213,7 +213,7 @@ public readonly struct InputActionState
     /// <see langword="true"/> while the action is pressed, including the update on which
     /// it first became pressed; otherwise, <see langword="false"/>.
     /// </returns>
-    public bool IsPressed(Enum name) => name != null && IsPressed(HashHelper.Cache64(name));
+    public bool IsPressed(Enum name) => name != null && IsPressed(HashHelper.Cache64IgnoreCase(name.ToEnumString()));
 
     private bool IsPressed(ulong hash) => _states != null && _states.TryGetValue(hash, out bool current) && current;
 

@@ -482,7 +482,7 @@ public sealed class AssetManager
                 $"Supported extentions: {string.Join(", ", SupportedExtensions[typeof(T)])}"
             );
 
-        var hash = HashHelper.Cache64(path);
+        var hash = HashHelper.Cache64IgnoreCase(path);
         if (_assets.TryGetValue(hash, out var existingAsset))
         {
             Logger.Instance.DebugWithCategory("AssetManager", "Cache hit: {0} (hash: {1})", normalizedPath, hash);
@@ -631,7 +631,7 @@ public sealed class AssetManager
     #region Internal Methods
     internal bool TryGetAsset<T>(string tag, out T asset) where T : IAsset
     {
-        var hash = HashHelper.Cache64(tag);
+        var hash = HashHelper.Cache64IgnoreCase(tag);
         if (_assets.TryGetValue(hash, out var a))
         {
             asset = (T)a;
@@ -648,7 +648,7 @@ public sealed class AssetManager
         if (string.IsNullOrEmpty(tag))
             throw new ArgumentNullException(nameof(tag));
 
-        var hash = HashHelper.Cache64(tag);
+        var hash = HashHelper.Cache64IgnoreCase(tag);
 
         if (_assets.TryGetValue(hash, out var existing))
             return (T)existing;

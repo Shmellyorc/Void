@@ -7,6 +7,8 @@
 //  Licensed under the MIT License.
 // ============================================================================
 
+using Void.Engine.Graphics.Rendering;
+
 namespace Void.Engine.Graphics.RenderTargets;
 
 /// <summary>
@@ -41,6 +43,24 @@ namespace Void.Engine.Graphics.RenderTargets;
 public static class RenderTarget
 {
     private static readonly Dictionary<(int Width, int Height, bool Srgb), Queue<IRenderTarget>> _pool = [];
+
+    internal static void Dispose()
+    {
+        if (RendererRuntime.TryGetDevice(out IGraphicsDevice device))
+        {
+            foreach (var queue in _pool.Values)
+            {
+                foreach (var target in queue)
+                {
+                    if (target is TextureRenderTarget ownedTarget &&
+                        ReferenceEquals(ownedTarget.GraphicsDevice, device))
+                        ownedTarget.Dispose();
+                }
+            }
+        }
+
+        _pool.Clear();
+    }
 
     /// <summary>
     /// Gets a pooled render target with the requested size and color format.

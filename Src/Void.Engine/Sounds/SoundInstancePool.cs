@@ -49,6 +49,12 @@ public sealed class SoundInstancePool : IDisposable
     /// </summary>
     public static SoundInstancePool Instance => _instance.Value;
 
+    internal static void Shutdown()
+    {
+        if (_instance.IsValueCreated)
+            _instance.Value.Dispose();
+    }
+
     private readonly Queue<SoundInstance> _availableInstances;
     private readonly List<SoundInstance> _activeInstances;
     private readonly int _maxInstances;
@@ -147,7 +153,7 @@ public sealed class SoundInstancePool : IDisposable
             _cancellationTokenSource.Token,
             TaskCreationOptions.LongRunning,
             TaskScheduler.Default
-        );
+        ).Unwrap();
     }
 
     private async Task UpdateLoop()
@@ -452,11 +458,14 @@ public sealed class SoundInstancePool : IDisposable
 
         try
         {
-            _updateTask.Wait(TimeSpan.FromSeconds(2));
+            _updateTask.Wait();
         }
-        catch (AggregateException)
+        catch (AggregateException ex)
         {
-            // Task was cancelled, ignore...
+            // A cancelled or faulted worker has stopped, so resource cleanup is safe.
+            if (!_updateTask.IsCanceled)
+                Logger.Instance.WarningWithCategory("SoundInstancePool",
+                    "Background update task failed during shutdown: {0}", ex.Flatten().Message);
         }
 
         lock (_lock)

@@ -401,9 +401,11 @@ public class Game : IDisposable
 
         CoroutineManager.Instance.StopAll();
         BeaconManager.Instance.Clear();
+        SoundInstancePool.Shutdown();
         AssetManager.Instance.Clear();
         AtlasManager.Instance.Clear();
         Inputs.Gamepads.Gamepad.Shutdown();
+        RenderTarget.Dispose();
         _window.Dispose();
 
         AppDomain.CurrentDomain.UnhandledException -= OnUnhandledException;
